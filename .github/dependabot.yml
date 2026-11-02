@@ -10,6 +10,14 @@ updates:
       # Node types follow the Node major used in CI and engines (22); patch/minor updates still come.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # TypeScript stays on 6.x until typescript-eslint supports 7; ESLint stays on 9 for
+      # eslint-config-airbnb-extended (peer eslint ^9).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

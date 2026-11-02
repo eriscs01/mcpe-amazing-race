@@ -96,9 +96,15 @@ export const PENALTY_HOURS = {
 
 export const SETUP = {
   sliders: {
-    days: { min: 1, max: 5, step: 1, default: 3 },
-    minutesPerDay: { min: 30, max: 120, step: 15, default: 60 },
-    teamSize: { min: 2, max: 4, step: 1, default: 2 },
+    days: {
+      min: 1, max: 5, step: 1, default: 3,
+    },
+    minutesPerDay: {
+      min: 30, max: 120, step: 15, default: 60,
+    },
+    teamSize: {
+      min: 2, max: 4, step: 1, default: 2,
+    },
   },
   toggles: {
     hostRaces: false,
@@ -187,7 +193,10 @@ export const TERRAIN_BLOCKS: Record<Terrain, readonly BlockId[]> = {
   swamp: [BLOCK.mud, BLOCK.mangroveRoots],
 };
 
-/** Place names are prefix + " " + suffix. Prefixes never repeat across terrains, so names stay unique. */
+/**
+ * Place names are prefix + " " + suffix. Prefixes never repeat across terrains, so names stay
+ * unique.
+ */
 export const TERRAIN_NAMES: Record<
   Terrain,
   { readonly prefixes: readonly string[]; readonly suffixes: readonly string[] }

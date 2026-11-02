@@ -1,9 +1,11 @@
 // Every vanilla identifier the add-on writes must exist in the oldest supported game
 // (vanilla-data 1.21.90, matching min_engine_version) and in the latest data we know of.
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
 import * as latest from '@minecraft/vanilla-data';
 import * as oldest from 'vanilla-data-min';
+
 import * as config from '../src/core/config.js';
 import { BLOCK, ENTITY, ITEM } from '../src/core/config.js';
 

@@ -1,15 +1,16 @@
 // Spec tables: invariants the race depends on, then exact values from the spec so an
 // accidental edit to a table fails a test.
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
 import {
   DETOUR_PAIRS,
   GATHER,
   HOUR,
   KIT,
   PASSPORT,
-  RACE_CONTROL,
   PENALTY_HOURS,
+  RACE_CONTROL,
   ROADBLOCK_HINTS,
   ROADBLOCK_KINDS,
   SETUP,
@@ -68,7 +69,7 @@ test('each ground block classifies into exactly one terrain', () => {
   assert.ok(unique(all), 'a block is listed under two terrains');
 });
 
-test('place names can stay unique for the largest course, even if every stop shares a terrain', () => {
+test('place names stay unique for the largest course, even if every stop shares a terrain', () => {
   const maxStops = 4 * 12 + 1; // 12 legs × 4 stops + start line
   for (const t of TERRAINS) {
     const { prefixes, suffixes } = TERRAIN_NAMES[t];
@@ -92,8 +93,9 @@ test('detour pairs offer two different kinds under distinct option names', () =>
 });
 
 test('every roadblock kind, plus recall, has a hint', () => {
-  for (const k of [...ROADBLOCK_KINDS, 'recall' as const])
+  for (const k of [...ROADBLOCK_KINDS, 'recall' as const]) {
     assert.ok(ROADBLOCK_HINTS[k].length > 0, k);
+  }
 });
 
 test("the starter kit is the spec's tools and bread", () => {

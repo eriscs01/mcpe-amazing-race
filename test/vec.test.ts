@@ -1,5 +1,6 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
 import {
   distance,
   horizontalDistance,
@@ -10,8 +11,9 @@ import {
   yawTowards,
 } from '../src/core/vec.js';
 
-const near = (actual: number, expected: number, eps = 1e-9): void =>
+const near = (actual: number, expected: number, eps = 1e-9): void => {
   assert.ok(Math.abs(actual - expected) < eps, `expected ${expected}, got ${actual}`);
+};
 
 test('distance() is 3D, horizontalDistance() ignores height', () => {
   const a = { x: 0, y: 0, z: 0 };

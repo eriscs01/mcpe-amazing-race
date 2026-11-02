@@ -25,7 +25,7 @@ Checked in `node_modules/@minecraft/server@2.0.0` and `@minecraft/server-ui@2.0.
 
 Still **[Verify first]** in-game (cannot be settled from typings): `itemUse` on Clock/Compass in air (spec §3), beacon beam through the cleared column, `projectileHitBlock` source for player-shot arrows, `Player.nameTag` colouring visible to others, ticking-area load latency.
 
-Toolchain notes: `tsconfig` uses `NodeNext`, so relative imports must end in `.js` (Bedrock resolves these fine). TypeScript 7 is the native (`tsgo`) compiler — keep to plain TS features, no decorators or emit plugins.
+Toolchain notes: `tsconfig` uses `NodeNext`, so relative imports must end in `.js` (Bedrock resolves these fine). TypeScript is pinned to 6.0 (the last release with the JavaScript compiler API, which ESLint's TypeScript plugin needs); keep to plain TS features, no decorators or emit plugins, so moving to TypeScript 7 later is a version bump.
 
 ---
 
@@ -170,7 +170,7 @@ Detour, Roadblock, Speed Bump and Recall reuse the same interface; the engine on
 | Identifiers | Vanilla ids live only in the `BLOCK` / `ITEM` / `ENTITY` tables in `config.ts`. `test/ids.test.ts` checks each against `@minecraft/vanilla-data` for the oldest supported game (1.21.90, installed as the `vanilla-data-min` alias) and the latest, and fails if any other `minecraft:` string appears in `config.ts`. vanilla-data has no particle list: particle ids get a hand-verified table with a source comment. |
 | In-game | Checklist in `docs/ingame-test.md`, run per milestone on 1.21.90+ with 2 players. |
 
-Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = clean build + `node --test` over `build/test/test/**/*.test.js` (Node ≥ 22). `npm run typecheck` checks both projects. `npm run lint` (`biome check`) is the code-quality gate: Biome's recommended rules plus an Airbnb-style format check (2-space indent, single quotes, semicolons, trailing commas, 100 columns, arrow parens always; `npm run format` applies it), warnings fail (`noNonNullAssertion` is off because `noUncheckedIndexedAccess` makes `!` the explicit marker for a proven in-range index; ESLint's TypeScript plugin can't run on TypeScript 7). `npm run coverage` runs the tests under c8, source-mapped to `src/core/*.ts`, and fails below 80% line coverage, counting untested core files. CI runs typecheck, lint, coverage and package in the required `build` check; GitHub Code Quality and its coverage upload aren't available for this personal repository.
+Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = clean build + `node --test` over `build/test/test/**/*.test.js` (Node ≥ 22). `npm run typecheck` checks both projects. `npm run lint` is the code-quality gate: ESLint 9 with `eslint-config-airbnb-extended` (Airbnb base + TypeScript strict, type-aware, @stylistic formatting at 100 columns; `npm run format` applies fixes), any warning fails. Project deviations from Airbnb live in `eslint.config.mjs`, each with its reason. `npm run coverage` runs the tests under c8, source-mapped to `src/core/*.ts`, and fails below 80% line coverage, counting untested core files. CI runs typecheck, lint, coverage and package in the required `build` check; GitHub Code Quality and its coverage upload aren't available for this personal repository.
 
 ---
 
