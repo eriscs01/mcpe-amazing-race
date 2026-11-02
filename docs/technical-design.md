@@ -1,6 +1,6 @@
 # Amazing Race Add-on — Technical Design
 
-Companion to [amazing-race-addon-spec.md](../amazing-race-addon-spec.md) (the **spec**). The spec says *what* to build; this document says *how the code is shaped* and *in which order to build it*. Where they conflict, the spec wins on behaviour and this document wins on structure.
+Companion to [amazing-race-addon-spec.md](amazing-race-addon-spec.md) (the **spec**). The spec says *what* to build; this document says *how the code is shaped* and *in which order to build it*. Where they conflict, the spec wins on behaviour and this document wins on structure.
 
 ---
 

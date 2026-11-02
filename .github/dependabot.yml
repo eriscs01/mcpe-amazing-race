@@ -4,7 +4,7 @@ updates:
     directory: /
     schedule: { interval: weekly }
     ignore:
-      # Target API versions are pinned deliberately (see spec section 2).
+      # Target API versions are pinned deliberately (see docs/amazing-race-addon-spec.md section 2).
       - dependency-name: "@minecraft/server"
       - dependency-name: "@minecraft/server-ui"
   - package-ecosystem: github-actions
