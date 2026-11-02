@@ -1,0 +1,28 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Amazing Race",
+    "description": "The Amazing Race for teams, run by one host.",
+    "uuid": "5f1c6e0a-2b7d-4c1e-9a53-0d8b6f4e7a11",
+    "version": [0, 1, 0],
+    "min_engine_version": [1, 21, 90]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "a3c9d2b4-71e8-4f06-8b2d-5e1f0c9a6d32",
+      "version": [0, 1, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "c84e1f57-9d03-4a6b-b7e2-3f5a8d1c2e90",
+      "entry": "scripts/main.js",
+      "version": [0, 1, 0]
+    }
+  ],
+  "dependencies": [
+    { "module_name": "@minecraft/server", "version": "2.0.0" },
+    { "module_name": "@minecraft/server-ui", "version": "2.0.0" }
+  ]
+}

@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    ignore:
+      # Target API versions are pinned deliberately (see spec section 2).
+      - dependency-name: "@minecraft/server"
+      - dependency-name: "@minecraft/server-ui"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
