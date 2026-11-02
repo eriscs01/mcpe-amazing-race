@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 // Invariants the spec places on the tunable tables. Values themselves live in config.ts;
 // these tests only fail when a table stops satisfying a rule the race depends on.
+=======
+// Spec tables: invariants the race depends on, then exact values from the spec so an
+// accidental edit to a table fails a test.
+>>>>>>> origin/main
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -7,6 +12,11 @@ import {
   GATHER,
   HOUR,
   KIT,
+<<<<<<< HEAD
+=======
+  PASSPORT,
+  RACE_CONTROL,
+>>>>>>> origin/main
   PENALTY_HOURS,
   ROADBLOCK_HINTS,
   ROADBLOCK_KINDS,
@@ -90,3 +100,66 @@ test("the starter kit is the spec's tools and bread", () => {
     [["stone_pickaxe", 1], ["stone_axe", 1], ["stone_shovel", 1], ["stone_sword", 1], ["bread", 16]],
   );
 });
+<<<<<<< HEAD
+=======
+
+test("team colours match spec §4 in order", () => {
+  assert.deepEqual(
+    TEAM_COLORS.map((c) => `${c.name} ${c.code}`),
+    ["Red §c", "Blue §9", "Green §a", "Gold §6", "Purple §5", "Aqua §b", "Pink §d", "White §f", "Gray §7", "Jade §2", "Teal §3", "Maroon §4"],
+  );
+});
+
+test("setup sliders and toggles match spec §4", () => {
+  const sliders = Object.fromEntries(
+    Object.entries(SETUP.sliders).map(([k, s]) => [k, [s.min, s.max, s.step, s.default]]),
+  );
+  assert.deepEqual(sliders, { days: [1, 5, 1, 3], minutesPerDay: [30, 120, 15, 60], teamSize: [2, 4, 1, 2] });
+  assert.deepEqual(SETUP.toggles, { hostRaces: false, daylightCycle: true });
+});
+
+test("menu items match spec §3", () => {
+  assert.deepEqual(RACE_CONTROL, { item: "minecraft:clock", nameTag: "§6Race Control", lore: ["Amazing Race host menu"] });
+  assert.deepEqual(PASSPORT, { item: "minecraft:compass", nameTag: "§eRace Passport", lore: ["Amazing Race passport"] });
+});
+
+test("gather requirements match spec §7.2", () => {
+  const short = (id: string): string => id.replace("minecraft:", "");
+  const table = Object.fromEntries(TERRAINS.map((t) => [t, [GATHER[t].count, GATHER[t].items.map(short)]]));
+  const logs = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak"].map((w) => `${w}_log`);
+  assert.deepEqual(table, {
+    desert: [32, ["sand", "red_sand"]],
+    snowy: [16, ["snowball"]],
+    forest: [16, logs],
+    plains: [10, ["wheat_seeds"]],
+    mountain: [32, ["cobblestone", "cobbled_deepslate"]],
+    swamp: [32, ["dirt", "mud"]],
+  });
+});
+
+test("detour pairs match spec §7.3", () => {
+  assert.deepEqual(
+    DETOUR_PAIRS.map((p) => `${p.a.name}/${p.b.name} ${p.a.kind}/${p.b.kind}`),
+    [
+      "Aim/Climb archery/parkour",
+      "Fight/Find hunt/haystack",
+      "Muscle/Mind gather/quiz",
+      "Dig/Shoot haystack/archery",
+      "Brains/Brawn quiz/hunt",
+      "Hike/Haul parkour/gather",
+    ],
+  );
+});
+
+test("roadblock kinds and hints match spec §7.3", () => {
+  assert.deepEqual([...ROADBLOCK_KINDS], ["archery", "parkour", "haystack", "quiz", "hunt"]);
+  assert.deepEqual(ROADBLOCK_HINTS, {
+    archery: "Who has a good eye?",
+    parkour: "Who's light on their feet?",
+    haystack: "Who's ready to dig deep?",
+    quiz: "Who's the brains of this team?",
+    hunt: "Who's ready for a fight?",
+    recall: "Who's been paying attention?",
+  });
+});
+>>>>>>> origin/main

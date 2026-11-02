@@ -4,6 +4,15 @@ import { Rng } from "../src/core/rng.js";
 
 const draw = (rng: Rng, n: number): number[] => Array.from({ length: n }, () => rng.next());
 
+// Saved worlds and bug-report seeds depend on this exact sequence: changing the algorithm breaks them.
+test("seed 42 yields the reference mulberry32 sequence", () => {
+  const rng = new Rng(42);
+  assert.deepEqual(draw(rng, 3), [0.6011037519201636, 0.44829055899754167, 0.8524657934904099]);
+  assert.equal(rng.state, 1199730185);
+  draw(rng, 97);
+  assert.equal(rng.state, 2767954910);
+});
+
 test("the same seed reproduces the same sequence", () => {
   assert.deepEqual(draw(new Rng(42), 20), draw(new Rng(42), 20));
 });
