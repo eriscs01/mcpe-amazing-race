@@ -61,6 +61,10 @@ const savedCount = (bag: PropertyBag): number => {
   return typeof n === 'number' ? n : 0;
 };
 
+/**
+ * Writes all chunks in one call. If a write throws part-way, the stored chunks can mix old
+ * and new text until the session's next periodic retry rewrites them all.
+ */
 export function saveState(bag: PropertyBag, state: State): void {
   const chunks = splitChunks(JSON.stringify(state), CHUNK_BYTES);
   const previous = savedCount(bag);
@@ -75,7 +79,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => (
 
 /**
  * Saves grow additively: a field missing from an older save takes its default, one level
- * deep for nested records such as `settings` and `leg`.
+ * deep for nested records such as `settings` and `leg`. Elements of arrays and maps (teams,
+ * stops, players) are not filled: fields added to them later must be optional or read with `??`.
  */
 function withDefaults(saved: Record<string, unknown>): State {
   const defaults: Record<string, unknown> = { ...createState(0) };

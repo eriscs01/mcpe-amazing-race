@@ -33,6 +33,8 @@ export class Session {
 
   private saveFailing = false;
 
+  private droppedLogged = false;
+
   constructor(private readonly deps: SessionDeps) {
     this.log = new Logger(deps.sink, () => ({ clock: this.state?.clock }));
   }
@@ -68,7 +70,13 @@ export class Session {
 
   dispatch(action: Action): void {
     const { state } = this;
-    if (!state) return;
+    if (!state) {
+      if (action.type !== 'tick' && !this.droppedLogged) {
+        this.log.warn('droppedNoState', { action: action.type });
+        this.droppedLogged = true;
+      }
+      return;
+    }
     const out = reduce(state, action);
     if (out.refusal) {
       this.log.warn('refused', {

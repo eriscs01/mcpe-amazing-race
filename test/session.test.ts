@@ -80,6 +80,7 @@ test('an unreadable save is kept untouched and the add-on stays idle', () => {
   const [line] = cap.find('loadFailed');
   assert.equal(line?.level, 'error');
   assert.match(line?.line ?? '', /reason=missingChunk/);
+  assert.equal(cap.find('droppedNoState').length, 1, 'dropped actions are explained once');
 });
 
 test('a state change is saved immediately', () => {
@@ -133,6 +134,25 @@ test('actions before the world has loaded are ignored', () => {
   session.onTick(SAVE_EVERY_TICKS);
   assert.equal(session.state, undefined);
   assert.deepEqual([bag.writes, executed], [0, []]);
+});
+
+test('a save that fails part-way is made whole by the retry', () => {
+  const { bag, session } = setup(createState(1));
+  session.load();
+  const bigName = 'x'.repeat(70_000);
+  let writes = 0;
+  const real = bag.set.bind(bag);
+  bag.set = (key, value) => {
+    writes += 1;
+    if (writes === 2) throw new Error('write failed');
+    real(key, value);
+  };
+  session.state = { ...createState(1), players: { p1: { name: bigName } } };
+  session.dispatch({ type: 'setPhase', to: 'generating' });
+  bag.set = real;
+  session.onTick(SAVE_EVERY_TICKS);
+  assert.equal(saved(bag).players.p1?.name, bigName);
+  assert.equal(saved(bag).phase, 'generating');
 });
 
 test('a failed save is logged once, keeps the state in memory and is retried', () => {

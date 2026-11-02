@@ -123,6 +123,8 @@ interface Team { id: string; name: string; color: string; members: string[]; sta
   departAt?: number; lastClearedStop: number; lockoutUntil?: number; }
 ```
 
+Older saves are filled in from `createState` one level deep (top-level fields and records like `settings`, `leg`). Fields added later to array or map elements (`Team`, `Stop`, `PlayerRecord`) must be optional or read with `??`.
+
 Transient (not persisted): open forms, separation timers, HUD caches, retry queues — all rebuildable from State.
 
 ### 2.4 Runtime loop and timing
@@ -193,7 +195,9 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | RNG | Seeded and stored, so a course and quiz draw can be reproduced for bug reports. |
 | World reopened while the race was running | Loaded as `paused` (logged `pausedOnLoad`); the host unpauses once racers are back. |
 | Chunk size unit (§13) | Chunks are at most 30,000 UTF-8 bytes, which also meets "30,000 characters" and the 32,767 limit however the game counts. |
-| Unreadable save | Logged `loadFailed reason=…`; the stored chunks are never overwritten and the add-on stays idle. |
+| Unreadable save | Logged `loadFailed reason=…`; the stored chunks are never overwritten and the add-on stays idle (later actions log `droppedNoState` once). G3's host menu must show "Saved race unreadable — see Content Log" when the session has no state. |
+| Save interrupted part-way | Chunks can briefly mix old and new text; the in-memory state is kept and the 5 s retry rewrites every chunk. Only closing the world inside that window loses the save (`badJson` on load). |
+| Where the host id is stored (§3) | Inside the chunked state as `hostId`, not in its own dynamic property; it persists the same way. |
 | "Saved immediately after any state change" | Every accepted action is saved at once; race clock ticks alone are saved every 5 s. |
 
 ---
