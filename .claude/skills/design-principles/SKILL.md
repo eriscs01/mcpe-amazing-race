@@ -1,120 +1,81 @@
 ---
 name: design-principles
-description: Apply clean code, the Single Responsibility Principle and the Open-Closed Principle to this Bedrock add-on. Use when deciding where new logic belongs (src/core vs src/mc); when splitting or merging a module, file or function; when adding a new case to an existing mechanism (a challenge kind, stop type, effect, host menu screen, penalty, advantage); when reviewing code for design quality; or when the user asks about clean code, SRP, OCP, SOLID, refactoring or code quality.
+description: Apply SRP, the Open-Closed Principle and clean code to decide where logic belongs and how to extend it. Use when adding or moving logic, adding a new case to an existing mechanism, splitting a module, or reviewing design quality.
 ---
 
 # Design principles
 
-Three principles, read the way their authors meant them, applied to this project. The research
-behind each, with sources and criticisms, is in [reference.md](reference.md).
+Background and sources for each principle: [reference.md](reference.md).
 
-The project's own rules come first: `CLAUDE.md`, the spec (`docs/amazing-race-addon-spec.md`)
-and the technical design (`docs/technical-design.md`). Where they are explicit, they win.
+**Project specifics come from the project, not this skill.** Read `CLAUDE.md` and the design
+documents it points to for the current layout, module ownership and extension points. Where
+they are explicit, they win. This skill explains the reasoning and covers what they leave open.
 
-## 0. The boundary this project is built on
+## 0. Rules live in the core, Minecraft lives in the adapter
 
-- **`src/core/**` holds every game rule and never imports `@minecraft/*`.** It takes plain data
-  (ids, positions, block type ids, clock ticks) and returns new state plus a list of effects.
-- **`src/mc/**` translates.** Events become core actions; effects become world calls. It holds
-  no rules. A race `if` in `src/mc` (who may open a clue box, whether a hit counts, how long a
-  penalty is) belongs in `src/core`.
-- **`src/main.ts` wires only.** It subscribes events at top level and initialises inside
-  `world.afterEvents.worldLoad` (no world access at module top level, Script API 2.0).
+- Game rules are pure: plain data in, new state and a list of effects out. They never import
+  `@minecraft/*`, so they can be tested in Node.
+- The adapter translates only: events become actions, effects become world calls. A race
+  decision (who may act, whether something counts, how long a penalty is) found in the adapter
+  belongs in the core.
+- The entry point only wires. No world access at module top level (Script API 2.0).
 
 ## 1. Single Responsibility: one owner per reason to change
 
-Martin: "a module should be responsible to one, and only one, actor". Gather what changes for
-the same reason; separate what changes for different reasons. It is **not** "a function does
-one thing".
+A module answers to one actor: gather what changes for the same reason, separate what changes
+for different reasons. It is not "a function does one thing".
 
-Reasons to change in this project, each with its own home:
+Typical separate reasons in this project: tunable numbers and tables; one domain rule set
+(course, a challenge, leg flow, advantages); what players are shown; how state is stored; how
+the world is read and written; how forms behave.
 
-| Reason to change | Owner |
-|---|---|
-| Tunable numbers and tables (penalties, radius, colours, gather items, hints) | `core/config.ts` |
-| Derived plan, elimination schedule | `core/plan.ts` |
-| Course shape (stops, segments, pinned waypoints, names) | `core/course/planner.ts` |
-| Terrain classification of a sampled column | `core/course/terrain.ts` |
-| One challenge's rules | `core/tasks/<kind>.ts` |
-| Leg flow, check-in, placement, eliminations | `core/race/engine.ts` |
-| Advantages (U-Turn, Express Pass, Speed Bump) | `core/race/advantages.ts` |
-| What the HUD says | `core/hud.ts` |
-| How state is stored (chunked dynamic properties) | `mc/store.ts` |
-| How the world is read and written (chunks, ticking areas, blocks) | `mc/world.ts`, `mc/terrainProbe.ts`, `mc/builder.ts` |
-| How forms look and are retried | `mc/ui/*` |
-
-Checks:
-
-- **Name the actor.** For each file or function you touch, say who would ask for it to change
-  (the host experience, a challenge's rules, the Script API, the save format). Two answers mean
-  two homes.
-- **One rule, one place.** Presence ("all online members within 10 blocks"), eligibility
-  (Detour member vs. Roadblock performer), Roadblock caps and penalty amounts are each decided
-  once in core. Forms and event handlers call that decision; they never re-check it.
-- **No copied facts.** Derived values (current leg, legs per day, whether a team is last,
-  whether the Express Pass has expired, sidebar score) are computed from state, not stored a
-  second time.
-- **Constants live in `config.ts`.** No magic numbers for ticks, distances or counts in logic;
-  express real time via `HOUR` / ticks-per-second constants.
-- **Don't split by technique.** `helpers.ts`, `validators.ts`, `utils.ts` scatter an actor.
-  Split only along a different reason to change.
+- **Name the actor** for each file or function you touch. Two answers mean two homes.
+- **One rule, one place.** A rule (presence, eligibility, caps, penalties) is decided once by
+  its owner; forms and handlers call it, never re-check it.
+- **No copied facts.** Derive values from state instead of storing them twice.
+- **Tunables in config**, not as magic numbers in logic.
+- **Don't split by technique** (`helpers`, `utils`, `validators`); split only along a
+  different reason to change.
 
 ## 2. Open-Closed: add the new case, don't edit the mechanism
 
-Meyer (1988), Martin (1996), Larman's *Protected Variation* (2001): put a stable interface
-around the points you **predict** will vary, and only those.
+Put a stable interface around points that are **predicted** to vary, and only those.
 
-Predicted variation points in this project (designed extension points):
+- **Find the existing extension point first** (a registry, a handler table, an interface such
+  as a challenge kind). Add to it instead of branching in the code that consumes it.
+- **A growing `if (kind === …)` chain** wants a map or interface owned by whoever defines the
+  kinds.
+- **Closed sets are deliberate.** Phases, statuses, stop types and effect kinds are closed
+  unions: use exhaustive `switch` with a `never` check so the compiler finds every handler.
+- **One case is not a pattern.** Abstract when the second real case arrives.
+- **Persisted formats grow additively**, with a schema version and defaults on load.
+- **Extend at the edge.** The core never imports the adapter.
 
-- **Challenge kinds** → the `TaskKind` interface; a new kind is a new file plus one registry
-  entry. The engine never switches on kind.
-- **Effects** → a closed `Effect` union executed by `mc/world.ts`; adding one is deliberate
-  and the exhaustive switch must flag every handler.
-- **Host menu screens** → a phase → `[{label, handler}]` table, not a growing `if` chain.
-- **Periodic systems** → registered with a period in `mc/loop.ts`.
-- **Persisted state** → versioned (`State.v`); new fields are additive with defaults on load.
+## 3. Clean code
 
-Rules:
+Defaults from *Clean Code*, balanced by Ousterhout: prefer deep modules with small interfaces
+over many shallow ones; judge by how hard code is to understand and change.
 
-- **Find the existing extension point first** before adding a case-specific branch.
-- **Deliberately closed sets are not violations.** `Phase`, stop types, team status and
-  `Effect` are closed unions: use exhaustive `switch` with a `never` check so the compiler finds
-  every handler when a member is added.
-- **One case is not a pattern.** Don't add an interface for something the spec defines once
-  (for example Recall). Write it plainly; abstract when a second real case appears.
-- **Extend at the edge.** The core never imports adapters.
+- **Use the spec's vocabulary** consistently (leg, stop, clue box, Detour, Roadblock, Pit Stop,
+  race clock…).
+- **Make illegal states unrepresentable:** discriminated unions, typed ids, strict compiler
+  settings stay on.
+- **Fail fast on programmer errors**; treat expected world conditions (unloaded chunk, player
+  offline, busy form) as normal outcomes.
+- **Vanilla identifiers only**, verified, kept with the other tunables.
+- **Comments say why.** No dead code, no speculative generality. Stay inside the task's scope.
 
-## 3. Clean code: readable by the next person
+## How to use
 
-*Clean Code* heuristics as defaults, Ousterhout's *A Philosophy of Software Design* as the
-counterweight: prefer deep modules with small interfaces.
+**Writing:** core or adapter (0) → name the actor (1) → find the extension point (2) → write
+it plainly (3).
 
-- **Use the spec's vocabulary** everywhere: leg, stop, Route Info, Detour, Roadblock, Pit Stop,
-  Finish, clue box, mat, performer, Speed Bump, U-Turn, Express Pass, race clock, race hour.
-- **Make illegal states unrepresentable.** Discriminated unions over optional-field combos;
-  typed ids (`PlayerId`, `TeamId`, `StopId`); `noUncheckedIndexedAccess` stays on.
-- **Fail fast on programmer errors** (a malformed config table, an unknown stop id) with a
-  named error; handle expected world conditions (unloaded chunk, player offline, form busy)
-  as normal outcomes.
-- **Identifiers are vanilla and verified.** Every block/item/entity/particle id is a current
-  Bedrock id, kept in `config.ts`.
-- **Size budget.** The spec targets ~1,500 lines; prefer fewer, deeper modules over many
-  shallow ones.
-- **Comments say why**, or state a contract the type can't. No dead code, no speculative
-  generality, no commented-out blocks. Stay inside the task's implementation group.
-
-## How to use this skill
-
-**When writing code:** decide core vs. adapter (section 0), name the actor (1), look for the
-extension point (2), then write it plainly (3).
-
-**When reviewing:** report only findings that would change the code, each as
+**Reviewing:** report only findings that would change the code, as
 
 ```
-<file>:<line> — <principle>: <what is wrong> → <concrete change>
+<file>:<line> — <principle>: <problem> → <change>
 ```
 
-ordered by impact: a core/adapter boundary breach first, then a rule enforced twice or a fact
-stored twice, then an adapter making decisions, then a mechanism that needs editing per case,
-then readability. Say explicitly when a candidate is a deliberate closed set or a one-case
-abstraction you recommend *not* adding. Out-of-scope refactors are follow-ups, not edits.
+ordered by impact: core/adapter breach, rule or fact duplicated, adapter deciding, mechanism
+edited per case, readability. Note deliberate closed sets and one-case abstractions you advise
+against. Out-of-scope refactors are follow-ups.
