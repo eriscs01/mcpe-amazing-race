@@ -51,6 +51,10 @@ for (const c of cardinals) {
   });
 }
 
+test("yawToDirection(0) is exactly due south, with no negative zero", () => {
+  assert.deepEqual(yawToDirection(0), { x: 0, z: 1 });
+});
+
 test("relativeYaw() is the signed turn from facing to target", () => {
   near(relativeYaw(0, 90), 90);
   near(relativeYaw(170, -170), 20);

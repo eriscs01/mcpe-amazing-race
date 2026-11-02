@@ -31,6 +31,17 @@ test("src/core never imports @minecraft/* or the adapter", () => {
 });
 
 test("the import scanner sees every import form", () => {
-  const src = `import { a } from "@minecraft/server";\nimport "@minecraft/x";\nconst m = await import('../mc/world.js');\nexport * from "./ok.js";`;
-  assert.deepEqual(specifiers(src), ["@minecraft/server", "@minecraft/x", "../mc/world.js", "./ok.js"]);
+  const src = [
+    `import { a } from "@minecraft/server";`,
+    `import "@minecraft/x";`,
+    `const m = await import('../mc/world.js');`,
+    `export * from "./ok.js";`,
+    `import type { T } from "@minecraft/server-ui";`,
+    `export { b } from "../mc/items.js";`,
+    `import {\n  c,\n  d,\n} from "@minecraft/common";`,
+  ].join("\n");
+  assert.deepEqual(specifiers(src), [
+    "@minecraft/server", "@minecraft/x", "../mc/world.js", "./ok.js",
+    "@minecraft/server-ui", "../mc/items.js", "@minecraft/common",
+  ]);
 });

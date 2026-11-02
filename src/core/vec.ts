@@ -27,7 +27,7 @@ export function normalizeYaw(yaw: number): number {
 
 /** Unit direction on the X/Z plane for a yaw. */
 export function yawToDirection(yaw: number): { x: number; z: number } {
-  return { x: -Math.sin(yaw * RAD), z: Math.cos(yaw * RAD) };
+  return { x: 0 - Math.sin(yaw * RAD), z: Math.cos(yaw * RAD) }; // 0 - avoids −0 due south
 }
 
 /** Yaw that faces from `from` towards `to`. */
