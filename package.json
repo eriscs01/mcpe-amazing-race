@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build": "tsc",
     "test": "rm -rf build/test && tsc -p tsconfig.test.json && node --test \"build/test/test/**/*.test.js\"",
-    "package": "npm run build && node scripts/package.mjs",
+    "package": "rm -rf behavior_pack/scripts && npm run build && node scripts/package.mjs",
     "clean": "rm -rf behavior_pack/scripts build dist"
   },
   "dependencies": {
