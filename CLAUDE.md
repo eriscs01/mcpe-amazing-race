@@ -21,7 +21,7 @@ docs/            spec, technical design, in-game test checklist
 - Module ownership, extension points, test layers and logging conventions: technical design §2. Keep it current when they change; the skills defer to it.
 - Relative imports end in `.js` (NodeNext).
 - Code style is Airbnb (`eslint-config-airbnb-extended`, type-aware, formatting included); plus Microsoft's `eslint-plugin-minecraft-linting` (prefer a Script API over `runCommand`); deviations and their reasons are in `eslint.config.mjs`. Run `npm run format` after editing; `npm run lint` fails on any warning.
-- Typecheck after every edit to a TS/JS file (`npm run typecheck`). A PostToolUse hook does this automatically and reports errors; fix them before moving on.
+- Every edit is checked like CI does: a PostToolUse hook (`.claude/hooks/check-on-edit.sh`) runs ESLint with `--fix` on the edited file (formatting is corrected in place; re-read the file before editing it again) and an incremental typecheck, and reports what's left. Fix it before moving on.
 - Run `npm run typecheck`, `npm run lint`, `npm run coverage` and `npm run package` before opening a PR (CI enforces all four; coverage must stay at or above 80% of `src/core` lines); note the in-game check result in the PR when the group is marked ✱.
 - Apply the `design-principles` skill while writing code and review the branch diff with it before opening a PR.
 - Apply the `test-driven-development` skill: tests first, and prove each core↔adapter connection a change touches.
