@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import js from '@eslint/js';
 import { configs, plugins, rules } from 'eslint-config-airbnb-extended';
+import minecraftLinting from 'eslint-plugin-minecraft-linting';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -42,6 +43,14 @@ export default [
         tsconfigRootDir: root,
       },
     },
+  },
+
+  {
+    // Microsoft's Minecraft add-on lint: prefer a Script API over runCommand when one exists.
+    name: 'minecraft/scripts',
+    files: ['src/**/*.ts'],
+    plugins: { 'minecraft-linting': minecraftLinting },
+    rules: { 'minecraft-linting/avoid-unnecessary-command': 'error' },
   },
 
   {

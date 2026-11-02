@@ -29,6 +29,7 @@
     "c8": "12.0.0",
     "eslint": "9.39.5",
     "eslint-config-airbnb-extended": "3.3.0",
+    "eslint-plugin-minecraft-linting": "2.0.13",
     "typescript": "6.0.3",
     "vanilla-data-min": "npm:@minecraft/vanilla-data@1.21.90"
   }

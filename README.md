@@ -16,7 +16,7 @@ npm install
 npm run typecheck   # type-check against @minecraft/server 2.0.0
 npm run build       # compile src/ -> behavior_pack/scripts/
 npm test            # core unit tests (Node >= 22)
-npm run lint        # ESLint, Airbnb style (rules + formatting)
+npm run lint        # ESLint: Airbnb style (rules + formatting) + Minecraft lint
 npm run format      # auto-fix what ESLint can (formatting included)
 npm run coverage    # tests + coverage; fails below 80% lines of src/core
 npm run package     # clean build + checks -> dist/AmazingRace.mcaddon
