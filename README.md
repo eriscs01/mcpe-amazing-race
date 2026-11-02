@@ -1,6 +1,6 @@
 # Minecraft Bedrock: Amazing Race
 
-A behavior-pack add-on that plays *The Amazing Race* in a dedicated world: teams, one host, automatic challenge verification. Design: [amazing-race-addon-spec.md](amazing-race-addon-spec.md).
+A behavior-pack add-on that plays *The Amazing Race* in a dedicated world: teams, one host, automatic challenge verification. Spec: [docs/amazing-race-addon-spec.md](docs/amazing-race-addon-spec.md) · Technical design: [docs/technical-design.md](docs/technical-design.md).
 
 ## Develop
 
