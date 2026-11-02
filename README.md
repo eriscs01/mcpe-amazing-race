@@ -16,6 +16,7 @@ npm install
 npm run typecheck   # type-check against @minecraft/server 2.0.0
 npm run build       # compile src/ -> behavior_pack/scripts/
 npm test            # core unit tests (Node >= 22)
+npm run coverage    # tests + coverage report (build/coverage)
 npm run package     # clean build + checks -> dist/AmazingRace.mcaddon
 ```
 

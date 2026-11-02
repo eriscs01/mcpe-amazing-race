@@ -4,7 +4,8 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "build/test",
-    "types": ["node"]
+    "types": ["node"],
+    "sourceMap": true
   },
   "include": ["src/core", "test"]
 }
