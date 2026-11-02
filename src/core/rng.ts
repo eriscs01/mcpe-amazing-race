@@ -37,7 +37,7 @@ export class Rng {
   }
 
   pick<T>(items: readonly T[]): T {
-    if (items.length === 0) throw new RangeError("pick() from an empty list");
+    if (items.length === 0) throw new RangeError('pick() from an empty list');
     return items[Math.floor(this.next() * items.length)]!;
   }
 

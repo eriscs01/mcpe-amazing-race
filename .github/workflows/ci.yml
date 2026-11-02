@@ -23,7 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run lint # code quality gate (Biome recommended rules)
+      - run: npm run lint # code quality gate: Biome lint + Airbnb-style format check
       - run: npm run coverage # tests; fails below 80% line coverage of src/core
       - run: npm run package
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
