@@ -19,6 +19,7 @@ docs/            spec, technical design, in-game test checklist
 - Stable APIs only: `@minecraft/server` 2.0.0 and `@minecraft/server-ui` 2.0.0. No Beta, no experiments, no resource pack, vanilla identifiers only.
 - One implementation group (technical design §4, G1–G18) per branch and PR. Stay in its scope.
 - Relative imports end in `.js` (NodeNext).
+- Typecheck after every edit to a TS/JS file (`npm run typecheck`). A PostToolUse hook does this automatically and reports errors; fix them before moving on.
 - Run `npm run typecheck`, `npm test` (once it exists) and `npm run package` before opening a PR; note the in-game check result in the PR when the group is marked ✱.
 - Apply the `design-principles` skill while writing code and review the branch diff with it before opening a PR.
 - Apply the `test-driven-development` skill: tests first, and prove each core↔adapter connection a change touches.
