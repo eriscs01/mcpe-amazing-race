@@ -170,7 +170,7 @@ Detour, Roadblock, Speed Bump and Recall reuse the same interface; the engine on
 | Identifiers | Vanilla ids live only in the `BLOCK` / `ITEM` / `ENTITY` tables in `config.ts`. `test/ids.test.ts` checks each against `@minecraft/vanilla-data` for the oldest supported game (1.21.90, installed as the `vanilla-data-min` alias) and the latest, and fails if any other `minecraft:` string appears in `config.ts`. vanilla-data has no particle list: particle ids get a hand-verified table with a source comment. |
 | In-game | Checklist in `docs/ingame-test.md`, run per milestone on 1.21.90+ with 2 players. |
 
-Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = clean build + `node --test` over `build/test/test/**/*.test.js` (Node ≥ 22). `npm run typecheck` checks both projects; CI runs typecheck, test and package.
+Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = clean build + `node --test` over `build/test/test/**/*.test.js` (Node ≥ 22). `npm run typecheck` checks both projects. `npm run lint` is the code-quality gate: Biome's recommended rules, warnings fail (`noNonNullAssertion` is off because `noUncheckedIndexedAccess` makes `!` the explicit marker for a proven in-range index; ESLint's TypeScript plugin can't run on TypeScript 7). `npm run coverage` runs the tests under c8, source-mapped to `src/core/*.ts`, and fails below 80% line coverage, counting untested core files. CI runs typecheck, lint, coverage and package in the required `build` check; GitHub Code Quality and its coverage upload aren't available for this personal repository.
 
 ---
 
