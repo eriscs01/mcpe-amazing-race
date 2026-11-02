@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-// Invariants the spec places on the tunable tables. Values themselves live in config.ts;
-// these tests only fail when a table stops satisfying a rule the race depends on.
-=======
 // Spec tables: invariants the race depends on, then exact values from the spec so an
 // accidental edit to a table fails a test.
->>>>>>> origin/main
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -12,11 +7,8 @@ import {
   GATHER,
   HOUR,
   KIT,
-<<<<<<< HEAD
-=======
   PASSPORT,
   RACE_CONTROL,
->>>>>>> origin/main
   PENALTY_HOURS,
   ROADBLOCK_HINTS,
   ROADBLOCK_KINDS,
@@ -100,8 +92,6 @@ test("the starter kit is the spec's tools and bread", () => {
     [["stone_pickaxe", 1], ["stone_axe", 1], ["stone_shovel", 1], ["stone_sword", 1], ["bread", 16]],
   );
 });
-<<<<<<< HEAD
-=======
 
 test("team colours match spec §4 in order", () => {
   assert.deepEqual(
@@ -162,4 +152,3 @@ test("roadblock kinds and hints match spec §7.3", () => {
     recall: "Who's been paying attention?",
   });
 });
->>>>>>> origin/main
