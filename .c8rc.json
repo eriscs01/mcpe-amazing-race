@@ -2,6 +2,8 @@
   "all": true,
   "src": ["build/test/src/core"],
   "include": ["build/test/src/core/**"],
-  "reporter": ["cobertura", "text-summary"],
-  "reports-dir": "build/coverage"
+  "reporter": ["text", "lcov"],
+  "reports-dir": "build/coverage",
+  "check-coverage": true,
+  "lines": 80
 }
