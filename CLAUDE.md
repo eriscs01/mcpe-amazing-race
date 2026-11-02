@@ -25,3 +25,14 @@ docs/            spec, technical design, in-game test checklist
 - Apply the `design-principles` skill while writing code and review the branch diff with it before opening a PR.
 - Apply the `test-driven-development` skill: tests first, and prove each core↔adapter connection a change touches.
 - Apply the `debuggability` skill: guarded handlers, structured log lines keyed by race clock/team/leg, no swallowed errors.
+
+## Group workflow
+
+Each implementation group goes through these steps in order:
+
+1. **Branch** from the latest `main`, named for the group (e.g. `feat/g2-state-clock`).
+2. **TDD:** failing test first, then code, per the `test-driven-development` skill. Typecheck, test and package pass locally.
+3. **Isolated review:** run a nested agent on Sonnet in its own worktree to review the branch diff read-only against the spec, technical design, this file and the skills; it returns a verdict and ranked findings.
+4. **Address findings** from that review and from CI on the PR. Fix what matters; report what was left and why.
+5. **After merge, clean up:** delete the merged local and remote branch, remove agent worktrees (`.claude/worktrees/`), and drop build output and other data the next group doesn't need (`build/`, `dist/`).
+6. **Stop.** Do not start the next group until told to. Report follow-ups first (open review nits, deferred items, in-game checks, spec questions) so each can be implemented or deferred.
