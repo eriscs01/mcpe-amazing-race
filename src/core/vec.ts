@@ -21,7 +21,7 @@ export function horizontalDistance(a: Vec3, b: Vec3): number {
 
 /** Maps any angle into (−180, 180]. */
 export function normalizeYaw(yaw: number): number {
-  const r = (((yaw + 180) % 360) + 360) % 360 - 180;
+  const r = ((((yaw + 180) % 360) + 360) % 360) - 180;
   return r === -180 ? 180 : r + 0; // + 0 turns −0 into 0
 }
 

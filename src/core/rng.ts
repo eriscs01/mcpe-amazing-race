@@ -1,5 +1,6 @@
 // Seeded PRNG (mulberry32). The seed and current state are plain numbers, so a course or quiz
 // draw can be saved, resumed and reproduced in a test from a host's bug report.
+/* eslint-disable no-bitwise -- mulberry32 is defined by 32-bit integer operations */
 
 export class Rng {
   private s: number;
@@ -37,16 +38,19 @@ export class Rng {
   }
 
   pick<T>(items: readonly T[]): T {
-    if (items.length === 0) throw new RangeError("pick() from an empty list");
-    return items[Math.floor(this.next() * items.length)]!;
+    if (items.length === 0) throw new RangeError('pick() from an empty list');
+    // The index is in range, so the element is a T even when T itself allows undefined.
+    return items[Math.floor(this.next() * items.length)] as T;
   }
 
   /** A shuffled copy (Fisher–Yates); the input is not modified. */
   shuffle<T>(items: readonly T[]): T[] {
     const out = [...items];
-    for (let i = out.length - 1; i > 0; i--) {
+    for (let i = out.length - 1; i > 0; i -= 1) {
       const j = Math.floor(this.next() * (i + 1));
-      [out[i], out[j]] = [out[j]!, out[i]!];
+      const swap = out[i] as T; // i and j are in range
+      out[i] = out[j] as T;
+      out[j] = swap;
     }
     return out;
   }
