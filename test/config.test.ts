@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  ADDON_VERSION,
   DETOUR_PAIRS,
   GATHER,
   HOUR,
@@ -13,6 +14,7 @@ import {
   RACE_CONTROL,
   ROADBLOCK_HINTS,
   ROADBLOCK_KINDS,
+  SAVE_EVERY_TICKS,
   SETUP,
   TEAM_COLORS,
   TERRAIN_BLOCKS,
@@ -206,4 +208,16 @@ test('roadblock kinds and hints match spec §7.3', () => {
     hunt: "Who's ready for a fight?",
     recall: "Who's been paying attention?",
   });
+});
+
+test('the version logged at load is the package version', async () => {
+  const { readFileSync } = await import('node:fs');
+  const pkg = JSON.parse(
+    readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  assert.equal(ADDON_VERSION, pkg.version);
+});
+
+test('state is saved every 5 seconds', () => {
+  assert.equal(SAVE_EVERY_TICKS / TICKS_PER_SECOND, 5);
 });

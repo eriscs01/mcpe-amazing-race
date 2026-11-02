@@ -57,7 +57,12 @@ src/
   main.ts                 entry: subscribe events at top level, init in worldLoad
   core/
     config.ts             constants & tables (colours, terrain, gather, detour pairs, hints, penalties, kit)
-    types.ts              State, Team, Stop, Task, Settings, Effect, Action
+    types.ts              State, Team, Stop, Task, Settings, Effect, Action, schema version
+    state.ts              createState: a new race, and the defaults older saves are filled from
+    phase.ts              phase machine: allowed lifecycle transitions
+    persist.ts            chunked JSON save/load over a PropertyBag, validation, additive defaults
+    session.ts            live state holder: load, dispatch → reduce → effects, save timing
+    log.ts                Logger (event + key=value fields keyed by race clock) and guard()
     rng.ts                seeded PRNG (mulberry32); seed stored in state
     vec.ts                distance, heading, yaw→direction
     plan.ts               derived plan (legs, radius, boundary) + elimination schedule
@@ -73,7 +78,7 @@ src/
     clock.ts              race clock, timers keyed to clock ticks
   mc/
     loop.ts               single runInterval(1): advance clock, run periodic systems by modulo
-    store.ts              chunked dynamic-property persistence, dirty flag
+    store.ts              world dynamic properties as the core's PropertyBag
     items.ts              Race Control / Passport create + recognise
     world.ts              effect executor, block/entity helpers, safe chunk access
     terrainProbe.ts       ticking area load + column sampling + landmark scan
@@ -130,7 +135,7 @@ Transient (not persisted): open forms, separation timers, HUD caches, retry queu
 
 - Subscribe at module top level in `main.ts`; handlers return immediately if `state` is not yet loaded.
 - `beforeEvents` handlers only decide `cancel` from in-memory state, then `system.run(() => dispatch(...))`.
-- Every dispatch marks state dirty; `store.save()` runs at end of the tick if dirty (spec: "immediately after any state change") and every 100 ticks regardless.
+- `Session.dispatch` saves at once after any accepted action (spec: "immediately after any state change"); clock-only changes are saved every 100 ticks, and a failed save is logged once and retried on that period.
 - All world reads that can hit unloaded chunks go through `safe(fn)` which catches `LocationInUnloadedChunkError` / `undefined` and returns `undefined`.
 
 ### 2.6 Course generation pipeline
@@ -186,6 +191,10 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Haystack wool refill | Rebuild the zone's pile when hidden count reaches 0 and some team still needs it. |
 | Sidebar entries | Fake-player scores keyed by coloured team name; `[OUT]` prefix re-keys the entry. |
 | RNG | Seeded and stored, so a course and quiz draw can be reproduced for bug reports. |
+| World reopened while the race was running | Loaded as `paused` (logged `pausedOnLoad`); the host unpauses once racers are back. |
+| Chunk size unit (§13) | Chunks are at most 30,000 UTF-8 bytes, which also meets "30,000 characters" and the 32,767 limit however the game counts. |
+| Unreadable save | Logged `loadFailed reason=…`; the stored chunks are never overwritten and the add-on stays idle. |
+| "Saved immediately after any state change" | Every accepted action is saved at once; race clock ticks alone are saved every 5 s. |
 
 ---
 

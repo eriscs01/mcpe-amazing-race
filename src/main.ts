@@ -1,6 +1,29 @@
+// Entry point: wiring only. Event subscriptions live at top level; world access starts in
+// worldLoad (Script API 2.0 forbids it earlier). Handlers ignore events until state is loaded.
 import { world } from '@minecraft/server';
 
-// No world access at module top level (Script API 2.0): initialise in worldLoad.
-world.afterEvents.worldLoad.subscribe(() => {
-  console.warn('Amazing Race loaded');
+import { guard } from './core/log.js';
+import { Session } from './core/session.js';
+import { startLoop } from './mc/loop.js';
+import { worldBag } from './mc/store.js';
+import { executeEffects } from './mc/world.js';
+
+import type { Level } from './core/log.js';
+
+// Content Log shows warnings and errors; outcome (info) lines go to it as warnings.
+const sink = (level: Level, line: string): void => {
+  if (level === 'error') console.error(line);
+  else console.warn(line);
+};
+
+const session: Session = new Session({
+  bag: worldBag,
+  sink,
+  execute: (effects) => executeEffects(effects, session.log),
+  newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });
+
+world.afterEvents.worldLoad.subscribe(guard(session.log, 'worldLoad', () => {
+  session.load();
+  startLoop(session);
+}));
