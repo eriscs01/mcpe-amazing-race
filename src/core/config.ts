@@ -1,0 +1,245 @@
+// Tunable constants and tables from the spec. Rules read these; nothing here decides anything.
+// Vanilla identifiers live only in the BLOCK / ITEM / ENTITY tables below, which
+// test/ids.test.ts checks against vanilla-data for the oldest supported and the latest game.
+
+// ── Vanilla identifiers ─────────────────────────────────────────────────────
+
+export const BLOCK = {
+  // desert
+  sand: "minecraft:sand",
+  redSand: "minecraft:red_sand",
+  sandstone: "minecraft:sandstone",
+  redSandstone: "minecraft:red_sandstone",
+  terracotta: "minecraft:hardened_clay", // plain terracotta keeps its legacy id on Bedrock
+  whiteTerracotta: "minecraft:white_terracotta",
+  orangeTerracotta: "minecraft:orange_terracotta",
+  yellowTerracotta: "minecraft:yellow_terracotta",
+  brownTerracotta: "minecraft:brown_terracotta",
+  redTerracotta: "minecraft:red_terracotta",
+  lightGrayTerracotta: "minecraft:light_gray_terracotta",
+  // snowy
+  snow: "minecraft:snow",
+  snowLayer: "minecraft:snow_layer",
+  ice: "minecraft:ice",
+  packedIce: "minecraft:packed_ice",
+  blueIce: "minecraft:blue_ice",
+  powderSnow: "minecraft:powder_snow",
+  // forest (also marked by passing leaves or logs on the way down)
+  podzol: "minecraft:podzol",
+  // plains
+  grassBlock: "minecraft:grass_block",
+  mycelium: "minecraft:mycelium",
+  // mountain
+  stone: "minecraft:stone",
+  gravel: "minecraft:gravel",
+  andesite: "minecraft:andesite",
+  diorite: "minecraft:diorite",
+  granite: "minecraft:granite",
+  deepslate: "minecraft:deepslate",
+  tuff: "minecraft:tuff",
+  calcite: "minecraft:calcite",
+  // swamp
+  mud: "minecraft:mud",
+  mangroveRoots: "minecraft:mangrove_roots",
+} as const;
+
+export const ITEM = {
+  clock: "minecraft:clock",
+  compass: "minecraft:compass",
+  // kit
+  stonePickaxe: "minecraft:stone_pickaxe",
+  stoneAxe: "minecraft:stone_axe",
+  stoneShovel: "minecraft:stone_shovel",
+  stoneSword: "minecraft:stone_sword",
+  bread: "minecraft:bread",
+  // gather
+  sand: "minecraft:sand",
+  redSand: "minecraft:red_sand",
+  snowball: "minecraft:snowball",
+  oakLog: "minecraft:oak_log",
+  spruceLog: "minecraft:spruce_log",
+  birchLog: "minecraft:birch_log",
+  jungleLog: "minecraft:jungle_log",
+  acaciaLog: "minecraft:acacia_log",
+  darkOakLog: "minecraft:dark_oak_log",
+  mangroveLog: "minecraft:mangrove_log",
+  cherryLog: "minecraft:cherry_log",
+  paleOakLog: "minecraft:pale_oak_log",
+  wheatSeeds: "minecraft:wheat_seeds",
+  cobblestone: "minecraft:cobblestone",
+  cobbledDeepslate: "minecraft:cobbled_deepslate",
+  dirt: "minecraft:dirt",
+  mud: "minecraft:mud",
+} as const;
+
+export const ENTITY = {} as const satisfies Record<string, `minecraft:${string}`>;
+
+export type BlockId = (typeof BLOCK)[keyof typeof BLOCK];
+export type ItemId = (typeof ITEM)[keyof typeof ITEM];
+
+// ── Time ────────────────────────────────────────────────────────────────────
+
+export const TICKS_PER_SECOND = 20;
+/** One race hour in race-clock ticks (30 real seconds). Used only for penalties. */
+export const HOUR = 30 * TICKS_PER_SECOND;
+
+/** Penalties in race hours (spec §8.8). Host-added penalties are chosen in the form. */
+export const PENALTY_HOURS = {
+  quitRoadblock: 4,
+  quitDetour: 6,
+  quitSpeedBump: 4,
+  separation: 0.5,
+  gliding: 0.5,
+} as const;
+
+// ── Host setup (spec §4) ────────────────────────────────────────────────────
+
+export const SETUP = {
+  sliders: {
+    days: { min: 1, max: 5, step: 1, default: 3 },
+    minutesPerDay: { min: 30, max: 120, step: 15, default: 60 },
+    teamSize: { min: 2, max: 4, step: 1, default: 2 },
+  },
+  toggles: {
+    hostRaces: false,
+    daylightCycle: true,
+  },
+} as const;
+
+// ── Teams (spec §4) ─────────────────────────────────────────────────────────
+
+export const TEAM_COLORS = [
+  { name: "Red", code: "§c" },
+  { name: "Blue", code: "§9" },
+  { name: "Green", code: "§a" },
+  { name: "Gold", code: "§6" },
+  { name: "Purple", code: "§5" },
+  { name: "Aqua", code: "§b" },
+  { name: "Pink", code: "§d" },
+  { name: "White", code: "§f" },
+  { name: "Gray", code: "§7" },
+  { name: "Jade", code: "§2" },
+  { name: "Teal", code: "§3" },
+  { name: "Maroon", code: "§4" },
+] as const;
+
+// ── Items and kit (spec §3, §8.1) ───────────────────────────────────────────
+
+export interface MenuItem {
+  readonly item: ItemId;
+  readonly nameTag: string;
+  readonly lore: readonly string[];
+}
+
+export const RACE_CONTROL: MenuItem = { item: ITEM.clock, nameTag: "§6Race Control", lore: ["Amazing Race host menu"] };
+export const PASSPORT: MenuItem = { item: ITEM.compass, nameTag: "§eRace Passport", lore: ["Amazing Race passport"] };
+
+export const KIT: readonly { readonly item: ItemId; readonly amount: number }[] = [
+  { item: ITEM.stonePickaxe, amount: 1 },
+  { item: ITEM.stoneAxe, amount: 1 },
+  { item: ITEM.stoneShovel, amount: 1 },
+  { item: ITEM.stoneSword, amount: 1 },
+  { item: ITEM.bread, amount: 16 },
+];
+
+// ── Terrain (spec §5, §6.2, §7.2) ───────────────────────────────────────────
+
+export const TERRAINS = ["desert", "snowy", "forest", "plains", "mountain", "swamp"] as const;
+export type Terrain = (typeof TERRAINS)[number];
+export const TERRAIN_FALLBACK: Terrain = "plains";
+
+/** Ground blocks that classify a stop. Forest is also marked by passing leaves or logs. */
+export const TERRAIN_BLOCKS: Record<Terrain, readonly BlockId[]> = {
+  desert: [
+    BLOCK.sand, BLOCK.redSand, BLOCK.sandstone, BLOCK.redSandstone, BLOCK.terracotta,
+    BLOCK.whiteTerracotta, BLOCK.orangeTerracotta, BLOCK.yellowTerracotta, BLOCK.brownTerracotta,
+    BLOCK.redTerracotta, BLOCK.lightGrayTerracotta,
+  ],
+  snowy: [BLOCK.snow, BLOCK.snowLayer, BLOCK.ice, BLOCK.packedIce, BLOCK.blueIce, BLOCK.powderSnow],
+  forest: [BLOCK.podzol],
+  plains: [BLOCK.grassBlock, BLOCK.mycelium],
+  mountain: [
+    BLOCK.stone, BLOCK.gravel, BLOCK.andesite, BLOCK.diorite, BLOCK.granite,
+    BLOCK.deepslate, BLOCK.tuff, BLOCK.calcite,
+  ],
+  swamp: [BLOCK.mud, BLOCK.mangroveRoots],
+};
+
+/** Place names are prefix + " " + suffix. Prefixes never repeat across terrains, so names stay unique. */
+export const TERRAIN_NAMES: Record<Terrain, { readonly prefixes: readonly string[]; readonly suffixes: readonly string[] }> = {
+  desert: {
+    prefixes: ["Amber", "Sunscorch", "Mirage", "Copper", "Saffron", "Ochre", "Dustwind", "Bleached"],
+    suffixes: ["Dunes", "Flats", "Mesa", "Basin", "Wash", "Sands", "Oasis", "Bluff"],
+  },
+  snowy: {
+    prefixes: ["Frostpine", "Glacier", "Whiteout", "Rime", "Icefang", "Hoarfrost", "Snowdrift", "Coldwater"],
+    suffixes: ["Ridge", "Hollow", "Field", "Pass", "Shelf", "Tundra", "Drift", "Peak"],
+  },
+  forest: {
+    prefixes: ["Mossy", "Oakshade", "Fernwood", "Thornbush", "Elderbark", "Greenbough", "Owlwatch", "Timber"],
+    suffixes: ["Grove", "Thicket", "Glade", "Woods", "Clearing", "Copse", "Dell", "Weald"],
+  },
+  plains: {
+    prefixes: ["Meadow", "Goldengrass", "Windrow", "Clover", "Sunfield", "Hayward", "Brightvale", "Larkspur"],
+    suffixes: ["Green", "Downs", "Commons", "Pasture", "Heath", "Lea", "Prairie", "Crossing"],
+  },
+  mountain: {
+    prefixes: ["Granite", "Stormcrag", "Ironspire", "Eagle", "Slatefall", "Highstone", "Thunder", "Graywall"],
+    suffixes: ["Summit", "Crag", "Ledge", "Cliffs", "Spur", "Scarp", "Tor", "Heights"],
+  },
+  swamp: {
+    prefixes: ["Willow", "Murk", "Reedy", "Bogwater", "Mistmire", "Cattail", "Mangrove", "Gloom"],
+    suffixes: ["Fen", "Marsh", "Bayou", "Mire", "Slough", "Bog", "Wetland", "Morass"],
+  },
+};
+
+// ── Challenges (spec §7) ────────────────────────────────────────────────────
+
+export const TASK_KINDS = ["archery", "parkour", "haystack", "hunt", "gather", "quiz", "recall"] as const;
+export type TaskKindName = (typeof TASK_KINDS)[number];
+
+/** Gather requirement per terrain: `count` of any mix of `items`. */
+export const GATHER: Record<Terrain, { readonly items: readonly ItemId[]; readonly count: number; readonly label: string }> = {
+  desert: { items: [ITEM.sand, ITEM.redSand], count: 32, label: "sand or red sand" },
+  snowy: { items: [ITEM.snowball], count: 16, label: "snowballs" },
+  forest: {
+    items: [
+      ITEM.oakLog, ITEM.spruceLog, ITEM.birchLog, ITEM.jungleLog, ITEM.acaciaLog,
+      ITEM.darkOakLog, ITEM.mangroveLog, ITEM.cherryLog, ITEM.paleOakLog,
+    ],
+    count: 16,
+    label: "logs (any wood)",
+  },
+  plains: { items: [ITEM.wheatSeeds], count: 10, label: "wheat seeds" },
+  mountain: { items: [ITEM.cobblestone, ITEM.cobbledDeepslate], count: 32, label: "cobblestone or cobbled deepslate" },
+  swamp: { items: [ITEM.dirt, ITEM.mud], count: 32, label: "dirt or mud" },
+};
+
+export interface DetourOption {
+  readonly name: string;
+  readonly kind: Exclude<TaskKindName, "recall">;
+}
+
+/** Detour pairs (option A / option B). The planner never uses the same pair twice in a row. */
+export const DETOUR_PAIRS: readonly { readonly a: DetourOption; readonly b: DetourOption }[] = [
+  { a: { name: "Aim", kind: "archery" }, b: { name: "Climb", kind: "parkour" } },
+  { a: { name: "Fight", kind: "hunt" }, b: { name: "Find", kind: "haystack" } },
+  { a: { name: "Muscle", kind: "gather" }, b: { name: "Mind", kind: "quiz" } },
+  { a: { name: "Dig", kind: "haystack" }, b: { name: "Shoot", kind: "archery" } },
+  { a: { name: "Brains", kind: "quiz" }, b: { name: "Brawn", kind: "hunt" } },
+  { a: { name: "Hike", kind: "parkour" }, b: { name: "Haul", kind: "gather" } },
+];
+
+/** Roadblock kinds for legs 1 to L−1; the final leg's Roadblock is always recall. */
+export const ROADBLOCK_KINDS = ["archery", "parkour", "haystack", "quiz", "hunt"] as const;
+export type RoadblockKind = (typeof ROADBLOCK_KINDS)[number] | "recall";
+
+/** Shown before the performer is chosen. */
+export const ROADBLOCK_HINTS: Record<RoadblockKind, string> = {
+  archery: "Who has a good eye?",
+  parkour: "Who's light on their feet?",
+  haystack: "Who's ready to dig deep?",
+  quiz: "Who's the brains of this team?",
+  hunt: "Who's ready for a fight?",
+  recall: "Who's been paying attention?",
+};

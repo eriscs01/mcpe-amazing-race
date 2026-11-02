@@ -5,19 +5,24 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build": "tsc",
+    "test": "rm -rf build/test && tsc -p tsconfig.test.json && node --test \"build/test/test/**/*.test.js\"",
     "package": "npm run build && node scripts/package.mjs",
-    "clean": "rm -rf behavior_pack/scripts dist"
+    "clean": "rm -rf behavior_pack/scripts build dist"
   },
   "dependencies": {
     "@minecraft/server": "2.0.0",
     "@minecraft/server-ui": "2.0.0"
   },
   "devDependencies": {
+    "@minecraft/vanilla-data": "1.26.60",
     "@types/node": "^22.0.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vanilla-data-min": "npm:@minecraft/vanilla-data@1.21.90"
   }
 }

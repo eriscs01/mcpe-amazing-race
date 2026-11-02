@@ -48,7 +48,7 @@ Toolchain notes: `tsconfig` uses `NodeNext`, so relative imports must end in `.j
 
 - `src/core/**` never imports `@minecraft/*`. It receives plain data (positions, player ids, block type ids) and returns new state plus a list of **effects** (`{kind:"tp", player, pos}`, `{kind:"chat", text}`, `{kind:"build", stopId}` …).
 - `src/mc/**` translates Minecraft events into core actions and executes effects. It holds no game rules.
-- Benefit: the spec §14.3 full-race simulation runs in plain Node against `core` with a fake world — no module stubbing or loader hacks. CI enforces the boundary with a grep (`! grep -r "@minecraft" src/core`).
+- Benefit: the spec §14.3 full-race simulation runs in plain Node against `core` with a fake world — no module stubbing or loader hacks. `test/core-boundary.test.ts` enforces the boundary (no `@minecraft/*` or adapter imports under `src/core`), so it runs locally and in CI.
 
 ### 2.2 Source layout
 
@@ -167,10 +167,10 @@ Detour, Roadblock, Speed Bump and Recall reuse the same interface; the engine on
 | Pure core | `node:test` unit tests (plan math, schedule, caps, U-Turn targets, Express expiry, quiz normaliser, compass bar, chunked store round trip). |
 | Full race | `test/sim/fullRace.test.ts`: fake world with flat terrain, scripted players walking to targets and completing tasks; asserts §14.3 outcomes. |
 | Type safety | `npm run typecheck` against 2.0.0 typings (already in CI). |
-| Identifiers | `test/ids.test.ts` checks every block/item/entity/particle id in `config.ts` against `@minecraft/vanilla-data` enums (already a peer dependency). |
+| Identifiers | Vanilla ids live only in the `BLOCK` / `ITEM` / `ENTITY` tables in `config.ts`. `test/ids.test.ts` checks each against `@minecraft/vanilla-data` for the oldest supported game (1.21.90, installed as the `vanilla-data-min` alias) and the latest, and fails if any other `minecraft:` string appears in `config.ts`. vanilla-data has no particle list: particle ids get a hand-verified table with a source comment. |
 | In-game | Checklist in `docs/ingame-test.md`, run per milestone on 1.21.90+ with 2 players. |
 
-Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = build + `node --test build/test`. Add `npm test` and the core-boundary grep to CI.
+Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm test` = clean build + `node --test` over `build/test/test/**/*.test.js` (Node ≥ 22). `npm run typecheck` checks both projects; CI runs typecheck, test and package.
 
 ---
 

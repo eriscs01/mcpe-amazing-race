@@ -1,0 +1,10 @@
+{
+  // Core + tests compiled for Node (node:test). The add-on build (tsconfig.json) never sees test code.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "build/test",
+    "types": ["node"]
+  },
+  "include": ["src/core", "test"]
+}
