@@ -1,0 +1,23 @@
+{
+  "name": "mcpe-amazing-race",
+  "version": "0.1.0",
+  "description": "Minecraft Bedrock add-on: The Amazing Race for teams, run by one host.",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "package": "npm run build && node scripts/package.mjs",
+    "clean": "rm -rf behavior_pack/scripts dist"
+  },
+  "dependencies": {
+    "@minecraft/server": "2.0.0",
+    "@minecraft/server-ui": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
