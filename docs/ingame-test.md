@@ -137,6 +137,21 @@ the technical design (§4) add their checks here and record the result in their 
       ring, at a block centre, not stuck in rock. A Nether block at an arena's coordinates is not
       treated as its clue box.
 
+### G9 — HUD & navigation ✱
+
+- [ ] ✱ With 2 players: the action bar shows a 21-cell `[----------|---O-----] 412m Route Info`-style bar; turning
+      moves the `O` the right way (target to your right → `O` right of the centre mark).
+- [ ] ✱ Facing away from the target shows `<< TURN AROUND >>`; the distance counts down as you walk.
+- [ ] ✱ During the 10-second countdown a second line shows "Departing in Ns" under the bar.
+- [ ] ✱ Every second, three green sparkles lead towards the target; the other player does not
+      see yours (confirms `minecraft:villager_happy` is a valid id on 1.21.90+).
+- [ ] ✱ A blind stop (Detour from leg 2) shows only `Detour: X n, Z n`: no bar, no trail.
+- [ ] ✱ In the Nether the bar reads "Return to the Overworld"; paused or eliminated racers
+      see nothing.
+- [ ] ✱ The action bar really shows two lines (`\n` works on 1.21.90+).
+- [ ] ✱ `race:pause` blanks the HUD and stops the trail; resuming brings both back.
+- [ ] ✱ The HUD yaw matches facing (the `getRotation().y` sign is the one the bar assumes).
+
 ### M2–M4
 
 Add checks as the groups land.

@@ -534,3 +534,27 @@ export const CLUE = {
   pit: { label: 'Pit Stop', beam: 'lime' },
   finish: { label: 'Finish', beam: 'lime' },
 } as const satisfies Record<StopType, { label: string; beam: string }>;
+
+// ── Racer HUD (spec §9.1) ───────────────────────────────────────────────────
+
+/**
+ * Particle ids, hand-verified: vanilla-data has no particle list, so `test/ids.test.ts` cannot
+ * check them. Source: the Bedrock particle list (minecraft:villager_happy, the green sparkle
+ * the spec names); the id's validity in 1.21.90+ is an in-game check (docs/ingame-test.md, G9).
+ */
+export const PARTICLE = {
+  trail: 'minecraft:villager_happy',
+} as const;
+
+export const HUD = {
+  /** The action bar refreshes every 5 ticks, the trail every 20 (technical design §2.4). */
+  everyTicks: 5,
+  trailEveryTicks: 20,
+  /** Cells between the brackets: odd, so the player's heading has a true centre. */
+  barCells: 21,
+  /** The bar spans this many degrees either side of the heading; beyond it is "behind". */
+  barSpan: 90,
+  /** Trail particles: blocks from the player towards the target, and below eye level. */
+  trailDistances: [2, 3.5, 5],
+  trailDrop: 0.4,
+} as const;

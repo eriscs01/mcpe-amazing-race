@@ -7,7 +7,9 @@ import * as latest from '@minecraft/vanilla-data';
 import * as oldest from 'vanilla-data-min';
 
 import * as config from '../src/core/config.js';
-import { BLOCK, ENTITY, ITEM } from '../src/core/config.js';
+import {
+  BLOCK, ENTITY, ITEM, PARTICLE,
+} from '../src/core/config.js';
 
 type Data = typeof latest;
 const categories = [
@@ -29,7 +31,11 @@ for (const { name, ids, enumOf } of categories) {
 }
 
 test('config uses no vanilla id outside the checked id tables', () => {
-  const registered = new Set<string>(categories.flatMap((c) => Object.values(c.ids)));
+  // Particles have no vanilla-data list; they are hand-verified in config.ts.
+  const registered = new Set<string>([
+    ...categories.flatMap((c) => Object.values(c.ids)),
+    ...Object.values(PARTICLE),
+  ]);
   const found = new Set<string>();
   const walk = (v: unknown): void => {
     if (typeof v === 'string') {
