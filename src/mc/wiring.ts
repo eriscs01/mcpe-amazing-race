@@ -4,6 +4,7 @@ import { Player, system, world } from '@minecraft/server';
 
 import { hasItem, heldOf } from './items.js';
 import { OVERWORLD, useClueBox } from './race.js';
+import { wireTaskEvents } from './tasks.js';
 import { openHostMenu } from './ui/host.js';
 import { openPassport } from './ui/racer.js';
 import { parseLightCommand } from '../core/arenas.js';
@@ -147,4 +148,5 @@ export function wireEvents(session: Session): void {
   wireItemUse(session);
   wireSpawn(session);
   wireScriptEvents(session);
+  wireTaskEvents(session);
 }

@@ -3,6 +3,7 @@
 // changes nothing, so it is not an Action and keeps no state of its own.
 import { clueBoxPos, matCentre, targetStop } from './clue.js';
 import { CLUE, HUD, TICKS_PER_SECOND } from './config.js';
+import { taskProgressText } from './race/task.js';
 import {
   horizontalDistance, offsetByYaw, relativeYaw, yawTowards,
 } from './vec.js';
@@ -53,7 +54,7 @@ function taskLine(state: State, team: Team): string | undefined {
   const graceLeft = state.leg.phase === 'grace' && team.status === 'racing' && !onMat
     ? (state.leg.graceEnd ?? 0) - state.clock : 0;
   const parts = [
-    // Task progress joins here when the challenges arrive (G11-G12).
+    team.status === 'racing' ? taskProgressText(state, team) : undefined,
     onMat && team.arrivedAt !== undefined
       ? `Checking in: ${seconds(team.arrivedAt + team.penaltyOwed - state.clock)}s` : undefined,
     team.penaltyOwed > 0 && !onMat ? `Penalty owed: ${seconds(team.penaltyOwed)}s` : undefined,
