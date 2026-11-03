@@ -220,3 +220,21 @@ test('dumpState with no state says so', () => {
   assert.match(cap.find('stateDump')[0]?.line ?? '', /status=pending/);
   assert.equal(cap.find('stateDumpPart').length, 0);
 });
+
+test('outcome lines an accepted action returns are logged with the race clock', () => {
+  const { cap, session } = setup();
+  session.load();
+  session.dispatch({
+    type: 'playerSpawned', player: 'h', name: 'Hana', initial: true, hasPassport: false,
+  });
+  const settings = {
+    days: 1, minutesPerDay: 30, teamSize: 2, hostRaces: false, daylightCycle: true,
+  };
+  assert.equal(session.dispatch({ type: 'saveSettings', by: 'h', settings }), true);
+  assert.match(
+    cap.find('settingsSaved')[0]?.line ?? '',
+    /^\[race\] settingsSaved clock=0 days=1 minutesPerDay=30 .* legs=2 by=h$/,
+  );
+  assert.equal(session.dispatch({ type: 'saveSettings', by: 'x', settings }), false);
+  assert.equal(cap.find('settingsSaved').length, 1);
+});

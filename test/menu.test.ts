@@ -7,7 +7,7 @@ import {
   ITEM, PASSPORT, RACE_CONTROL, TEAM_COLORS,
 } from '../src/core/config.js';
 import {
-  HOST_ENTRIES, hostMenu, passportMenu, PHASE_LABEL, routeUse, UNREADABLE_TEXT,
+  HOST_ENTRIES, hostMenu, passportMenu, PHASE_LABEL, routeUse, teamsMenu, UNREADABLE_TEXT,
 } from '../src/core/menu.js';
 import { createState } from '../src/core/state.js';
 
@@ -77,4 +77,27 @@ test('the Passport shows the racer\'s team, or that they have none yet', () => {
   assert.match(passportMenu(state, 'b').body, /Team: §cRed/);
   assert.match(passportMenu(state, 'c').body, /not on a team yet/);
   assert.deepEqual(passportMenu(state, 'b').buttons, []);
+});
+
+test('Setup is offered only in setup; Teams until the race starts', () => {
+  const offered = (phase: Phase) => hostMenu({ ...hosted, phase }).buttons.map((b) => b.command);
+  assert.deepEqual(offered('setup'), ['setup', 'teams', 'transferHost']);
+  assert.deepEqual(offered('generating'), ['teams', 'transferHost']);
+  assert.deepEqual(offered('ready'), ['teams', 'transferHost']);
+  assert.deepEqual(offered('running'), ['transferHost']);
+});
+
+test('before the race the host menu shows the derived plan under the phase', () => {
+  assert.equal(
+    hostMenu(hosted).body,
+    'Phase: Setup\n6 legs · ~1,800-block radius · eliminations set by teams',
+  );
+  assert.equal(hostMenu({ ...hosted, phase: 'running' }).body, 'Phase: Racing');
+});
+
+test('the Teams screen shows the teams and offers auto-assign and swap', () => {
+  const menu = teamsMenu(hosted, []);
+  assert.equal(menu.title, 'Teams');
+  assert.match(menu.body, /No teams yet/);
+  assert.deepEqual(menu.buttons.map((b) => b.command), ['autoAssign', 'swap']);
 });

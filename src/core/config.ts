@@ -125,6 +125,20 @@ export const SETUP = {
   },
 } as const;
 
+/** Derived plan (spec §4) and elimination schedule (spec §8.6); not host options. */
+export const PLAN = {
+  /** Real minutes one leg is planned to take: legs per day = floor(minutes per day / this). */
+  legMinutes: 30,
+  legs: { min: 2, max: 12 },
+  radius: {
+    base: 1200, perLeg: 100, min: 1400, max: 2400,
+  },
+  /** Distance beyond the course radius where racers are warned, and where they are stopped. */
+  boundary: { warn: 200, hard: 300 },
+  /** Teams left in the final leg once eliminations are done. */
+  finalists: 3,
+} as const;
+
 // ── Teams (spec §4) ─────────────────────────────────────────────────────────
 
 export const TEAM_COLORS = [

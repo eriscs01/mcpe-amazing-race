@@ -38,7 +38,11 @@ export async function showForm<R extends FormResponse>(
       log.warn('formGaveUp', { player: player.id, form, reason: 'busy' });
       if (player.isValid) player.sendMessage('Close chat and try again.');
     }
-    return response?.canceled ? undefined : response;
+    if (response?.canceled) {
+      log.info('formClosed', { player: player.id, form, reason: response.cancelationReason });
+      return undefined;
+    }
+    return response;
   } finally {
     openFor.delete(player.id);
   }

@@ -11,6 +11,8 @@ Versions follow `package.json`; the release workflow publishes the section match
   handler guard (G2).
 - Race Control and Race Passport items, host claim / replace / transfer, `/scriptevent race:host`
   and `race:dump`, phase-aware host menu and Passport shell with busy-retry forms (G3).
+- Setup screen with the derived plan, elimination schedule, team auto-assign / swap / view
+  with the fixed colour list, and the Roadblock cap (G4).
 
 ## [0.1.0]
 

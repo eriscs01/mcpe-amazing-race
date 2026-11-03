@@ -2,6 +2,8 @@
 import { advanceClock } from '../clock.js';
 import { claimHost, playerSpawned, transferHost } from '../host.js';
 import { canEnter } from '../phase.js';
+import { saveSettings } from '../setup.js';
+import { autoAssignTeams, swapPlayers } from '../teams.js';
 
 import type { Action, Result, State } from '../types.js';
 
@@ -32,6 +34,12 @@ export function reduce(state: State, action: Action): Result {
       return claimHost(state, action);
     case 'transferHost':
       return transferHost(state, action);
+    case 'saveSettings':
+      return saveSettings(state, action);
+    case 'autoAssignTeams':
+      return autoAssignTeams(state, action);
+    case 'swapPlayers':
+      return swapPlayers(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

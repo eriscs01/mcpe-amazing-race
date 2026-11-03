@@ -2,6 +2,9 @@
 // the adapter renders them as forms and turns the chosen command into actions.
 import { hostName } from './host.js';
 import { isPlainClock, roleOf } from './items.js';
+import { planOf, planSummary } from './plan.js';
+import { SETTINGS_PHASES } from './setup.js';
+import { TEAM_PHASES, teamsView } from './teams.js';
 
 import type { HeldItem } from './items.js';
 import type { Phase, PlayerId, State } from './types.js';
@@ -30,7 +33,9 @@ export function routeUse(use: Use, state: State | undefined): UseRoute | undefin
   return { kind: 'say', text: `Race Control belongs to the host (${hostName(state)}).` };
 }
 
-export type HostCommand = 'transferHost';
+export type HostCommand = 'setup' | 'teams' | 'transferHost';
+
+export type TeamsCommand = 'autoAssign' | 'swap';
 
 export interface MenuButton<C> {
   command: C;
@@ -49,6 +54,8 @@ export const HOST_ENTRIES: readonly {
   readonly label: string;
   readonly phases: 'all' | readonly Phase[];
 }[] = [
+  { command: 'setup', label: 'Setup', phases: SETTINGS_PHASES },
+  { command: 'teams', label: 'Teams', phases: TEAM_PHASES },
   { command: 'transferHost', label: 'Transfer host', phases: 'all' },
 ];
 
@@ -70,7 +77,24 @@ export function hostMenu(state: State | undefined): Menu<HostCommand> {
   const buttons = HOST_ENTRIES
     .filter((e) => e.phases === 'all' || e.phases.includes(state.phase))
     .map(({ command, label }) => ({ command, label }));
-  return { title, body: `Phase: ${PHASE_LABEL[state.phase]}`, buttons };
+  const phase = `Phase: ${PHASE_LABEL[state.phase]}`;
+  // The plan follows the settings and teams until the race starts; show it while they can change.
+  const body = TEAM_PHASES.includes(state.phase)
+    ? `${phase}\n${planSummary(planOf(state), state.teams.length)}`
+    : phase;
+  return { title, body, buttons };
+}
+
+/** The Teams screen (spec §4): its body is the View teams text; `online` are player ids. */
+export function teamsMenu(state: State, online: readonly PlayerId[]): Menu<TeamsCommand> {
+  return {
+    title: 'Teams',
+    body: teamsView(state, online),
+    buttons: [
+      { command: 'autoAssign', label: 'Auto-assign' },
+      { command: 'swap', label: 'Swap two players' },
+    ],
+  };
 }
 
 export function passportMenu(state: State, player: PlayerId): Menu<never> {
