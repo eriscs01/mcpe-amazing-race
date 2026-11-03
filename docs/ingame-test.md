@@ -177,6 +177,32 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] A reload during rest or a departure countdown re-locks the racers (see #39 for the
       reload pausing the race).
 
+### G11 — Physical tasks ✱
+
+Run with 2 players on 1.21.90+, a generated course with Detour and Roadblock stops (use
+`/scriptevent race:dump` to read their options). Arena protection is not in yet (G16), so
+racers can break course blocks; do not, except hay and wool where noted.
+
+- [ ] Clue box of an Aim/Climb Detour: the first click starts Aim; chat/title says "Aim: targets
+      0/4"; the arena's west edge (x−9) shows 6 free-standing target blocks at the spec heights; every online member
+      receives a bow and 24 arrows. A second click shows the progress and builds nothing.
+- [ ] Shooting a target from 8+ blocks away counts (action bar "Aim: targets 1/4"); the same
+      target twice, a target from under 8 blocks, and a shot at any other block do not. Four
+      different targets finish it: title and chat show the next clue and the sidebar moves.
+- [ ] `projectileHitBlock` reports the shooter's location and the target block as the core
+      assumes (note what a hit on a target's side face reports).
+- [ ] A second team starting the same Detour does not rebuild the zone (no blocks reset under
+      the first team).
+- [ ] Climb (or Hike): a white concrete line with 1-block gaps rising every 2 jumps ends in a
+      gold block (leg 3+: 6 jumps, 2-block gaps); standing on the gold block finishes it within
+      about half a second; standing beside or below it does not.
+- [ ] Find/Dig: a 5 × 5 × 3 hay pile with yellow wool hidden inside, one wool per team; breaking
+      a wool finishes it for the breaker's team; with a second team still digging, the pile is
+      rebuilt when the last wool is gone.
+- [ ] Roadblock: the player who clicked the box is the performer; a teammate's shots or breaks
+      do not count, and only the performer must be within 10 blocks on later clicks.
+- [ ] A Hunt/Gather/Quiz stop still says it comes in a later update.
+
 ### M2–M4
 
 Add checks as the groups land.

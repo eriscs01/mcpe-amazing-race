@@ -37,6 +37,12 @@ Versions follow `package.json`; the release workflow publishes the section match
   Bump flag, a 20-second rest with heal and feed, staggered departures (gap behind the winner up
   to 45 s plus any unserved penalty), the final leg's winner and finish, and End leg in the host
   menu (G10).
+- Task framework and physical tasks: the `TaskKind` plug-in shape, shared task zones built once
+  per zone, Archery (six targets, 4 or 5 distinct hits from 8+ blocks, bow and 24 arrows),
+  Parkour (white concrete jumps to a gold block) and Haystack (hidden wool, one per team,
+  rebuilt when it runs out), counted for any member on a Detour and the performer on a
+  Roadblock, with progress on the HUD task line. A Detour or Roadblock box starts its task
+  directly until the full flow arrives (G11).
 
 ## [0.1.0]
 

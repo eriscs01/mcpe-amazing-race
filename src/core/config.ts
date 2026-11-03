@@ -83,6 +83,11 @@ export const BLOCK = {
   yellowWool: 'minecraft:yellow_wool',
   lantern: 'minecraft:lantern',
   torch: 'minecraft:torch',
+  // tasks
+  target: 'minecraft:target',
+  whiteConcrete: 'minecraft:white_concrete',
+  goldBlock: 'minecraft:gold_block',
+  hayBlock: 'minecraft:hay_block',
 } as const;
 
 export const ITEM = {
@@ -112,6 +117,9 @@ export const ITEM = {
   cobbledDeepslate: 'minecraft:cobbled_deepslate',
   dirt: 'minecraft:dirt',
   mud: 'minecraft:mud',
+  // archery
+  bow: 'minecraft:bow',
+  arrow: 'minecraft:arrow',
 } as const;
 
 export const ENTITY = {
@@ -506,6 +514,26 @@ export const ROADBLOCK_HINTS: Record<RoadblockKind, string> = {
   hunt: "Who's ready for a fight?",
   recall: "Who's been paying attention?",
 };
+
+/** The physical tasks (spec §7.1). Legs up to `earlyLegs` use the easier numbers. */
+export const TASK = {
+  earlyLegs: 2,
+  archery: {
+    /** z offsets from the arena centre, and heights above the floor, of the six targets. */
+    zOffsets: [-6, -4, -1, 1, 4, 6],
+    heights: [2, 3, 4, 4, 3, 2],
+    needed: { early: 4, late: 5 },
+    minDistance: 8,
+    arrows: 24,
+  },
+  parkour: {
+    early: { jumps: 8, gap: 1 },
+    late: { jumps: 6, gap: 2 },
+    /** Rises one block every this many jumps. */
+    riseEvery: 2,
+  },
+  haystack: { size: 5, height: 3, maxHidden: 9 },
+} as const;
 
 // ── Race start and clue boxes (spec §8.1, §8.2) ─────────────────────────────
 

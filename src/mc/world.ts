@@ -7,6 +7,7 @@ import {
 import {
   broadcast, lockMovement, showSidebar, showTitle, startRacers,
 } from './race.js';
+import { buildZone, giveVanilla } from './tasks.js';
 
 import type { Logger } from '../core/log.js';
 import type { Effect } from '../core/types.js';
@@ -16,6 +17,8 @@ export interface EffectHost {
   generate: (effect: Extract<Effect, { kind: 'generateCourse' }>) => void;
   build: (effect: Extract<Effect, { kind: 'buildArenas' }>) => void;
   light: (effect: Extract<Effect, { kind: 'lightStops' }>) => void;
+  /** A task zone could not be built (the core forgets it so the next box use retries). */
+  zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
 }
 
 function apply(effect: Effect, log: Logger, host: EffectHost): void {
@@ -36,6 +39,12 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       log.info('itemGiven', { player: effect.to, item: effect.item, to });
       break;
     }
+    case 'giveVanilla':
+      giveVanilla(effect, log);
+      break;
+    case 'zoneBlocks':
+      buildZone(effect, log, host.zoneFailed);
+      break;
     case 'takeItem': {
       // An offline player's copy stays, but it is inert: Race Control works only for the host.
       const player = online(effect.from);

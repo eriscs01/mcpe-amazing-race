@@ -4,7 +4,7 @@
 import { ARENA, BLOCK } from '../config.js';
 
 import type { BlockId } from '../config.js';
-import type { StopType } from '../types.js';
+import type { Op, StopType, ZoneName } from '../types.js';
 import type { Vec3 } from '../vec.js';
 
 /** Where an arena stands: `pos.y` is the ground height g, the floor level. */
@@ -13,12 +13,7 @@ export interface Site {
   type: StopType;
 }
 
-export type Op = | {
-  kind: 'fill'; from: Vec3; to: Vec3; block: BlockId; only?: readonly BlockId[];
-}
-  | { kind: 'set'; pos: Vec3; block: BlockId }
-  /** Air from `fromY` up to the topmost block of the column, so the beam is not blocked. */
-  | { kind: 'clearColumn'; x: number; z: number; fromY: number };
+export type { Op };
 
 /** What the builder needs from the world; unloaded chunks make a call throw or read undefined. */
 export interface BlockWorld {
@@ -148,7 +143,7 @@ export function* applyOps(world: BlockWorld, ops: readonly Op[]): Generator<void
   }
 }
 
-export type ZoneName = 'A' | 'B';
+export type { ZoneName };
 
 /** Task zones (spec §6.5): A is the west half, B the east; Roadblock uses A only. */
 export function zonesFor(type: StopType, pos: Vec3): { zone: ZoneName; centre: Vec3 }[] {

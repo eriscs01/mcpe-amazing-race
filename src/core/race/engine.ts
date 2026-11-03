@@ -15,6 +15,7 @@ import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
 import { racerPositions } from './pitstop.js';
 import { startRace } from './start.js';
+import { taskEvent, taskStanding, zoneBuildFailed } from './task.js';
 import { tick } from './tick.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
 
@@ -84,8 +85,19 @@ export function reduce(state: State, action: Action): Result {
       return startRace(state, action);
     case 'interactClue':
       return interactClue(state, action);
-    case 'racerPositions':
-      return racerPositions(state, action);
+    case 'racerPositions': {
+      const arrived = racerPositions(state, action);
+      const standing = taskStanding(arrived.state, action);
+      return {
+        state: standing.state,
+        effects: [...arrived.effects, ...standing.effects],
+        logs: [...(arrived.logs ?? []), ...(standing.logs ?? [])],
+      };
+    }
+    case 'taskEvent':
+      return taskEvent(state, action);
+    case 'zoneBuildFailed':
+      return zoneBuildFailed(state, action);
     case 'endLeg':
       return endLeg(state, action);
     default: {

@@ -1,6 +1,8 @@
 // Persisted race state (technical design §2.3) and the actions and effects that cross the
 // core/adapter boundary. Everything in State is plain JSON so it survives the chunked store.
-import type { DetourOption, RoadblockKind, Terrain } from './config.js';
+import type {
+  BlockId, DetourOption, RoadblockKind, TaskKindName, Terrain,
+} from './config.js';
 import type { Fields } from './log.js';
 import type { Vec3 } from './vec.js';
 
@@ -46,6 +48,31 @@ export type TaskSpec = { type: 'detour'; options: [DetourOption, DetourOption] }
 /** Per-team, per-option task progress; each task kind defines its own counters. */
 export type TaskProgress = Record<string, number>;
 
+/** A task zone of a Detour or Roadblock stop (spec §6.5): A is the west half, B the east. */
+export type ZoneName = 'A' | 'B';
+
+/** A block operation of an arena or task build; the adapter runs it against the world. */
+export type Op = | {
+  kind: 'fill'; from: Vec3; to: Vec3; block: BlockId; only?: readonly BlockId[];
+}
+  | { kind: 'set'; pos: Vec3; block: BlockId }
+  /** Air from `fromY` up to the topmost block of the column, so the beam is not blocked. */
+  | { kind: 'clearColumn'; x: number; z: number; fromY: number };
+
+/** What a zone holds once its task is set up; shared by every team that plays there. */
+export interface ZoneState {
+  kind: TaskKindName;
+  /** Haystack: where the hidden wool still is. */
+  hidden?: Vec3[];
+  /** Haystack: how many times the pile has been rebuilt (varies the seeded wool draw). */
+  refills?: number;
+}
+
+/** What a racer did that a task may care about (spec §7.1). */
+export type TaskEvent = { type: 'projectileHit'; block: Vec3; shooter: Vec3 }
+  | { type: 'blockBroken'; block: Vec3; id: string }
+  | { type: 'standing'; pos: Vec3 };
+
 export interface Stop {
   id: number;
   leg: number;
@@ -60,6 +87,8 @@ export interface Stop {
   pinned?: boolean;
   built: boolean;
   lit: boolean;
+  /** Task zones already set up (read with `??`: absent in older saves). */
+  zones?: Partial<Record<ZoneName, ZoneState>>;
 }
 
 export interface CheckIn {
@@ -82,6 +111,8 @@ export interface Team {
   checkIns: CheckIn[];
   roadblockCounts: Record<PlayerId, number>;
   performer?: PlayerId;
+  /** The task the team is playing now (read with `??`); `option` picks the Detour zone. */
+  task?: { stopId: number; option: 'A' | 'B' };
   expressPass?: { expiresLeg: number };
   uTurnUsed: boolean;
   uTurnedAt?: number;
@@ -206,7 +237,11 @@ export type Action = { type: 'tick' }
    */
   | { type: 'racerPositions'; players: { id: PlayerId; pos?: Vec3 }[] }
   /** Host: ends the leg now (spec §8.5). */
-  | { type: 'endLeg'; by: PlayerId };
+  | { type: 'endLeg'; by: PlayerId }
+  /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
+  | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
+  /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
+  | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName };
 
 /** The world's settings before the race changed them (restored when it ends, spec §12). */
 export interface RaceSnapshot {
@@ -233,6 +268,10 @@ export type GenerationFailure = {
 /** What the adapter must do in the world. */
 export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string }
   | { kind: 'giveItem'; to: PlayerId; item: MenuItemRole }
+  /** Gives a plain vanilla item (a task's bow and arrows). */
+  | { kind: 'giveVanilla'; to: PlayerId; item: string; count: number }
+  /** Builds a task zone's blocks; the team is standing there, so the chunks are loaded. */
+  | { kind: 'zoneBlocks'; stop: number; zone: ZoneName; ops: Op[] }
   /** Starts the generation job; the adapter reports back with courseGenerated or courseFailed. */
   | {
     kind: 'generateCourse';
