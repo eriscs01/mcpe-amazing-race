@@ -94,8 +94,8 @@ the technical design (§4) add their checks here and record the result in their 
       column above the centre is clear of trees or overhangs.
 - [ ] ✱ Pit Stop and Finish have the red and yellow checker mat 6 blocks south of the centre;
       other stops do not.
-- [ ] ✱ Dirt fills holes and water below the floor; a stop beside a pond or lava does not flood
-      or burn the arena after the build (water or lava flowing in during the clear).
+- [ ] ✱ Dirt fills holes and water below the floor, and no water is left inside the cleared box
+      (a stop beside a pond: note whether water flows in afterwards; the spec does not seal edges).
 - [ ] ✱ `/scriptevent race:light 1 on` turns that stop's clue box into a beacon with a beam and
       tinted glass above it (yellow Route Info / Detour, red Roadblock, lime Pit Stop / Finish,
       white Start); `off` restores yellow concrete and removes the glass; `all on` works.
@@ -107,8 +107,8 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] ✱ #32: Generate again from the same start (or after Discard): arenas that already stand are
       not rebuilt or stacked 1–2 blocks higher (`arenaBuilt existing=true`), and old lit ones
       follow their stop's lit state.
-- [ ] ✱ #34: no arena stands on a village roof or other structure (watch for it while flying
-      the course).
+- [ ] ✱ Observation for #34 (not fixed here): note any arena standing on a village roof or other
+      structure while flying the course.
 - [ ] ✱ At night with torches only: no hostile mob spawns on the arena floor, including its middle.
 - [ ] ✱ With 10 ticking areas in the world, the build stops and tells the host to remove one;
       Build arenas works afterwards.

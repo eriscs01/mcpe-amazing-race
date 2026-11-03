@@ -5,7 +5,7 @@ import { test } from 'node:test';
 
 import { BlockGrid } from './helpers/blockGrid.js';
 import {
-  applyOps, buildOps, lightOps, looksBuilt, zonesFor,
+  applyOps, buildOps, lightOps, looksBuilt, reuseOps, zonesFor,
 } from '../src/core/arena/layout.js';
 import { ARENA, BLOCK } from '../src/core/config.js';
 
@@ -193,4 +193,12 @@ test('an unfinished build never reads as built: the clue box is placed last', ()
 
 test('a block that is not loaded reads as no arena', () => {
   assert.equal(looksBuilt(() => undefined, site().pos), undefined);
+});
+
+test('an old Route Info arena reused as a Pit Stop gets the mat; other types need nothing', () => {
+  const grid = built('route');
+  assert.equal(grid.idAt(100, G, -34), BLOCK.smoothStone);
+  run(applyOps(grid, reuseOps(site('pit'))));
+  assert.equal(grid.idAt(100, G, -34), BLOCK.redConcrete);
+  assert.deepEqual(reuseOps(site('detour')), []);
 });

@@ -81,6 +81,11 @@ function mat(pos: Vec3): Op[] {
   )));
 }
 
+/** What a reused arena may lack: the mat, if a re-run turned its place into Pit Stop or Finish. */
+export function reuseOps({ pos, type }: Site): Op[] {
+  return type === 'pit' || type === 'finish' ? mat(pos) : [];
+}
+
 /**
  * Everything that makes the arena, unlit, in spec order. The clue box goes last: it, with the
  * iron under it, is what marks an arena as finished, so a build cut short is never mistaken
@@ -99,7 +104,7 @@ export function buildOps({ pos, type }: Site): Op[] {
     },
     ...flags(pos),
     ...torches(pos),
-    ...(type === 'pit' || type === 'finish' ? mat(pos) : []),
+    ...reuseOps({ pos, type }),
     fill(v(x - 1, g, z - 1), v(x + 1, g, z + 1), BLOCK.ironBlock),
     set(v(x, g + 1, z), BLOCK.yellowConcrete),
   ];

@@ -9,7 +9,7 @@ import {
 import { DimensionWorld } from './blockWorld.js';
 import { TickingAreaLoader } from './terrainProbe.js';
 import {
-  applyOps, buildOps, looksBuilt,
+  applyOps, buildOps, looksBuilt, reuseOps,
 } from '../core/arena/layout.js';
 import { buildStep } from '../core/arenas.js';
 import { ARENA } from '../core/config.js';
@@ -67,7 +67,10 @@ async function buildOne(
   if (!await loader.ensureLoaded(site.pos) || !keep()) return undefined;
   const target = new DimensionWorld(world.getDimension('overworld'));
   const found = looksBuilt((x, y, z) => target.idAt(x, y, z), site.pos);
-  if (found === undefined) await runToEnd(whileWanted(applyOps(target, buildOps(site)), keep));
+  const ops = found === undefined
+    ? buildOps(site)
+    : reuseOps({ pos: { ...site.pos, y: found }, type: site.type });
+  await runToEnd(whileWanted(applyOps(target, ops), keep));
   // Nothing was written for a course that changed meanwhile, or only part of it.
   if (!keep()) return undefined;
   return { y: found ?? site.pos.y, existing: found !== undefined };

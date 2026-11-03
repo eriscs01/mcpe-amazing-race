@@ -35,8 +35,9 @@ export function retryLights(session: Session): void {
   const target = new DimensionWorld(world.getDimension('overworld'));
   queue.drain((site, tries) => {
     const current = session.state?.stops.find((s) => s.id === site.id);
-    if (current?.pos.x !== site.pos.x || current.pos.z !== site.pos.z) {
-      // The course changed since this was queued; its stop is not where it was.
+    const moved = current?.pos.x !== site.pos.x || current?.pos.z !== site.pos.z;
+    if (moved || current?.type !== site.type) {
+      // The course changed since this was queued; the stop is not where or what it was.
       session.log.info('lightsDropped', { stop: site.id });
       return true;
     }
