@@ -3,7 +3,7 @@
 import { Player, system, world } from '@minecraft/server';
 
 import { hasItem, heldOf } from './items.js';
-import { useClueBox } from './race.js';
+import { OVERWORLD, useClueBox } from './race.js';
 import { openHostMenu } from './ui/host.js';
 import { openPassport } from './ui/racer.js';
 import { parseLightCommand } from '../core/arenas.js';
@@ -65,10 +65,11 @@ function wireItemUse(session: Session): void {
     if (!ev.isFirstEvent) return;
     // A clue box wins over the menu fallback: a racer holding the Passport opens one screen.
     const { state } = session;
-    if (state?.phase === 'running' && clueBoxAt(state, ev.block.location)) {
+    const at = ev.block.location; // read now: the block may be gone by the next tick
+    if (state?.phase === 'running' && ev.block.dimension.id === OVERWORLD && clueBoxAt(state, at)) {
       ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API
-      const { player, block } = ev;
-      system.run(guard(session.log, 'clueBox', () => useClueBox(session, player, block.location)));
+      const { player } = ev;
+      system.run(guard(session.log, 'clueBox', () => useClueBox(session, player, at)));
       return;
     }
     if (!ev.itemStack) return;

@@ -21,11 +21,13 @@ const teamOf = (state: State, id: string): Team | undefined => {
 
 export function interactClue(state: State, a: Of<'interactClue'>): Result {
   if (state.phase !== 'running' || state.leg.phase !== 'racing') {
-    return refuse(state, a.player, 'notRacing', 'The race is not under way.');
+    const text = state.phase === 'running' ? 'Wait for GO!' : 'The race is not under way.';
+    return refuse(state, a.player, 'notRacing', text);
   }
   const stop = clueBoxAt(state, a.pos);
   const team = teamOf(state, a.player);
-  if (!stop) return { state, refusal: 'unknownBox', effects: [] };
+  // The adapter only sends clicks on a clue box; reaching here means it and the state disagree.
+  if (!stop) return refuse(state, a.player, 'unknownBox', 'That is not a clue box.');
   const heading = team ? targetStop(state, team) : undefined;
   if (team?.status !== 'racing' || heading?.id !== stop.id) {
     return refuse(state, a.player, 'notYourBox', 'Not your clue box.');

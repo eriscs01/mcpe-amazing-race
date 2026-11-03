@@ -49,6 +49,7 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
     return refuse(state, a.by, 'tooFewTeams', `At least ${MIN_TEAMS} teams are needed to start.`);
   }
   if (!allArenasBuilt(state)) {
+    // allArenasBuilt is also false for a state with no stops at all.
     const missing = unbuilt(state).length;
     const text = missing === 0 ? 'There is no course to race.'
       : `${missing} arena${missing === 1 ? '' : 's'} still to build. Use Build arenas first.`;

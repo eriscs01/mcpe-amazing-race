@@ -17,6 +17,7 @@ import type { Vec3 } from '../core/vec.js';
 
 type Of<K extends Effect['kind']> = Extract<Effect, { kind: K }>;
 
+export const OVERWORLD = 'minecraft:overworld';
 const OBJECTIVE = 'race';
 const WORN = [
   EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet,
@@ -46,11 +47,15 @@ function clearAndKit(player: Player): void {
 
 /** Sets the rules and time, then readies each racer; one racer failing does not stop the rest. */
 export function startRacers(effect: Of<'startRacers'>, log: Logger): void {
-  const rules = world.gameRules;
-  rules.keepInventory = RACE.rules.keepInventory;
-  rules.showCoordinates = RACE.rules.showCoordinates;
-  rules.doDayLightCycle = effect.daylight;
-  world.setTimeOfDay(effect.time);
+  try {
+    const rules = world.gameRules;
+    rules.keepInventory = RACE.rules.keepInventory;
+    rules.showCoordinates = RACE.rules.showCoordinates;
+    rules.doDayLightCycle = effect.daylight;
+    world.setTimeOfDay(effect.time);
+  } catch (error) {
+    log.error('raceRulesFailed', error, { daylight: effect.daylight, time: effect.time });
+  }
   for (const racer of effect.racers) {
     const player = online(racer.id);
     if (!player) {
@@ -60,7 +65,11 @@ export function startRacers(effect: Of<'startRacers'>, log: Logger): void {
         clearAndKit(player);
         player.setGameMode(GameMode.Survival);
         player.nameTag = `${racer.color}${racer.name}`;
-        player.teleport(racer.spawn);
+        // Arenas stand in the Overworld, wherever the racer is now; spots are block centres.
+        player.teleport(
+          { x: racer.spawn.x + 0.5, y: racer.spawn.y, z: racer.spawn.z + 0.5 },
+          { dimension: world.getDimension(OVERWORLD) },
+        );
         log.info('racerReady', { player: racer.id, x: racer.spawn.x, z: racer.spawn.z });
       } catch (error) {
         log.error('racerSetupFailed', error, { player: racer.id });
@@ -122,13 +131,14 @@ export function showSidebar(effect: Of<'sidebar'>, log: Logger): void {
  */
 export function useClueBox(session: Session, player: Player, pos: Vec3): void {
   const { state } = session;
+  if (player.dimension.id !== OVERWORLD) return;
   const teamId = state?.players[player.id]?.teamId;
   const team = state?.teams.find((t) => t.id === teamId);
   const members = (team?.members ?? [player.id]).flatMap((id) => {
     const member = online(id);
     if (!member) return [];
     return [{
-      id, pos: member.dimension.id === player.dimension.id ? member.location : undefined,
+      id, pos: member.dimension.id === OVERWORLD ? member.location : undefined,
     }];
   });
   session.dispatch({

@@ -160,6 +160,12 @@ test('Ready to Running cannot be forced around the start rules', () => {
   assert.equal(out.refusal, 'useStartRace');
 });
 
+test('with nobody online the race still starts, with no kit to give', () => {
+  const out = reduce(readyRace(), start('h', []));
+  assert.equal(out.refusal, undefined);
+  assert.deepEqual(of(out.effects, 'startRacers')[0]?.racers, []);
+});
+
 test('a world reloaded in the countdown re-locks movement through the session', () => {
   const bag = new MapBag();
   saveState(bag, reduce(readyRace(), start()).state);

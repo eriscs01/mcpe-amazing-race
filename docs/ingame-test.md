@@ -133,6 +133,9 @@ the technical design (§4) add their checks here and record the result in their 
       sidebar score rises by one. Another team's box gives "Not your clue box".
 - [ ] ✱ Sidebar fake-player names keep their colour codes.
 - [ ] ✱ Detour / Roadblock / Pit Stop boxes say they come in a later update.
+- [ ] ✱ Start with one racer standing in the Nether: they are brought to the Overworld start
+      ring, at a block centre, not stuck in rock. A Nether block at an arena's coordinates is not
+      treated as its clue box.
 
 ### M2–M4
 
