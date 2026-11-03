@@ -1,15 +1,12 @@
 // Effect executor: applies the core's effects to the world. Holds no race rules.
-import { Player, world } from '@minecraft/server';
-
 import { giveItem, takeItem } from './items.js';
+import { online } from './online.js';
+import {
+  broadcast, lockMovement, showSidebar, showTitle, startRacers,
+} from './race.js';
 
 import type { Logger } from '../core/log.js';
-import type { Effect, PlayerId } from '../core/types.js';
-
-function online(id: PlayerId): Player | undefined {
-  const entity = world.getEntity(id);
-  return entity instanceof Player ? entity : undefined;
-}
+import type { Effect } from '../core/types.js';
 
 /** What the executor needs from the rest of the adapter. */
 export interface EffectHost {
@@ -53,6 +50,21 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'lightStops':
       host.light(effect);
+      break;
+    case 'startRacers':
+      startRacers(effect, log);
+      break;
+    case 'lockMovement':
+      lockMovement(effect, log);
+      break;
+    case 'broadcast':
+      broadcast(effect);
+      break;
+    case 'title':
+      showTitle(effect, log);
+      break;
+    case 'sidebar':
+      showSidebar(effect, log);
       break;
     default: {
       const unknown: never = effect;

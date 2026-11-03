@@ -113,6 +113,27 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] ✱ With 10 ticking areas in the world, the build stops and tells the host to remove one;
       Build arenas works afterwards.
 
+### G8 — race start & core loop ✱
+
+- [ ] ✱ With an arena missing, **Start race** is refused and says how many; once all stand, the
+      host confirms ("inventories will be cleared") and the race starts.
+- [ ] ✱ At start: racers are in Survival with the stone tools, 16 bread and a Passport (nothing
+      else), name tags in their team colour, and stand on a ring around the start arena; the host
+      who races still has Race Control. Gamerules `keepInventory` and `showCoordinates` are on.
+- [ ] ✱ Time: with the day-night cycle on it is morning and moves; off, it stays at noon.
+- [ ] ✱ Movement is locked for 10 seconds (cannot walk, jump or sneak), then "GO!" shows and
+      movement is free. Close the world during the countdown, reopen: note whether movement is
+      still locked (the add-on re-locks it on load; releasing it after a pause comes with G17).
+- [ ] ✱ Only leg 1's beams are lit, even after `race:light all on` before the start (#36).
+- [ ] ✱ Each racer gets the Leg 1 Route Info clue as a title and in chat; chat shows the race
+      start and "Leg 1 begins."; the sidebar lists each team coloured with score 0.
+- [ ] ✱ Clue box (hold the Passport and click it): exactly one screen/message, no block UI. A
+      teammate 11+ blocks away, or in the Nether, gives "All teammates must be present"; with
+      everyone within 10 blocks the clue advances, shows the next stop's clue and the team's
+      sidebar score rises by one. Another team's box gives "Not your clue box".
+- [ ] ✱ Sidebar fake-player names keep their colour codes.
+- [ ] ✱ Detour / Roadblock / Pit Stop boxes say they come in a later update.
+
 ### M2–M4
 
 Add checks as the groups land.

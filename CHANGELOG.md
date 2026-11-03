@@ -24,6 +24,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   beacon base, flags, torches, Pit Stop / Finish mat), recognised instead of rebuilt after a
   re-run, lit / unlit switching with a 2-second chunk retry queue restored on reload, task zone
   geometry, Build arenas retry, and `/scriptevent race:light` for checking beacons (G7).
+- Race start: Start race in the host menu (refused while an arena is missing), gamerule and
+  time snapshot, kit, ring teleport, 10-second movement-locked countdown with a GO title, only
+  leg 1 lit (clearing the debug lights), clue boxes with the presence rule, Route Info clues
+  and step advance, sidebar scoreboard and race/leg chat announcements (G8).
 
 ## [0.1.0]
 

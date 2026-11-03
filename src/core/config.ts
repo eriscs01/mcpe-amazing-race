@@ -506,3 +506,31 @@ export const ROADBLOCK_HINTS: Record<RoadblockKind, string> = {
   hunt: "Who's ready for a fight?",
   recall: "Who's been paying attention?",
 };
+
+// ── Race start and clue boxes (spec §8.1, §8.2) ─────────────────────────────
+
+export const RACE = {
+  /** Movement stays locked this long after the start (10 s). */
+  countdownTicks: 10 * TICKS_PER_SECOND,
+  /** Morning when the day-night cycle runs; noon, held, when it is off (spec §8.1). */
+  dayTime: 1000,
+  fixedTime: 6000,
+  /** Racers stand on a ring this far from the start stop's centre. */
+  ringRadius: 3,
+  /** Every online teammate must be this close to the clue box. */
+  presenceRadius: 10,
+  /** The clue box sits this far above the arena floor. */
+  clueBoxHeight: 1,
+  /** The game rules the race sets, as the world names them. */
+  rules: { keepInventory: true, showCoordinates: true },
+};
+
+/** How each stop type reads in a clue: its label and the beam colour to look for. */
+export const CLUE = {
+  start: { label: 'Start', beam: 'white' },
+  route: { label: 'Route Info', beam: 'yellow' },
+  detour: { label: 'Detour', beam: 'yellow' },
+  roadblock: { label: 'Roadblock', beam: 'red' },
+  pit: { label: 'Pit Stop', beam: 'lime' },
+  finish: { label: 'Finish', beam: 'lime' },
+} as const satisfies Record<StopType, { label: string; beam: string }>;

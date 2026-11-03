@@ -14,7 +14,7 @@ type Of<T extends Action['type']> = Extract<Action, { type: T }>;
 
 export const TEAM_PHASES: readonly Phase[] = ['setup', 'generating', 'ready'];
 
-const MIN_TEAMS = 2;
+export const MIN_TEAMS = 2;
 
 /** Team sizes for `players` racers: ceil(players / size) teams, as even as possible. */
 export function teamSizes(players: number, size: number): number[] {
