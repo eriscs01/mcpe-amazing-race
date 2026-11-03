@@ -44,6 +44,21 @@ export const BLOCK = {
   // swamp
   mud: 'minecraft:mud',
   mangroveRoots: 'minecraft:mangrove_roots',
+  air: 'minecraft:air',
+  water: 'minecraft:water',
+  flowingWater: 'minecraft:flowing_water',
+  lava: 'minecraft:lava',
+  flowingLava: 'minecraft:flowing_lava',
+  shortGrass: 'minecraft:short_grass',
+  tallGrass: 'minecraft:tall_grass',
+  fern: 'minecraft:fern',
+  largeFern: 'minecraft:large_fern',
+  vine: 'minecraft:vine',
+  deadBush: 'minecraft:deadbush',
+  bell: 'minecraft:bell',
+  cryingObsidian: 'minecraft:crying_obsidian',
+  chiseledSandstone: 'minecraft:chiseled_sandstone',
+  dirt: 'minecraft:dirt',
 } as const;
 
 export const ITEM = {
@@ -75,7 +90,11 @@ export const ITEM = {
   mud: 'minecraft:mud',
 } as const;
 
-export const ENTITY = {} as const satisfies Record<string, `minecraft:${string}`>;
+export const ENTITY = {
+  villager: 'minecraft:villager',
+  ironGolem: 'minecraft:iron_golem',
+  pillager: 'minecraft:pillager',
+} as const satisfies Record<string, `minecraft:${string}`>;
 
 export type BlockId = (typeof BLOCK)[keyof typeof BLOCK];
 export type ItemId = (typeof ITEM)[keyof typeof ITEM];
@@ -222,6 +241,31 @@ export const KIT: readonly { readonly item: ItemId; readonly amount: number }[] 
 export const TERRAINS = ['desert', 'snowy', 'forest', 'plains', 'mountain', 'swamp'] as const;
 export type Terrain = (typeof TERRAINS)[number];
 export const TERRAIN_FALLBACK: Terrain = 'plains';
+
+/** Terrain probe (spec §6.2): sample the ground at the centre and `arm` blocks out on each axis. */
+export const TERRAIN_PROBE = {
+  arm: 6,
+  maxSpread: 6,
+  /** How far down from the top block the ground walk looks before giving up. */
+  maxDepth: 48,
+};
+
+/** Landmark scan and arena offset (spec §6.3). */
+export const LANDMARK = {
+  scanRadius: 48,
+  offset: { min: 20, max: 30 },
+  /** Offset spots tried before the candidate stays without its landmark. */
+  offsetTries: 4,
+};
+
+/** Loading a candidate (spec §6.1): one ticking area, polled until the centre block reads. */
+export const LOAD = {
+  areaName: 'race_scan',
+  radiusChunks: 2,
+  pollTicks: 5,
+  settleTicks: 10,
+  timeoutTicks: 30 * TICKS_PER_SECOND,
+};
 
 /** Ground blocks that classify a stop. Forest is also marked by passing leaves or logs. */
 export const TERRAIN_BLOCKS: Record<Terrain, readonly BlockId[]> = {
