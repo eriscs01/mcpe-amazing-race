@@ -1,6 +1,6 @@
 ---
 name: advisor
-description: Senior advisor for the decisions that matter. Use only at the checkpoints in CLAUDE.md's group workflow - reviewing a group's plan before coding, unblocking an error that survived two fix attempts, and a completeness check before opening the PR. Not for routine coding, searching or reviewing small diffs.
+description: Senior advisor for the decisions that matter. Use only at the checkpoints of the group-workflow skill - reviewing a group's plan before coding, unblocking an error that survived two fix attempts, and a completeness check before opening the PR. Not for routine coding, searching or reviewing small diffs.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

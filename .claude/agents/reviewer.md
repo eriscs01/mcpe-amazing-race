@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Isolated code reviewer for a group's branch diff (CLAUDE.md group workflow, isolated review step). Run it with worktree isolation so it reads the branch fresh. Returns a verdict and ranked findings; never edits.
+description: Isolated code reviewer for a group's branch diff (group-workflow skill, isolated review step). Run it with worktree isolation so it reads the branch fresh. Returns a verdict and ranked findings; never edits.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
