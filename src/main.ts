@@ -4,6 +4,7 @@ import { world } from '@minecraft/server';
 
 import { guard } from './core/log.js';
 import { Session } from './core/session.js';
+import { startGenerationJob } from './mc/generationJob.js';
 import { startLoop } from './mc/loop.js';
 import { worldBag } from './mc/store.js';
 import { greetOnlinePlayers, wireEvents } from './mc/wiring.js';
@@ -20,7 +21,13 @@ const sink = (level: Level, line: string): void => {
 const session: Session = new Session({
   bag: worldBag,
   sink,
-  execute: (effects) => executeEffects(effects, session.log),
+  execute: (effects) => executeEffects(effects, session.log, {
+    generate: guard(
+      session.log,
+      'generationJob',
+      async (effect) => startGenerationJob(session, effect),
+    ),
+  }),
   newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });
 

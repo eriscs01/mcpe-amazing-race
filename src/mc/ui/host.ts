@@ -2,6 +2,9 @@
 import { world } from '@minecraft/server';
 import { ModalFormData } from '@minecraft/server-ui';
 
+import {
+  addLandmark, clearLandmarks, discardCourse, generateCourse, listStops,
+} from './course.js';
 import { showForm, showMenu } from './forms.js';
 import { hostMenu, teamsMenu } from '../../core/menu.js';
 import { COPY_WORLD_REMINDER, settingsFromValues, setupFields } from '../../core/setup.js';
@@ -128,9 +131,21 @@ async function transferHost(session: Session, player: Player): Promise<boolean> 
   return false;
 }
 
+/** Course commands open their own screens or act at once; the host menu is not shown again. */
+const once = (run: (session: Session, player: Player) => Promise<void> | void): Handler => (
+  async (session, player) => {
+    await run(session, player);
+    return false;
+  });
+
 const COMMANDS: Record<HostCommand, Handler> = {
   setup,
   teams,
+  addLandmark: once(addLandmark),
+  clearLandmarks: once(clearLandmarks),
+  generate: once(generateCourse),
+  listStops: once(listStops),
+  discardCourse: once(discardCourse),
   transferHost,
 };
 

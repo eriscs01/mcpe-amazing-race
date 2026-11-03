@@ -121,6 +121,8 @@ export interface State {
   dayStartClock: number;
   snapshot?: { rules: Record<string, boolean>; time: number };
   start?: Vec3;
+  /** Id of the newest generation job; a result for any other job is stale. */
+  job?: number;
   pins: Vec3[];
   stops: Stop[];
   teams: Team[];
@@ -152,11 +154,39 @@ export type Action = { type: 'tick' }
   }
   | {
     type: 'swapPlayers'; by: PlayerId; a: PlayerId; b: PlayerId;
-  };
+  }
+  /** Host: the position becomes a mandatory waypoint (spec §6.4). */
+  | { type: 'addPin'; by: PlayerId; pos: Vec3 }
+  | { type: 'clearPins'; by: PlayerId }
+  /** Host: `start` is the host's position, the start line. */
+  | { type: 'startGeneration'; by: PlayerId; start: Vec3 }
+  /** From the adapter's generation job, which carries the id it was started with. */
+  | {
+    type: 'courseGenerated'; job: number; start: Vec3; stops: Stop[]; inserted: number;
+  }
+  | { type: 'courseFailed'; job: number; failure: GenerationFailure }
+  | { type: 'discardCourse'; by: PlayerId };
+
+/** Why a generation job ended without a course. */
+export type GenerationFailure = {
+  reason: 'noGround' | 'noRoom'; stop: number; leg: number; type: StopType;
+} | {
+  reason: 'pinOutsideCourse' | 'pinTooClose' | 'tooManyPins'; pin: number;
+} | { reason: 'tickingAreaFull' } | { reason: 'error' };
 
 /** What the adapter must do in the world. */
 export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string }
   | { kind: 'giveItem'; to: PlayerId; item: MenuItemRole }
+  /** Starts the generation job; the adapter reports back with courseGenerated or courseFailed. */
+  | {
+    kind: 'generateCourse';
+    job: number;
+    start: Vec3;
+    pins: Vec3[];
+    legs: number;
+    radius: number;
+    seed: number;
+  }
   /** Removes every copy of the item from the player's inventory. */
   | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole };
 

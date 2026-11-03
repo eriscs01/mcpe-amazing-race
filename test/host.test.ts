@@ -14,7 +14,11 @@ const withHost = (id = 'h', name = 'Hana'): State => ({
 });
 // b loses any stale copy (kept from an earlier term while offline) before the fresh one.
 const HAND_OVER = ['takeItem:h', 'notify:h', 'takeItem:b', 'giveItem:b', 'notify:b'];
-const kinds = (effects: Effect[]) => effects.map((e) => `${e.kind}:${'to' in e ? e.to : e.from}`);
+const who = (e: Effect): string => {
+  if ('to' in e) return e.to;
+  return 'from' in e ? e.from : '';
+};
+const kinds = (effects: Effect[]) => effects.map((e) => `${e.kind}:${who(e)}`);
 
 type SpawnFlags = Partial<{ initial: boolean; hasPassport: boolean }>;
 const spawn = (player: string, name: string, extra: SpawnFlags = {}) => ({

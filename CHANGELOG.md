@@ -16,6 +16,10 @@ Versions follow `package.json`; the release workflow publishes the section match
 - Course planner: leg skeleton, Detour / Roadblock / Recall assignment, blind segments,
   pinned waypoints, distance-rule walk with look-ahead, candidate choice from terrain probes
   and unique place names (G5).
+- Course generation: host landmarks (add, clear), Generate course here, ticking-area terrain
+  probe with ground classification and landmark scan, arena offset from landmarks, progress on
+  the action bar, List stops and Discard course, failure messages that say what to change,
+  recovery from a world closed mid-generation (G6).
 
 ## [0.1.0]
 

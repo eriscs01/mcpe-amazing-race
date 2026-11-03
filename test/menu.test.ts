@@ -79,11 +79,15 @@ test('the Passport shows the racer\'s team, or that they have none yet', () => {
   assert.deepEqual(passportMenu(state, 'b').buttons, []);
 });
 
-test('Setup is offered only in setup; Teams until the race starts', () => {
+test('Setup and landmarks are offered in setup, the course screens as far as they apply', () => {
   const offered = (phase: Phase) => hostMenu({ ...hosted, phase }).buttons.map((b) => b.command);
-  assert.deepEqual(offered('setup'), ['setup', 'teams', 'transferHost']);
+  assert.deepEqual(offered('setup'), [
+    'setup', 'teams', 'addLandmark', 'clearLandmarks', 'generate', 'transferHost',
+  ]);
   assert.deepEqual(offered('generating'), ['teams', 'transferHost']);
-  assert.deepEqual(offered('ready'), ['teams', 'transferHost']);
+  assert.deepEqual(offered('ready'), [
+    'teams', 'generate', 'listStops', 'discardCourse', 'transferHost',
+  ]);
   assert.deepEqual(offered('running'), ['transferHost']);
 });
 
