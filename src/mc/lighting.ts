@@ -34,6 +34,12 @@ export function retryLights(session: Session): void {
   if (queue.size === 0) return;
   const target = new DimensionWorld(world.getDimension('overworld'));
   queue.drain((site, tries) => {
+    const current = session.state?.stops.find((s) => s.id === site.id);
+    if (current?.pos.x !== site.pos.x || current.pos.z !== site.pos.z) {
+      // The course changed since this was queued; its stop is not where it was.
+      session.log.info('lightsDropped', { stop: site.id });
+      return true;
+    }
     const { x, z } = site.pos;
     // A block that reads as undefined is in a chunk that is not loaded.
     const loaded = target.idAt(x, site.pos.y + 1, z) !== undefined;
@@ -46,9 +52,9 @@ export function retryLights(session: Session): void {
   }, (site, error) => session.log.error('lightsFailed', error, { stop: site.id, lit: site.lit }));
 }
 
-/** Queues the effect's changes and tries them at once. */
 type LightEffect = Extract<Effect, { kind: 'lightStops' }>;
 
+/** Queues the effect's changes and tries them at once. */
 export function lightStops(session: Session, effect: LightEffect): void {
   effect.sites.forEach((site) => queue.set(site));
   retryLights(session);

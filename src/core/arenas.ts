@@ -54,6 +54,17 @@ function current(state: State, job: number): Result | undefined {
 const hostNote = (state: State, code: string, text: string): Effect[] => (
   state.hostId ? [notify(state.hostId, code, text)] : []);
 
+/**
+ * What the builder does with a stop it was asked to build: `stop` when the course changed
+ * (the whole request is stale), `skip` when this arena stands already or its stop is gone,
+ * `build` otherwise.
+ */
+export function buildStep(state: State, job: number, id: number): 'build' | 'skip' | 'stop' {
+  if (state.phase !== 'ready' || state.job !== job) return 'stop';
+  const found = state.stops.find((s) => s.id === id);
+  return found && !found.built ? 'build' : 'skip';
+}
+
 export function buildArenas(state: State, a: Of<'buildArenas'>): Result {
   const denied = refuseUnlessHost(state, a.by, BUILD_PHASES);
   if (denied) return denied;

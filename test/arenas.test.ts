@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { LogCapture } from './helpers/logCapture.js';
 import { MapBag } from './helpers/mapBag.js';
 import {
-  allArenasBuilt, parseLightCommand, resumeEffects,
+  allArenasBuilt, buildStep, parseLightCommand, resumeEffects,
 } from '../src/core/arenas.js';
 import { hostMenu } from '../src/core/menu.js';
 import { saveState } from '../src/core/persist.js';
@@ -228,4 +228,14 @@ test('discard and a new course: a stale build result from before is refused (#32
   const again = reduce(discarded, { type: 'startGeneration', by: 'h', start: at }).state;
   assert.equal(again.job, 4);
   assert.equal(reduce(again, built(3, 1)).refusal, 'staleJob');
+});
+
+test('the builder skips an arena that stands and stops only when the course has changed', () => {
+  const state = hosted('ready', [stop(0, { built: true }), stop(1)]);
+  assert.equal(buildStep(state, 3, 0), 'skip');
+  assert.equal(buildStep(state, 3, 1), 'build');
+  assert.equal(buildStep(state, 3, 9), 'skip');
+  assert.equal(buildStep(state, 2, 1), 'stop');
+  assert.equal(buildStep({ ...state, phase: 'generating' }, 3, 1), 'stop');
+  assert.equal(buildStep({ ...state, phase: 'setup', stops: [] }, 3, 1), 'stop');
 });

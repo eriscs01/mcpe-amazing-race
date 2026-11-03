@@ -11,11 +11,14 @@ import { TickingAreaLoader } from './terrainProbe.js';
 import {
   applyOps, buildOps, looksBuilt,
 } from '../core/arena/layout.js';
+import { buildStep } from '../core/arenas.js';
 import { ARENA } from '../core/config.js';
 import { TickingAreaFull } from '../core/course/job.js';
 
 import type { Session } from '../core/session.js';
-import type { ArenaFailure, ArenaSite, Effect } from '../core/types.js';
+import type {
+  ArenaFailure, ArenaSite, Effect, State,
+} from '../core/types.js';
 
 type BuildEffect = Extract<Effect, { kind: 'buildArenas' }>;
 
@@ -37,13 +40,6 @@ async function runToEnd(steps: Generator<void>): Promise<void> {
 let pending: BuildEffect | undefined;
 let running = false;
 
-/** The course this build is for is still the one waiting to start, and this arena is missing. */
-function wanted(session: Session, job: number, id: number): boolean {
-  const { state } = session;
-  return state?.phase === 'ready' && state.job === job
-    && state.stops.some((s) => s.id === id && !s.built);
-}
-
 function progress(session: Session, k: number, total: number): void {
   const host = session.state?.hostId;
   const player = host ? world.getEntity(host) : undefined;
@@ -52,38 +48,63 @@ function progress(session: Session, k: number, total: number): void {
   }
 }
 
+/** Passes the build's steps through until the course changes under it. */
+function* whileWanted(steps: Generator<void>, keep: () => boolean): Generator<void> {
+  for (const step of steps) {
+    if (!keep()) return;
+    yield step;
+  }
+}
+
+/** Builds (or recognises) one arena; the y of its floor, or undefined if the course changed. */
 async function buildOne(
   session: Session,
   loader: TickingAreaLoader,
   job: number,
   site: ArenaSite,
-): Promise<'next' | 'stop'> {
+): Promise<{ y: number; existing: boolean } | undefined> {
+  const keep = (): boolean => buildStep(session.state as State, job, site.id) === 'build';
+  if (!await loader.ensureLoaded(site.pos) || !keep()) return undefined;
+  const target = new DimensionWorld(world.getDimension('overworld'));
+  const found = looksBuilt((x, y, z) => target.idAt(x, y, z), site.pos);
+  if (found === undefined) await runToEnd(whileWanted(applyOps(target, buildOps(site)), keep));
+  // Nothing was written for a course that changed meanwhile, or only part of it.
+  if (!keep()) return undefined;
+  return { y: found ?? site.pos.y, existing: found !== undefined };
+}
+
+/** Builds one site and reports it to the core; false ends the whole build. */
+async function buildSite(
+  session: Session,
+  loader: TickingAreaLoader,
+  job: number,
+  site: ArenaSite,
+): Promise<boolean> {
   const fail = (reason: ArenaFailure): void => {
     session.dispatch({
       type: 'arenaBuildFailed', job, stop: site.id, reason,
     });
   };
+  let outcome: Awaited<ReturnType<typeof buildOne>>;
   try {
-    if (!await loader.ensureLoaded(site.pos)) {
-      fail('timeout');
-      return 'next';
-    }
-    const target = new DimensionWorld(world.getDimension('overworld'));
-    const found = looksBuilt((x, y, z) => target.idAt(x, y, z), site.pos);
-    if (found === undefined) await runToEnd(applyOps(target, buildOps(site)));
-    session.dispatch({
-      type: 'arenaBuilt', job, stop: site.id, y: found ?? site.pos.y, existing: found !== undefined,
-    });
-    return 'next';
+    outcome = await buildOne(session, loader, job, site);
   } catch (error) {
     if (error instanceof TickingAreaFull) {
       fail('tickingAreaFull');
-      return 'stop';
+      return false;
     }
     session.log.error('arenaBuildError', error, { job, stop: site.id });
     fail('error');
-    return 'next';
+    return true;
   }
+  if (outcome) {
+    session.dispatch({
+      type: 'arenaBuilt', job, stop: site.id, y: outcome.y, existing: outcome.existing,
+    });
+  } else if (session.state && buildStep(session.state, job, site.id) === 'build') {
+    fail('timeout');
+  }
+  return true;
 }
 
 async function buildAll(session: Session, effect: BuildEffect): Promise<void> {
@@ -94,10 +115,13 @@ async function buildAll(session: Session, effect: BuildEffect): Promise<void> {
   try {
     for (let i = 0; i < sites.length; i += 1) {
       const site = sites[i];
-      // A newer request, a new course or a discard ends this one.
-      if (!site || pending || !wanted(session, job, site.id)) break;
-      progress(session, i + 1, sites.length);
-      if (await buildOne(session, loader, job, site) === 'stop') break;
+      const step = site && session.state ? buildStep(session.state, job, site.id) : 'stop';
+      // A newer request or a changed course ends this one; a finished arena is just skipped.
+      if (!site || pending || step === 'stop') break;
+      if (step === 'build') {
+        progress(session, i + 1, sites.length);
+        if (!await buildSite(session, loader, job, site)) break;
+      }
     }
   } finally {
     loader.close();
@@ -113,7 +137,12 @@ export async function startArenaBuild(session: Session, effect: BuildEffect): Pr
     while (pending) {
       const next = pending;
       pending = undefined;
-      await buildAll(session, next);
+      try {
+        await buildAll(session, next);
+      } catch (error) {
+        // A request that arrived meanwhile still runs.
+        session.log.error('arenaBuildAborted', error, { job: next.job });
+      }
     }
   } finally {
     running = false;
