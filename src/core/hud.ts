@@ -1,7 +1,7 @@
 // The racer HUD (spec §9.1): what each racer's action bar says and where their particle trail
 // goes. A pure query over the state and what the adapter reads from each online player; it
 // changes nothing, so it is not an Action and keeps no state of its own.
-import { clueBoxPos, targetStop } from './clue.js';
+import { clueBoxPos, matCentre, targetStop } from './clue.js';
 import { CLUE, HUD, TICKS_PER_SECOND } from './config.js';
 import {
   horizontalDistance, offsetByYaw, relativeYaw, yawTowards,
@@ -49,9 +49,15 @@ const seconds = (ticks: number): number => Math.ceil(ticks / TICKS_PER_SECOND);
 
 /** The line for a team held at a stop (spec §9.1); each part shows only while it applies. */
 function taskLine(state: State, team: Team): string | undefined {
+  const onMat = team.status === 'racing' && team.arrivedAt !== undefined;
+  const graceLeft = state.leg.phase === 'grace' && team.status === 'racing' && !onMat
+    ? (state.leg.graceEnd ?? 0) - state.clock : 0;
   const parts = [
-    // Task progress joins here when the challenges arrive (G10-G12).
-    team.penaltyOwed > 0 ? `Penalty owed: ${seconds(team.penaltyOwed)}s` : undefined,
+    // Task progress joins here when the challenges arrive (G11-G12).
+    onMat && team.arrivedAt !== undefined
+      ? `Checking in: ${seconds(team.arrivedAt + team.penaltyOwed - state.clock)}s` : undefined,
+    team.penaltyOwed > 0 && !onMat ? `Penalty owed: ${seconds(team.penaltyOwed)}s` : undefined,
+    graceLeft > 0 ? `Grace: ${seconds(graceLeft)}s` : undefined,
     team.lockoutUntil !== undefined && team.lockoutUntil > state.clock
       ? `Locked out: ${seconds(team.lockoutUntil - state.clock)}s` : undefined,
     team.departAt !== undefined && team.departAt > state.clock
@@ -69,7 +75,8 @@ function navigation(stop: Stop, view: HudView): { line: string; bearing?: number
   if (stop.blind) {
     return { line: `${label}: X ${stop.pos.x}, Z ${stop.pos.z}` };
   }
-  const box = clueBoxPos(stop);
+  // A Pit Stop or Finish is checked in on its mat, not at its clue box.
+  const box = stop.type === 'pit' || stop.type === 'finish' ? matCentre(stop) : clueBoxPos(stop);
   const metres = Math.round(horizontalDistance(view.head, box));
   // On top of the box there is no bearing: show it dead ahead.
   const bearing = horizontalDistance(view.head, box) < 1 ? view.yaw : yawTowards(view.head, box);

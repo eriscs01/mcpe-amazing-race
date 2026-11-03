@@ -2,6 +2,9 @@
 import { giveItem, takeItem } from './items.js';
 import { online } from './online.js';
 import {
+  restorePlayers, rewardWinners, spectate, teleportPlayers,
+} from './pitstop.js';
+import {
   broadcast, lockMovement, showSidebar, showTitle, startRacers,
 } from './race.js';
 
@@ -65,6 +68,18 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'sidebar':
       showSidebar(effect, log);
+      break;
+    case 'teleport':
+      teleportPlayers(effect, log);
+      break;
+    case 'reward':
+      rewardWinners(effect, log);
+      break;
+    case 'restore':
+      restorePlayers(effect, log);
+      break;
+    case 'spectate':
+      spectate(effect, log);
       break;
     default: {
       const unknown: never = effect;

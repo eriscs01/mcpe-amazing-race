@@ -17,6 +17,18 @@ const CONFIRM: Menu<'yes' | 'no'> = {
   buttons: [{ command: 'yes', label: 'Start' }, { command: 'no', label: 'Cancel' }],
 };
 
+const CONFIRM_END_LEG: Menu<'yes' | 'no'> = {
+  title: 'End leg now',
+  body: 'Teams not yet checked in are placed last; the last team is eliminated or gets a '
+    + 'Speed Bump. Penalties still owed are added to its departure.',
+  buttons: [{ command: 'yes', label: 'End leg' }, { command: 'no', label: 'Cancel' }],
+};
+
+export async function endLeg(session: Session, player: Player): Promise<void> {
+  if (await showMenu(player, CONFIRM_END_LEG, session.log) !== 'yes') return;
+  session.dispatch({ type: 'endLeg', by: player.id });
+}
+
 export async function startRace(session: Session, player: Player): Promise<void> {
   if (await showMenu(player, CONFIRM, session.log) !== 'yes') return;
   session.dispatch({

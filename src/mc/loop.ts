@@ -4,7 +4,8 @@ import { system } from '@minecraft/server';
 
 import { showHud } from './hud.js';
 import { retryLights } from './lighting.js';
-import { ARENA, HUD } from '../core/config.js';
+import { reportPositions } from './positions.js';
+import { ARENA, HUD, RACE } from '../core/config.js';
 import { guard } from '../core/log.js';
 
 import type { Session } from '../core/session.js';
@@ -21,4 +22,7 @@ export function startLoop(session: Session): void {
     showHud(session, refreshes % (HUD.trailEveryTicks / HUD.everyTicks) === 0);
   });
   system.runInterval(hud, HUD.everyTicks);
+  // Where the racers are: the core decides Pit Stop arrival (and later the rules) from it.
+  const positions = guard(session.log, 'positions', () => reportPositions(session));
+  system.runInterval(positions, RACE.positionTicks);
 }

@@ -89,7 +89,18 @@ test('Setup and landmarks are offered in setup, the course screens as far as the
   assert.deepEqual(offered('ready'), [
     'teams', 'generate', 'listStops', 'startRace', 'discardCourse', 'transferHost',
   ]);
-  assert.deepEqual(offered('running'), ['transferHost']);
+  assert.deepEqual(offered('running'), ['endLeg', 'transferHost']);
+  const resting = { ...hosted, phase: 'running' as const, leg: { n: 2, phase: 'rest' as const } };
+  assert.deepEqual(hostMenu(resting).buttons.map((b) => b.command), ['transferHost']);
+  const final = {
+    ...hosted,
+    phase: 'running' as const,
+    leg: { n: 2, phase: 'racing' as const },
+    plan: {
+      legs: 2, legsPerDay: 2, radius: 400, eliminationLegs: [],
+    },
+  };
+  assert.deepEqual(hostMenu(final).buttons.map((b) => b.command), ['transferHost']);
 });
 
 test('before the race the host menu shows the derived plan under the phase', () => {

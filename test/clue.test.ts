@@ -45,7 +45,7 @@ test('clue wording per stop type, with the blind-segment addition', () => {
   assert.match(clueText(state, stopOf(state, 3)), /^Leg 1 · Roadblock — .*red beam\.$/);
   assert.match(
     clueText(state, stopOf(state, 4)),
-    /^Check in at the Pit Stop: Place 4 \(X 400, Z −40\)\. .*lime beam\./,
+    /^Check in at the Pit Stop: Place 4 \(X 400, Z −40\)\. .*lime beam to the checkered mat\./,
   );
   assert.match(clueText(state, { ...stopOf(state, 2), blind: true }), /by coordinates only\.$/);
   assert.match(clueText(state, stopOf(state, 8)), /Finish/);
@@ -121,7 +121,12 @@ test('a teammate who is offline does not block (only the listed online members c
 
 test('before GO, or when the race is not running, the box does nothing', () => {
   const state = racing();
-  assert.equal(click({ ...state, leg: { n: 1, phase: 'departing' } }, 'h').refusal, 'notRacing');
+  const waiting = {
+    ...state,
+    leg: { n: 1, phase: 'departing' as const },
+    teams: state.teams.map((t) => ({ ...t, departAt: 99 })),
+  };
+  assert.equal(click(waiting, 'h').refusal, 'notRacing');
   assert.equal(click({ ...state, phase: 'paused' }, 'h').refusal, 'notRacing');
 });
 

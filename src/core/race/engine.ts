@@ -12,7 +12,10 @@ import {
 } from '../host.js';
 import { canEnter } from '../phase.js';
 import { saveSettings } from '../setup.js';
-import { startRace, tick } from './start.js';
+import { endLeg } from './legEnd.js';
+import { racerPositions } from './pitstop.js';
+import { startRace } from './start.js';
+import { tick } from './tick.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
 
 import type { Action, Result, State } from '../types.js';
@@ -81,6 +84,10 @@ export function reduce(state: State, action: Action): Result {
       return startRace(state, action);
     case 'interactClue':
       return interactClue(state, action);
+    case 'racerPositions':
+      return racerPositions(state, action);
+    case 'endLeg':
+      return endLeg(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

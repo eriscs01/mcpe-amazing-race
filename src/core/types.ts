@@ -88,6 +88,8 @@ export interface Team {
   speedBump: boolean;
   /** Key: `${stopId}:${option}`. */
   progress: Record<string, TaskProgress>;
+  /** Race clock when every online member stood on the Pit Stop mat (spec §8.4). */
+  arrivedAt?: number;
   departAt?: number;
   lastClearedStop: number;
   lockoutUntil?: number;
@@ -128,6 +130,9 @@ export interface State {
   teams: Team[];
   players: Record<PlayerId, PlayerRecord>;
   leg: LegState;
+  /** The final leg's winner (spec §8.4), and the race clock at which the race ends regardless. */
+  winner?: string;
+  finishEnd?: number;
 }
 
 /** The script-tagged vanilla items (spec §3). */
@@ -194,7 +199,14 @@ export type Action = { type: 'tick' }
    */
   | {
     type: 'interactClue'; player: PlayerId; pos: Vec3; members: { id: PlayerId; pos?: Vec3 }[];
-  };
+  }
+  /**
+   * Where the online racers are, sent by the adapter on an interval. One without `pos` is in
+   * another dimension. The core decides what it means (Pit Stop arrival; later, the rules).
+   */
+  | { type: 'racerPositions'; players: { id: PlayerId; pos?: Vec3 }[] }
+  /** Host: ends the leg now (spec §8.5). */
+  | { type: 'endLeg'; by: PlayerId };
 
 /** The world's settings before the race changed them (restored when it ends, spec §12). */
 export interface RaceSnapshot {
@@ -253,7 +265,15 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   /** A title on the players' screens; with `chat` the text is also sent to their chat. */
   | { kind: 'title'; to: PlayerId[]; text: string; chat?: boolean }
   /** Replaces the public sidebar scoreboard (spec §10). */
-  | { kind: 'sidebar'; rows: SidebarRow[] };
+  | { kind: 'sidebar'; rows: SidebarRow[] }
+  /** Moves the players to `pos` (the Overworld). */
+  | { kind: 'teleport'; players: PlayerId[]; pos: Vec3 }
+  /** The leg winner's reward (spec §8.4): experience levels and a firework at `at`. */
+  | { kind: 'reward'; to: PlayerId[]; levels: number; at: Vec3 }
+  /** Heals and feeds the players (the rest between legs, spec §8.5). */
+  | { kind: 'restore'; players: PlayerId[] }
+  /** Puts the players in Spectator mode (an eliminated team, spec §8.5). */
+  | { kind: 'spectate'; players: PlayerId[] };
 
 export interface SidebarRow {
   name: string;

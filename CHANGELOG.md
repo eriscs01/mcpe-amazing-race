@@ -31,6 +31,12 @@ Versions follow `package.json`; the release workflow publishes the section match
 - Racer HUD: action-bar compass bar with distance and stop label, `<< TURN AROUND >>`, task line
   (penalty, lockout, departure countdown), a private particle trail, and coordinates only for
   blind stops (G9).
+- Pit Stop and leg end: mat check-in (all online teammates within 2 blocks), penalty countdown
+  with a movement lock, placement and chat, 5 levels and a firework for the leg winner, a
+  60-second grace period for the last team, elimination (Spectator, Passport removed) or a Speed
+  Bump flag, a 20-second rest with heal and feed, staggered departures (gap behind the winner up
+  to 45 s plus any unserved penalty), the final leg's winner and finish, and End leg in the host
+  menu (G10).
 
 ## [0.1.0]
 

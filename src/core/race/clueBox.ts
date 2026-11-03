@@ -1,6 +1,6 @@
 // Clue box interaction (spec §8.2): is this the team's current stop, is the team together, and
-// what happens next. Route Info is complete here; Detour, Roadblock and Pit Stop arrive with
-// their groups, and until then say so instead of advancing.
+// what happens next. Route Info is complete here; a Pit Stop or Finish is checked in on its mat
+// (pitstop.ts); Detour and Roadblock arrive with their groups, and until then say so.
 import {
   clueBoxAt, clueBoxPos, clueText, legStops, sidebarRows, targetStop,
 } from '../clue.js';
@@ -20,17 +20,21 @@ const teamOf = (state: State, id: string): Team | undefined => {
 };
 
 export function interactClue(state: State, a: Of<'interactClue'>): Result {
-  if (state.phase !== 'running' || state.leg.phase !== 'racing') {
-    const text = state.phase === 'running' ? 'Wait for GO!' : 'The race is not under way.';
-    return refuse(state, a.player, 'notRacing', text);
+  if (state.phase !== 'running') {
+    return refuse(state, a.player, 'notRacing', 'The race is not under way.');
   }
   const stop = clueBoxAt(state, a.pos);
   const team = teamOf(state, a.player);
   // The adapter only sends clicks on a clue box; reaching here means it and the state disagree.
   if (!stop) return refuse(state, a.player, 'unknownBox', 'That is not a clue box.');
+  // Each team leaves on its own time (the start, and after each rest).
+  if (team?.departAt !== undefined) return refuse(state, a.player, 'notRacing', 'Wait for GO!');
   const heading = team ? targetStop(state, team) : undefined;
   if (team?.status !== 'racing' || heading?.id !== stop.id) {
     return refuse(state, a.player, 'notYourBox', 'Not your clue box.');
+  }
+  if (stop.type === 'pit' || stop.type === 'finish') {
+    return refuse(state, a.player, 'stopNotReady', 'Stand on the mat to check in.');
   }
   if (stop.type !== 'route') {
     return refuse(state, a.player, 'stopNotReady', `${stop.name} is a ${stop.type} stop; those `
