@@ -36,9 +36,9 @@ const session: Session = new Session({
     ),
     light: guard(session.log, 'lightStops', (effect) => lightStops(session, effect)),
     // Next tick: the failure arrives while the effect that failed is still being applied.
-    zoneFailed: (stop, zone) => system.run(() => {
+    zoneFailed: (stop, zone) => system.run(guard(session.log, 'zoneBuildFailed', () => {
       session.dispatch({ type: 'zoneBuildFailed', stop, zone });
-    }),
+    })),
   }),
   newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });

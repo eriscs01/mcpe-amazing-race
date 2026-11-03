@@ -184,7 +184,7 @@ Run with 2 players on 1.21.90+, a generated course with Detour and Roadblock sto
 racers can break course blocks; do not, except hay and wool where noted.
 
 - [ ] Clue box of an Aim/Climb Detour: the first click starts Aim; chat/title says "Aim: targets
-      0/4"; the west wall (x−9) shows 6 target blocks at the spec heights; every online member
+      0/4"; the arena's west edge (x−9) shows 6 free-standing target blocks at the spec heights; every online member
       receives a bow and 24 arrows. A second click shows the progress and builds nothing.
 - [ ] Shooting a target from 8+ blocks away counts (action bar "Aim: targets 1/4"); the same
       target twice, a target from under 8 blocks, and a shot at any other block do not. Four
