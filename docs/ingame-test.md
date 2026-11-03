@@ -169,8 +169,9 @@ the technical design (§4) add their checks here and record the result in their 
       then "Leg n begins." with the new clue; the old beam goes out and the new one lights.
 - [ ] Departures are staggered by the finish gap (max 45 s); a team released early can play
       while the others still show "Departing in Ns".
-- [ ] Host menu → End leg now (confirm): refused while two teams are still out; with one team
-      out it behaves like grace expiring (that team is teleported to the mat).
+- [ ] Host menu → End leg now (confirm) works with any number of teams out: those that never
+      arrived are teleported to the mat and placed by how far they got, and the last is
+      eliminated or gets the Speed Bump. It is not offered during the rest or on the final leg.
 - [ ] Final leg: the first team on the Finish mat wins ("… wins the Amazing Race!"); the race
       ends when all are in or 60 s later, and everyone can move.
 - [ ] A reload during rest or a departure countdown re-locks the racers (see #39 for the
