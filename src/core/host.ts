@@ -42,14 +42,21 @@ function replaceItem(state: State, host: PlayerId): Result {
   };
 }
 
-/** Makes `to` the host; the previous host, if any, loses the item and is told who took over. */
+/**
+ * Makes `to` the host; the previous host, if any, loses the item and is told who took over.
+ * `to` loses any stale copy first (one kept while offline), so exactly one is issued.
+ */
 function handOver(state: State, to: PlayerId, name: string, toText: string): Result {
   const previous = state.hostId;
   const effects: Effect[] = previous === undefined ? [] : [
     { kind: 'takeItem', from: previous, item: 'raceControl' },
     notify(previous, 'hostLost', `${name} is now the race host.`),
   ];
-  effects.push({ kind: 'giveItem', to, item: 'raceControl' }, notify(to, 'hostClaimed', toText));
+  effects.push(
+    { kind: 'takeItem', from: to, item: 'raceControl' },
+    { kind: 'giveItem', to, item: 'raceControl' },
+    notify(to, 'hostClaimed', toText),
+  );
   return { state: { ...withName(state, to, name), hostId: to }, effects };
 }
 

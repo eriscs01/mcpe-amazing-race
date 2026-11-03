@@ -48,6 +48,10 @@ function wireItemUse(session: Session): void {
     }
   };
 
+  world.afterEvents.playerLeave.subscribe(guard(session.log, 'playerLeave', (ev) => {
+    lastUse.delete(ev.playerId);
+  }));
+
   world.afterEvents.itemUse.subscribe(guard(session.log, 'itemUse', async (ev) => {
     const to = route(session, ev.source, ev.itemStack);
     if (to) await act(ev.source, to);
@@ -64,17 +68,28 @@ function wireItemUse(session: Session): void {
   }));
 }
 
+function spawned(session: Session, player: Player, initial: boolean): void {
+  session.dispatch({
+    type: 'playerSpawned',
+    player: player.id,
+    name: player.name,
+    initial,
+    hasPassport: hasItem(player, 'passport'),
+  });
+}
+
 function wireSpawn(session: Session): void {
   world.afterEvents.playerSpawn.subscribe(guard(session.log, 'playerSpawn', (ev) => {
-    const { player, initialSpawn } = ev;
-    session.dispatch({
-      type: 'playerSpawned',
-      player: player.id,
-      name: player.name,
-      initial: initialSpawn,
-      hasPassport: hasItem(player, 'passport'),
-    });
+    spawned(session, ev.player, ev.initialSpawn);
   }));
+}
+
+/**
+ * Called right after load: players who spawned before the state existed (their events were
+ * dropped), or are still online after a script reload, are treated as joining now.
+ */
+export function greetOnlinePlayers(session: Session): void {
+  for (const player of world.getPlayers()) spawned(session, player, true);
 }
 
 /** `/scriptevent race:<name>` handlers: optional operator backups, never required. */

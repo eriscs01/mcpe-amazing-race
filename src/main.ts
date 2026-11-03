@@ -6,7 +6,7 @@ import { guard } from './core/log.js';
 import { Session } from './core/session.js';
 import { startLoop } from './mc/loop.js';
 import { worldBag } from './mc/store.js';
-import { wireEvents } from './mc/wiring.js';
+import { greetOnlinePlayers, wireEvents } from './mc/wiring.js';
 import { executeEffects } from './mc/world.js';
 
 import type { Level } from './core/log.js';
@@ -28,5 +28,6 @@ wireEvents(session);
 
 world.afterEvents.worldLoad.subscribe(guard(session.log, 'worldLoad', () => {
   session.load();
+  greetOnlinePlayers(session);
   startLoop(session);
 }));

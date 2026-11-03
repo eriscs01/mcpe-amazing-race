@@ -207,9 +207,10 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Where the host id is stored (§3) | Inside the chunked state as `hostId`, not in its own dynamic property; it persists the same way. |
 | "Saved immediately after any state change" | Every accepted action is saved at once; race clock ticks alone are saved every 5 s. |
 | `itemUse` vs. block-use fallback (§3) | Both paths are wired until the in-game check settles it: `itemUse` (air) and `playerInteractWithBlock` holding a menu item (default interaction cancelled). Uses within 5 ticks count once, so a game that fires both opens one menu. |
-| Old Race Control after a host change | Removed from the previous host if online; an offline copy stays but is inert, because Race Control opens the menu only for the stored host. |
+| Old Race Control after a host change | Removed from the previous host if online; an offline copy, or one in the offhand (only the inventory container is searched), stays but is inert, because Race Control opens the menu only for the stored host. The new host's stale copies are removed before a fresh one is given. |
 | "Any plain vanilla Clock" (§3) | A clock with no custom name and no lore. A non-host sneak-using Race Control with no host stored also claims. |
-| Becoming host on spawn | Any spawn (join or respawn) while no host is stored claims the role; with an unreadable save nobody becomes host. |
+| Becoming host on spawn | Any spawn (join or respawn) while no host is stored claims the role; with an unreadable save nobody becomes host. Players already online when the state loads (spawned before `worldLoad`, or a script reload) are treated as joining then. |
+| Unreadable save and clock gestures | With no state, Race Control and sneak-using any plain clock open the host menu for anyone, to show "Saved race unreadable"; there is no stored host to check against. |
 | Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---

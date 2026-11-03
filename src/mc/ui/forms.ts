@@ -22,7 +22,10 @@ export async function showForm<R extends FormResponse>(
   log: Logger,
   form: string,
 ): Promise<R | undefined> {
-  if (openFor.has(player.id)) return undefined;
+  if (openFor.has(player.id)) {
+    log.info('formIgnored', { player: player.id, form, reason: 'alreadyOpen' });
+    return undefined;
+  }
   openFor.add(player.id);
   try {
     const response = await retryWhileBusy(
@@ -31,7 +34,10 @@ export async function showForm<R extends FormResponse>(
       async () => system.waitTicks(FORM_RETRY_TICKS),
       FORM_TRIES,
     );
-    if (response === undefined) log.warn('formGaveUp', { player: player.id, form, reason: 'busy' });
+    if (response === undefined) {
+      log.warn('formGaveUp', { player: player.id, form, reason: 'busy' });
+      if (player.isValid) player.sendMessage('Close chat and try again.');
+    }
     return response?.canceled ? undefined : response;
   } finally {
     openFor.delete(player.id);

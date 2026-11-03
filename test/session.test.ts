@@ -192,7 +192,7 @@ test('a host change is logged with the old and new host and the action', () => {
   });
   assert.equal(session.state?.hostId, 'a');
   assert.match(cap.find('hostChanged')[0]?.line ?? '', /to=a via=playerSpawned/);
-  assert.equal(executed[0]?.kind, 'giveItem');
+  assert.ok(executed.some((e) => e.kind === 'giveItem' && e.to === 'a'));
   session.dispatch({
     type: 'transferHost', by: 'a', to: 'b', toName: 'Ben',
   });

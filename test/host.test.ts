@@ -12,6 +12,8 @@ const fresh = (): State => createState(1);
 const withHost = (id = 'h', name = 'Hana'): State => ({
   ...fresh(), hostId: id, players: { [id]: { name } },
 });
+// b loses any stale copy (kept from an earlier term while offline) before the fresh one.
+const HAND_OVER = ['takeItem:h', 'notify:h', 'takeItem:b', 'giveItem:b', 'notify:b'];
 const kinds = (effects: Effect[]) => effects.map((e) => `${e.kind}:${'to' in e ? e.to : e.from}`);
 
 type SpawnFlags = Partial<{ initial: boolean; hasPassport: boolean }>;
@@ -23,8 +25,7 @@ test('the first player to spawn with no host stored becomes host and gets Race C
   const out = reduce(fresh(), spawn('a', 'Ana'));
   assert.equal(out.state.hostId, 'a');
   assert.equal(out.state.players.a?.name, 'Ana');
-  assert.deepEqual(out.effects[0], { kind: 'giveItem', to: 'a', item: 'raceControl' });
-  assert.equal(out.effects[1]?.kind, 'notify');
+  assert.deepEqual(kinds(out.effects), ['takeItem:a', 'giveItem:a', 'notify:a']);
 });
 
 test('later spawns only record the player; the host is unchanged and nothing is given', () => {
@@ -55,7 +56,7 @@ test('sneak-using a plain clock with no host claims the role', () => {
     type: 'claimHost', by: 'a', name: 'Ana', via: 'clock',
   });
   assert.equal(out.state.hostId, 'a');
-  assert.deepEqual(kinds(out.effects), ['giveItem:a', 'notify:a']);
+  assert.deepEqual(kinds(out.effects), ['takeItem:a', 'giveItem:a', 'notify:a']);
 });
 
 test('the host sneak-using a plain clock gets a fresh Race Control in place of the old one', () => {
@@ -85,7 +86,7 @@ test('/scriptevent race:host takes the role from the current host', () => {
   });
   assert.equal(out.state.hostId, 'b');
   assert.equal(out.state.players.b?.name, 'Ben');
-  assert.deepEqual(kinds(out.effects), ['takeItem:h', 'notify:h', 'giveItem:b', 'notify:b']);
+  assert.deepEqual(kinds(out.effects), HAND_OVER);
 });
 
 test('the host transfers the role: the item moves and both are told', () => {
@@ -94,7 +95,7 @@ test('the host transfers the role: the item moves and both are told', () => {
   });
   assert.equal(out.state.hostId, 'b');
   assert.equal(out.state.players.b?.name, 'Ben');
-  assert.deepEqual(kinds(out.effects), ['takeItem:h', 'notify:h', 'giveItem:b', 'notify:b']);
+  assert.deepEqual(kinds(out.effects), HAND_OVER);
 });
 
 test('only the host can transfer, and not to themselves', () => {
