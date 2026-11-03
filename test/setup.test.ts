@@ -106,3 +106,21 @@ test('only the host saves settings, and only in setup', () => {
     assert.deepEqual(out.effects.map((e) => e.kind === 'notify' && e.code), ['badPhase']);
   }
 });
+
+test('changing team size or host racing with teams made asks to re-run Auto-assign', () => {
+  const base = hosted();
+  const teams = [{ id: 'red' }, { id: 'blue' }] as State['teams'];
+  const withTeams: State = { ...base, teams };
+  const same = reduce(withTeams, save({ ...base.settings, days: 1 }));
+  assert.deepEqual(same.effects.map((e) => e.kind === 'notify' && e.code), ['settingsSaved']);
+  for (const change of [{ teamSize: 3 }, { hostRaces: true }]) {
+    const out = reduce(withTeams, save({ ...base.settings, ...change }));
+    assert.deepEqual(out.effects.map((e) => e.kind === 'notify' && e.code), [
+      'settingsSaved', 'teamsStale',
+    ]);
+    assert.equal(out.logs?.[0]?.fields.teamsStale, true);
+    assert.equal(out.state.teams, teams);
+  }
+  const none = reduce(base, save({ ...base.settings, teamSize: 3 }));
+  assert.equal(none.logs?.[0]?.fields.teamsStale, undefined);
+});

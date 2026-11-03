@@ -11,6 +11,7 @@ import type { Player } from '@minecraft/server';
 
 import type { HostCommand, TeamsCommand } from '../../core/menu.js';
 import type { Session } from '../../core/session.js';
+import type { State } from '../../core/types.js';
 
 /** Runs a host menu command; resolves true when the host menu should be shown again. */
 type Handler = (session: Session, player: Player) => Promise<boolean>;
@@ -21,8 +22,14 @@ const answers = (values: readonly unknown[] | undefined): unknown[] => (values ?
 
 const onlineIds = (): string[] => world.getPlayers().map((p) => p.id);
 
+/** Menu commands need the race state; without it (save unreadable) they log and stop. */
+function stateFor(session: Session, form: string): State | undefined {
+  if (!session.state) session.log.warn('formNoState', { form, status: session.loadStatus });
+  return session.state;
+}
+
 async function setup(session: Session, player: Player): Promise<boolean> {
-  const { state } = session;
+  const state = stateFor(session, 'Setup');
   if (!state) return false;
   const form = new ModalFormData().title('Setup').label(COPY_WORLD_REMINDER);
   for (const field of setupFields(state.settings)) {
@@ -45,8 +52,8 @@ async function setup(session: Session, player: Player): Promise<boolean> {
     player.sendMessage('The Setup form could not be read. Try again.');
     return false;
   }
-  session.dispatch({ type: 'saveSettings', by: player.id, settings });
-  return true; // spec §4: after saving, the menu shows the derived plan
+  // Spec §4: after saving, the menu shows the derived plan. A refusal was already explained.
+  return session.dispatch({ type: 'saveSettings', by: player.id, settings });
 }
 
 function autoAssign(session: Session, player: Player): void {
@@ -59,7 +66,7 @@ function autoAssign(session: Session, player: Player): void {
 }
 
 async function swap(session: Session, player: Player): Promise<void> {
-  const { state } = session;
+  const state = stateFor(session, 'Swap');
   if (!state) return;
   const ids = swapCandidates(state, onlineIds());
   if (ids.length < 2) {
@@ -90,7 +97,7 @@ const TEAMS_COMMANDS: Record<TeamsCommand, TeamsHandler> = {
 
 /** The Teams screen; it opens again after each change so the host sees the result. */
 async function teams(session: Session, player: Player): Promise<boolean> {
-  const { state } = session;
+  const state = stateFor(session, 'Teams');
   if (!state) return false;
   const command = await showMenu(player, teamsMenu(state, onlineIds()), session.log);
   if (command === undefined) return false;

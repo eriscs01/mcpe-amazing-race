@@ -89,11 +89,25 @@ export function saveSettings(state: State, a: Extract<Action, { type: 'saveSetti
     return refuse(state, a.by, 'badSettings', 'Those settings are outside the allowed ranges.');
   }
   const plan = derivePlan(settings, state.teams.length);
+  // Teams are never reshuffled behind the host's back; they are told to re-run Auto-assign.
+  const old = state.settings;
+  const teamsStale = state.teams.length > 0
+    && (settings.teamSize !== old.teamSize || settings.hostRaces !== old.hostRaces);
+  const effects = [
+    notify(a.by, 'settingsSaved', `Settings saved: ${planSummary(plan, state.teams.length)}`),
+  ];
+  if (teamsStale) {
+    effects.push(notify(a.by, 'teamsStale', 'Teams were made with the old settings; '
+      + 'use Teams → Auto-assign to apply the new ones.'));
+  }
   return {
     state: { ...state, settings: { ...settings } },
-    effects: [
-      notify(a.by, 'settingsSaved', `Settings saved: ${planSummary(plan, state.teams.length)}`),
-    ],
-    logs: [{ event: 'settingsSaved', fields: { ...settings, legs: plan.legs, by: a.by } }],
+    effects,
+    logs: [{
+      event: 'settingsSaved',
+      fields: {
+        ...settings, legs: plan.legs, ...(teamsStale ? { teamsStale } : {}), by: a.by,
+      },
+    }],
   };
 }

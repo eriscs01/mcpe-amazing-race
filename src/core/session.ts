@@ -82,14 +82,15 @@ export class Session {
     this.flush();
   }
 
-  dispatch(action: Action): void {
+  /** Returns whether the action was accepted (false when refused or there is no state). */
+  dispatch(action: Action): boolean {
     const { state } = this;
     if (!state) {
       if (action.type !== 'tick' && !this.droppedLogged) {
         this.log.warn('droppedNoState', { action: action.type });
         this.droppedLogged = true;
       }
-      return;
+      return false;
     }
     const out = reduce(state, action);
     if (out.refusal) {
@@ -117,6 +118,7 @@ export class Session {
     this.deps.execute(out.effects);
     // Saved at once (spec §13); a failing save waits for the periodic retry instead.
     if (!this.saveFailing) this.flush();
+    return out.refusal === undefined;
   }
 
   /** Called once per game tick by the adapter's loop with `system.currentTick`. */

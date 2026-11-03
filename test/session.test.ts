@@ -230,11 +230,11 @@ test('outcome lines an accepted action returns are logged with the race clock', 
   const settings = {
     days: 1, minutesPerDay: 30, teamSize: 2, hostRaces: false, daylightCycle: true,
   };
-  session.dispatch({ type: 'saveSettings', by: 'h', settings });
+  assert.equal(session.dispatch({ type: 'saveSettings', by: 'h', settings }), true);
   assert.match(
     cap.find('settingsSaved')[0]?.line ?? '',
     /^\[race\] settingsSaved clock=0 days=1 minutesPerDay=30 .* legs=2 by=h$/,
   );
-  session.dispatch({ type: 'saveSettings', by: 'x', settings });
+  assert.equal(session.dispatch({ type: 'saveSettings', by: 'x', settings }), false);
   assert.equal(cap.find('settingsSaved').length, 1);
 });

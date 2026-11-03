@@ -173,7 +173,8 @@ Detour, Roadblock, Speed Bump and Recall reuse the same interface; the engine on
 - `forms.ts` wraps `show()` with a `UserBusy` retry (every 10 ticks, up to 5 s) and ignores cancelled responses.
 - Host menu is built from `phase` → list of `{label, handler}`; racer Passport shows team, leg, current clue, advantages, and clue-box screens are routed by the stop type and team progress.
 - Forms never mutate state directly; they dispatch actions so the same validation runs as for tests.
-- Menus are core models (`menu.ts`): a host menu entry is a `HOST_ENTRIES` row (command, label, phases) plus a handler in `mc/ui/host.ts`'s `COMMANDS`; the record type makes a missing handler a type error.
+- Menus are core models (`menu.ts`): a host menu entry is a `HOST_ENTRIES` row (command, label, phases) plus a handler in `mc/ui/host.ts`'s `COMMANDS`; the record type makes a missing handler a type error. Sub-screens follow the same shape: the Teams screen is `teamsMenu` with `TeamsCommand` handled by `TEAMS_COMMANDS`.
+- Host-only actions gate through `refuseUnlessHost(state, by, phases)` (codes `notHost`, `badPhase`); each handler module exports the phases it allows (`SETTINGS_PHASES`, `TEAM_PHASES`) and the menu reuses them. `Session.dispatch` returns whether the action was accepted, so a form reopens its screen only after a change.
 - One form per player at a time; a second request while one is open or retrying is ignored. A closed form logs `formClosed` with its reason.
 - Modal form controls are core models too (`setupFields`), and values are read back by core (`settingsFromValues`); text-only rows (labels) are skipped, whether or not the game gives them a value slot.
 - After a change, the screen that made it opens again so the host sees the result (Setup → host menu with the plan, Auto-assign/Swap → Teams).
@@ -215,14 +216,14 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | "Any plain vanilla Clock" (§3) | A clock with no custom name and no lore. A non-host sneak-using Race Control with no host stored also claims. |
 | Becoming host on spawn | Any spawn (join or respawn) while no host is stored claims the role; with an unreadable save nobody becomes host. Players already online when the state loads (spawned before `worldLoad`, or a script reload) are treated as joining then. |
 | Unreadable save and clock gestures | With no state, Race Control and sneak-using any plain clock open the host menu for anyone, to show "Saved race unreadable"; there is no stored host to check against. |
-| When the plan is fixed (§4, §8.6) | Before the race it is derived on demand from the settings and current team count (host menu shows it in Setup, Generating and Ready). Race start (G8) stores it in `state.plan`; teams can't change after that, so the elimination schedule is the one calculated at race start. |
-| When settings and teams can change | Setup only in `setup` (settings shape legs and radius, so the course). Teams in `setup`, `generating` and `ready`; once the race runs, changes go through Team fixes. Changing settings never reshuffles teams; the host re-runs Auto-assign. |
+| When the plan is fixed (§4, §8.6) | Before the race it is derived on demand from the settings and current team count (host menu shows it in Setup, Generating and Ready). Until teams exist the summary says "eliminations set by teams" instead of a count. Race start (G8) stores it in `state.plan`; teams can't change after that, so the elimination schedule is the one calculated at race start. |
+| When settings and teams can change | Setup only in `setup` (settings shape legs and radius, so the course). Teams in `setup`, `generating` and `ready`; once the race runs, changes go through Team fixes. Changing settings never reshuffles teams; if team size or "Host also races" changed while teams exist, the host is told (`teamsStale`) to re-run Auto-assign. |
 | Team count and sizes (§4) | ceil(racers ÷ size) teams, sizes differing by at most 1, never above the chosen size; so a team can be smaller (5 at size 2 → 2, 2, 1). Fewer than 2 teams, or more than the 12 colours, is refused. |
 | Who auto-assign uses | Every online player, minus the host unless "Host also races"; earlier teams are replaced and offline members drop out. The shuffle seed is logged (`teamsAssigned seed=…`). |
 | Swap two players | Two members of different teams trade places; a team member and an online unassigned racer also swap, which lets late joiners in. |
 | Team ids and names | Id is the lower-case colour name (`red`), used as the `team=` log key; name and colour come from `TEAM_COLORS` in order. |
 | View teams | The Teams screen's body is the view (each team in its colour, then racers on no team, then the 2-team warning); its buttons are Auto-assign and Swap. |
-| Roadblock cap team size (§8.7) | The team's actual member count, so a smaller team's members may each perform more. |
+| Roadblock cap team size (§8.7) | The team's actual member count (`roadblockCapFor`), so a smaller team's members may each perform more. |
 | Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---

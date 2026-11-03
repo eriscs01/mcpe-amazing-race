@@ -43,6 +43,8 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] Setup (only in Setup phase) shows the copy-world reminder, the five controls with current
       values, and minutes step by 15; saving reopens the host menu with
       e.g. `6 legs · ~1,800-block radius · …` and logs `settingsSaved`.
+- [ ] ✱ Setup values land in the right settings (the reminder label must not shift the slider
+      and toggle values); closing a form without saving logs `formClosed`.
 - [ ] Teams → Auto-assign with 3+ online racers: each racer is told their team and teammates,
       the screen shows the coloured teams, and `teamsAssigned … seed=…` is logged.
 - [ ] Teams → Swap two players moves them (and lets an unassigned player in); with only one

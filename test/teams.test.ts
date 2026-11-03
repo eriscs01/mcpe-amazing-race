@@ -7,7 +7,7 @@ import { TEAM_COLORS } from '../src/core/config.js';
 import { reduce } from '../src/core/race/engine.js';
 import { createState } from '../src/core/state.js';
 import {
-  mayPerform, roadblockCap, swapCandidates, teamSizes, teamsView,
+  mayPerform, roadblockCap, roadblockCapFor, swapCandidates, teamSizes, teamsView,
 } from '../src/core/teams.js';
 
 import type { Action, Phase, State } from '../src/core/types.js';
@@ -187,7 +187,8 @@ test('swaps that would change nothing or break the rules are refused', () => {
   const state = twoTeams();
   const [a1, a2] = state.teams[0]?.members ?? [];
   assert.equal(reduce(state, swap(a1 ?? '', a2 ?? '')).refusal, 'sameTeam');
-  assert.equal(reduce(state, swap(a1 ?? '', a1 ?? '')).refusal, 'sameTeam');
+  assert.equal(reduce(state, swap(a1 ?? '', a1 ?? '')).refusal, 'samePlayer');
+  assert.equal(reduce(state, swap('e', 'e')).refusal, 'samePlayer');
   assert.equal(reduce(state, swap('e', 'h')).refusal, 'notOnTeam');
   assert.equal(reduce(state, swap('zz', a1 ?? '')).refusal, 'unknownPlayer');
   assert.equal(reduce(state, swap('h', a1 ?? '')).refusal, 'hostNotRacing');
@@ -227,4 +228,9 @@ test('a player at the cap may not perform unless every teammate is at the cap', 
   assert.equal(mayPerform(team, 'a', 3), false);
   assert.equal(mayPerform(team, 'b', 3), true);
   assert.equal(mayPerform({ ...team, roadblockCounts: { a: 3, b: 3 } }, 'a', 3), true);
+});
+
+test('a team\'s cap uses its own member count, so smaller teams share the load', () => {
+  assert.equal(roadblockCapFor({ members: ['a', 'b', 'c'] }, 6), 2);
+  assert.equal(roadblockCapFor({ members: ['a', 'b'] }, 6), 3);
 });

@@ -126,10 +126,11 @@ export function swapPlayers(state: State, a: Of<'swapPlayers'>): Result {
   }
   const teamA = state.teams.find((t) => t.members.includes(a.a));
   const teamB = state.teams.find((t) => t.members.includes(a.b));
+  if (a.a === a.b) return refuse(state, a.by, 'samePlayer', 'Pick two different players.');
   if (!teamA && !teamB) {
     return refuse(state, a.by, 'notOnTeam', 'Neither player is on a team.');
   }
-  if (a.a === a.b || teamA === teamB) {
+  if (teamA === teamB) {
     return refuse(state, a.by, 'sameTeam', 'Those players are already on the same team.');
   }
   if (!races(state, a.a) || !races(state, a.b)) {
@@ -190,6 +191,11 @@ export function teamsView(state: State, online: readonly PlayerId[]): string {
 /** Most Roadblocks one player may perform: ceil(total Roadblocks / team size) (spec §8.7). */
 export function roadblockCap(totalRoadblocks: number, teamSize: number): number {
   return Math.ceil(totalRoadblocks / Math.max(1, teamSize));
+}
+
+/** The cap for one team, by its actual member count (technical design §3). */
+export function roadblockCapFor(team: Pick<Team, 'members'>, totalRoadblocks: number): number {
+  return roadblockCap(totalRoadblocks, team.members.length);
 }
 
 /** Under the cap, or everyone on the team is at it (then anyone may perform). */
