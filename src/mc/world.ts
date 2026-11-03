@@ -14,6 +14,8 @@ function online(id: PlayerId): Player | undefined {
 /** What the executor needs from the rest of the adapter. */
 export interface EffectHost {
   generate: (effect: Extract<Effect, { kind: 'generateCourse' }>) => void;
+  build: (effect: Extract<Effect, { kind: 'buildArenas' }>) => void;
+  light: (effect: Extract<Effect, { kind: 'lightStops' }>) => void;
 }
 
 function apply(effect: Effect, log: Logger, host: EffectHost): void {
@@ -45,6 +47,12 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
     }
     case 'generateCourse':
       host.generate(effect);
+      break;
+    case 'buildArenas':
+      host.build(effect);
+      break;
+    case 'lightStops':
+      host.light(effect);
       break;
     default: {
       const unknown: never = effect;

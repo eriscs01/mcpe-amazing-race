@@ -165,7 +165,31 @@ export type Action = { type: 'tick' }
     type: 'courseGenerated'; job: number; start: Vec3; stops: Stop[]; inserted: number;
   }
   | { type: 'courseFailed'; job: number; failure: GenerationFailure }
-  | { type: 'discardCourse'; by: PlayerId };
+  | { type: 'discardCourse'; by: PlayerId }
+  /** Host: builds the arenas still missing (after a failure). */
+  | { type: 'buildArenas'; by: PlayerId }
+  /**
+   * From the adapter's arena builder, with the job of the course it built for. `y` is the
+   * arena's real ground height; `existing` says it was found already standing, not built.
+   */
+  | {
+    type: 'arenaBuilt'; job: number; stop: number; y: number; existing: boolean;
+  }
+  | { type: 'arenaBuildFailed'; job: number; stop: number; reason: ArenaFailure }
+  /**
+   * Which stops show a beacon (spec §6.6). Without `by` it comes from the race rules; with it,
+   * from the host's debug command.
+   */
+  | { type: 'setLit'; stops: number[] | 'all'; lit: boolean; by?: PlayerId };
+
+export type ArenaFailure = 'timeout' | 'tickingAreaFull' | 'error';
+
+/** A stop's arena: where it stands and what kind of stop it is (which sets its colours). */
+export interface ArenaSite {
+  id: number;
+  pos: Vec3;
+  type: StopType;
+}
 
 /** Why a generation job ended without a course. */
 export type GenerationFailure = {
@@ -187,6 +211,10 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
     radius: number;
     seed: number;
   }
+  /** Builds the arenas one at a time; each is reported with arenaBuilt or arenaBuildFailed. */
+  | { kind: 'buildArenas'; job: number; sites: ArenaSite[] }
+  /** Makes these stops lit or unlit, retrying until their chunks can be written (spec §6.6). */
+  | { kind: 'lightStops'; sites: (ArenaSite & { lit: boolean })[] }
   /** Removes every copy of the item from the player's inventory. */
   | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole };
 

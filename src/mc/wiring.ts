@@ -5,6 +5,7 @@ import { Player, system, world } from '@minecraft/server';
 import { hasItem, heldOf } from './items.js';
 import { openHostMenu } from './ui/host.js';
 import { openPassport } from './ui/racer.js';
+import { parseLightCommand } from '../core/arenas.js';
 import { USE_DEBOUNCE_TICKS } from '../core/config.js';
 import { guard } from '../core/log.js';
 import { routeUse } from '../core/menu.js';
@@ -107,6 +108,16 @@ const SCRIPT_EVENTS: Record<string, ScriptEventHandler> = {
     });
   },
   'race:dump': (session) => session.dumpState(),
+  // Before the race lights anything, the host can check a stop's beacon: `race:light 3 on`.
+  'race:light': (session, ev) => {
+    const player = ev.sourceEntity;
+    const wish = parseLightCommand(ev.message);
+    if (!(player instanceof Player) || !wish) {
+      session.log.warn('lightCommandRejected', { message: ev.message });
+      return;
+    }
+    session.dispatch({ type: 'setLit', ...wish, by: player.id });
+  },
 };
 
 function wireScriptEvents(session: Session): void {

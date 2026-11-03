@@ -2,6 +2,8 @@
 // Vanilla identifiers live only in the BLOCK / ITEM / ENTITY tables below, which
 // test/ids.test.ts checks against vanilla-data for the oldest supported and the latest game.
 
+import type { StopType } from './types.js';
+
 /** Logged at load; must equal package.json and the manifest (checked by tests and packaging). */
 export const ADDON_VERSION = '0.1.0';
 
@@ -65,6 +67,22 @@ export const BLOCK = {
   cryingObsidian: 'minecraft:crying_obsidian',
   chiseledSandstone: 'minecraft:chiseled_sandstone',
   dirt: 'minecraft:dirt',
+  // arena
+  smoothStone: 'minecraft:smooth_stone',
+  ironBlock: 'minecraft:iron_block',
+  beacon: 'minecraft:beacon',
+  yellowConcrete: 'minecraft:yellow_concrete',
+  redConcrete: 'minecraft:red_concrete',
+  limeConcrete: 'minecraft:lime_concrete',
+  yellowStainedGlass: 'minecraft:yellow_stained_glass',
+  redStainedGlass: 'minecraft:red_stained_glass',
+  limeStainedGlass: 'minecraft:lime_stained_glass',
+  whiteStainedGlass: 'minecraft:white_stained_glass',
+  oakFence: 'minecraft:oak_fence',
+  redWool: 'minecraft:red_wool',
+  yellowWool: 'minecraft:yellow_wool',
+  lantern: 'minecraft:lantern',
+  torch: 'minecraft:torch',
 } as const;
 
 export const ITEM = {
@@ -273,6 +291,37 @@ export const LOAD = {
   pollTicks: 5,
   settleTicks: 10,
   timeoutTicks: 30 * TICKS_PER_SECOND,
+};
+
+/** Arena build (spec §6.5), in blocks. `g` is the ground height of the stop. */
+export const ARENA = {
+  size: 19,
+  /** Blocks from the centre to the edge. */
+  half: 9,
+  /** Cleared to air from g+1 to g+clearHeight. */
+  clearHeight: 14,
+  /** Air and water below the floor are filled with dirt from g-dirtDepth to g-1. */
+  dirtDepth: 2,
+  /** Torches along the floor edge, this many blocks apart, centred on each side. */
+  torchSpacing: 4,
+  /** Flag posts at the corners: fence height, then red wool, yellow wool and a lantern above. */
+  flagFence: 3,
+  /** Zone centres are this far west (A) and east (B) of the stop; the mat is this far south. */
+  zoneOffset: 6,
+  matOffset: 6,
+  /** Beam glass colour at g+2 when lit (spec §6.5). */
+  glass: {
+    start: BLOCK.whiteStainedGlass,
+    route: BLOCK.yellowStainedGlass,
+    detour: BLOCK.yellowStainedGlass,
+    roadblock: BLOCK.redStainedGlass,
+    pit: BLOCK.limeStainedGlass,
+    finish: BLOCK.limeStainedGlass,
+  } satisfies Record<StopType, BlockId>,
+  /** Lighting changes are retried this often until the stop's chunk is loaded (spec §6.6). */
+  retryTicks: 2 * TICKS_PER_SECOND,
+  /** Ticking area that loads a stop while it is built (the generator has its own). */
+  areaName: 'race_build',
 };
 
 /** Ground blocks that classify a stop. Forest is also marked by passing leaves or logs. */

@@ -3,7 +3,7 @@ import { world } from '@minecraft/server';
 import { ModalFormData } from '@minecraft/server-ui';
 
 import {
-  addLandmark, clearLandmarks, discardCourse, generateCourse, listStops,
+  addLandmark, buildArenas, clearLandmarks, discardCourse, generateCourse, listStops,
 } from './course.js';
 import { showForm, showMenu } from './forms.js';
 import { hostMenu, teamsMenu } from '../../core/menu.js';
@@ -145,6 +145,7 @@ const COMMANDS: Record<HostCommand, Handler> = {
   clearLandmarks: once(clearLandmarks),
   generate: once(generateCourse),
   listStops: once(listStops),
+  buildArenas: once(buildArenas),
   discardCourse: once(discardCourse),
   transferHost,
 };

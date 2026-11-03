@@ -83,6 +83,36 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] ✱ Generate again from Ready replaces the course; Discard course returns to Setup and
       Setup can be opened again, with landmarks and teams still there.
 
+### G7 — arena build & lighting ✱
+
+- [ ] ✱ After Generate finishes, the host sees "Building arena k/N…" and then "All arenas are
+      built." A 6-leg course needs no input; `arenaBuilt` is logged per stop and `race_build` is
+      gone from `/tickingarea list` afterwards.
+- [ ] ✱ At a stop (fly there): a 19 × 19 smooth-stone floor, a 3 × 3 iron base with a yellow
+      concrete block above its centre, four flags (fence, red wool, yellow wool, lantern), 20
+      torches along the edge; nothing else stands within 14 blocks above the floor, and the
+      column above the centre is clear of trees or overhangs.
+- [ ] ✱ Pit Stop and Finish have the red and yellow checker mat 6 blocks south of the centre;
+      other stops do not.
+- [ ] ✱ Dirt fills holes and water below the floor; a stop beside a pond or lava does not flood
+      or burn the arena after the build (water or lava flowing in during the clear).
+- [ ] ✱ `/scriptevent race:light 1 on` turns that stop's clue box into a beacon with a beam and
+      tinted glass above it (yellow Route Info / Detour, red Roadblock, lime Pit Stop / Finish,
+      white Start); `off` restores yellow concrete and removes the glass; `all on` works.
+- [ ] ✱ Lighting a stop in an unloaded chunk (fly away first): `lightsDeferred` is logged, and
+      the beacon appears within a few seconds of flying back, with `lightsApplied tries=n`.
+- [ ] ✱ Close and reopen the world with stops lit: the lit stops show beacons again after load.
+- [ ] ✱ Close the world while arenas are building: after reopening, the missing ones build by
+      themselves; **Build arenas** appears in the host menu only while some are missing.
+- [ ] ✱ #32: Generate again from the same start (or after Discard): arenas that already stand are
+      not rebuilt or stacked 1–2 blocks higher (`arenaBuilt existing=true`), and old lit ones
+      follow their stop's lit state.
+- [ ] ✱ #34: no arena stands on a village roof or other structure (watch for it while flying
+      the course).
+- [ ] ✱ At night with torches only: no hostile mob spawns on the arena floor, including its middle.
+- [ ] ✱ With 10 ticking areas in the world, the build stops and tells the host to remove one;
+      Build arenas works afterwards.
+
 ### M2–M4
 
 Add checks as the groups land.
