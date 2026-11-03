@@ -91,7 +91,7 @@ test('a state change is saved immediately', () => {
 });
 
 test('the clock alone is saved every 5 seconds, not every tick', () => {
-  const { bag, session } = setup({ ...createState(1), phase: 'ready' });
+  const { bag, session } = setup({ ...createState(1), phase: 'paused' });
   session.load();
   session.dispatch({ type: 'setPhase', to: 'running' });
   bag.writes = 0;

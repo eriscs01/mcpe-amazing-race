@@ -119,7 +119,7 @@ export interface State {
   clock: number;
   day: number;
   dayStartClock: number;
-  snapshot?: { rules: Record<string, boolean>; time: number };
+  snapshot?: RaceSnapshot;
   start?: Vec3;
   /** Id of the newest generation job; a result for any other job is stale. */
   job?: number;
@@ -180,7 +180,27 @@ export type Action = { type: 'tick' }
    * Which stops show a beacon (spec §6.6). Without `by` it comes from the race rules; with it,
    * from the host's debug command.
    */
-  | { type: 'setLit'; stops: number[] | 'all'; lit: boolean; by?: PlayerId };
+  | { type: 'setLit'; stops: number[] | 'all'; lit: boolean; by?: PlayerId }
+  /**
+   * Host: starts the race (spec §8.1). `online` are the players in the world; `snapshot` is the
+   * gamerules and time of day as the world has them now, kept for the end of the race.
+   */
+  | {
+    type: 'startRace'; by: PlayerId; online: PlayerId[]; snapshot: RaceSnapshot;
+  }
+  /**
+   * A racer used a stop's clue box (spec §8.2). `members` are the team's online members; one
+   * without `pos` is in another dimension.
+   */
+  | {
+    type: 'interactClue'; player: PlayerId; pos: Vec3; members: { id: PlayerId; pos?: Vec3 }[];
+  };
+
+/** The world's settings before the race changed them (restored when it ends, spec §12). */
+export interface RaceSnapshot {
+  rules: Record<string, boolean>;
+  time: number;
+}
 
 export type ArenaFailure = 'timeout' | 'tickingAreaFull' | 'error';
 
@@ -216,7 +236,29 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   /** Makes these stops lit or unlit, retrying until their chunks can be written (spec §6.6). */
   | { kind: 'lightStops'; sites: (ArenaSite & { lit: boolean })[] }
   /** Removes every copy of the item from the player's inventory. */
-  | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole };
+  | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole }
+  /**
+   * Race start (spec §8.1 steps 1-4): sets the rules and time, then for each racer clears the
+   * inventory, gives the kit, sets Survival, colours the name tag and teleports to `spawn`.
+   */
+  | {
+    kind: 'startRacers';
+    racers: { id: PlayerId; name: string; color: string; spawn: Vec3 }[];
+    daylight: boolean;
+    time: number;
+  }
+  /** Locks or unlocks the players' movement (the start countdown). */
+  | { kind: 'lockMovement'; players: PlayerId[]; locked: boolean }
+  | { kind: 'broadcast'; text: string }
+  /** A title on the players' screens; with `chat` the text is also sent to their chat. */
+  | { kind: 'title'; to: PlayerId[]; text: string; chat?: boolean }
+  /** Replaces the public sidebar scoreboard (spec §10). */
+  | { kind: 'sidebar'; rows: SidebarRow[] };
+
+export interface SidebarRow {
+  name: string;
+  score: number;
+}
 
 /** An outcome line for the Content Log; the session adds the race clock. */
 export interface LogLine {

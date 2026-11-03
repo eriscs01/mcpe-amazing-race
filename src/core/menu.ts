@@ -7,6 +7,7 @@ import {
 import { hostName } from './host.js';
 import { isPlainClock, roleOf } from './items.js';
 import { planOf, planSummary } from './plan.js';
+import { START_PHASES } from './race/start.js';
 import { SETTINGS_PHASES } from './setup.js';
 import { TEAM_PHASES, teamsView } from './teams.js';
 
@@ -38,7 +39,7 @@ export function routeUse(use: Use, state: State | undefined): UseRoute | undefin
 }
 
 export type HostCommand = 'setup' | 'teams' | 'addLandmark' | 'clearLandmarks' | 'generate'
-  | 'listStops' | 'buildArenas' | 'discardCourse' | 'transferHost';
+  | 'listStops' | 'buildArenas' | 'startRace' | 'discardCourse' | 'transferHost';
 
 export type TeamsCommand = 'autoAssign' | 'swap';
 
@@ -73,6 +74,7 @@ export const HOST_ENTRIES: readonly {
     phases: BUILD_PHASES,
     when: (s) => unbuilt(s).length > 0,
   },
+  { command: 'startRace', label: 'Start race', phases: START_PHASES },
   { command: 'discardCourse', label: 'Discard course', phases: DISCARD_PHASES },
   { command: 'transferHost', label: 'Transfer host', phases: 'all' },
 ];

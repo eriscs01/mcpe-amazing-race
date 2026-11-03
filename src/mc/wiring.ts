@@ -3,9 +3,11 @@
 import { Player, system, world } from '@minecraft/server';
 
 import { hasItem, heldOf } from './items.js';
+import { OVERWORLD, useClueBox } from './race.js';
 import { openHostMenu } from './ui/host.js';
 import { openPassport } from './ui/racer.js';
 import { parseLightCommand } from '../core/arenas.js';
+import { clueBoxAt } from '../core/clue.js';
 import { USE_DEBOUNCE_TICKS } from '../core/config.js';
 import { guard } from '../core/log.js';
 import { routeUse } from '../core/menu.js';
@@ -60,7 +62,19 @@ function wireItemUse(session: Session): void {
 
   // Before-event: decide `cancel` from memory only, then act on the next tick.
   world.beforeEvents.playerInteractWithBlock.subscribe(guard(session.log, 'useOnBlock', (ev) => {
-    if (!ev.isFirstEvent || !ev.itemStack) return;
+    if (!ev.isFirstEvent) return;
+    // A clue box wins over the menu fallback: a racer holding the Passport opens one screen.
+    const { state } = session;
+    const at = ev.block.location; // read now: the block may be gone by the next tick
+    const racing = state?.players[ev.player.id]?.teamId !== undefined;
+    if (racing && state?.phase === 'running' && ev.block.dimension.id === OVERWORLD
+      && clueBoxAt(state, at)) {
+      ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API
+      const { player } = ev;
+      system.run(guard(session.log, 'clueBox', () => useClueBox(session, player, at)));
+      return;
+    }
+    if (!ev.itemStack) return;
     const to = route(session, ev.player, ev.itemStack);
     if (!to) return;
     ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API

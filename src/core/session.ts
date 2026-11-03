@@ -5,6 +5,7 @@ import { ADDON_VERSION, SAVE_EVERY_TICKS } from './config.js';
 import { Logger } from './log.js';
 import { loadState, saveState } from './persist.js';
 import { reduce } from './race/engine.js';
+import { raceResumeEffects } from './race/start.js';
 import { createState } from './state.js';
 
 import type { Sink } from './log.js';
@@ -88,7 +89,8 @@ export class Session {
     this.dirty = fresh || this.state !== state;
     this.flush();
     // Builds that never finished and lights (kept only in the world) are redone from the state.
-    const resume = this.state ? resumeEffects(this.state) : [];
+    const resume = this.state
+      ? [...resumeEffects(this.state), ...raceResumeEffects(this.state)] : [];
     if (resume.length > 0) this.deps.execute(resume);
   }
 

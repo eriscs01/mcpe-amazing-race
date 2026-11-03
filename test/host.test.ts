@@ -15,7 +15,7 @@ const withHost = (id = 'h', name = 'Hana'): State => ({
 // b loses any stale copy (kept from an earlier term while offline) before the fresh one.
 const HAND_OVER = ['takeItem:h', 'notify:h', 'takeItem:b', 'giveItem:b', 'notify:b'];
 const who = (e: Effect): string => {
-  if ('to' in e) return e.to;
+  if ('to' in e) return Array.isArray(e.to) ? e.to.join(',') : e.to;
   return 'from' in e ? e.from : '';
 };
 const kinds = (effects: Effect[]) => effects.map((e) => `${e.kind}:${who(e)}`);

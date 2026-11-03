@@ -87,7 +87,7 @@ test('Setup and landmarks are offered in setup, the course screens as far as the
   ]);
   assert.deepEqual(offered('generating'), ['teams', 'transferHost']);
   assert.deepEqual(offered('ready'), [
-    'teams', 'generate', 'listStops', 'discardCourse', 'transferHost',
+    'teams', 'generate', 'listStops', 'startRace', 'discardCourse', 'transferHost',
   ]);
   assert.deepEqual(offered('running'), ['transferHost']);
 });

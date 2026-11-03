@@ -3,18 +3,28 @@ import {
   arenaBuildFailed,
   arenaBuilt, buildArenas, setLit,
 } from '../arenas.js';
-import { advanceClock } from '../clock.js';
 import {
   addPin, clearPins, courseFailed, courseGenerated, discardCourse, startGeneration,
 } from '../generation.js';
-import { claimHost, playerSpawned, transferHost } from '../host.js';
+import { interactClue } from './clueBox.js';
+import {
+  claimHost, playerSpawned, refuse, transferHost,
+} from '../host.js';
 import { canEnter } from '../phase.js';
 import { saveSettings } from '../setup.js';
+import { startRace, tick } from './start.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
 
 import type { Action, Result, State } from '../types.js';
 
 function setPhase(state: State, action: Extract<Action, { type: 'setPhase' }>): Result {
+  if (state.phase === 'ready' && action.to === 'running') {
+    // The start rules (host, teams, arenas, kit, countdown) live in startRace.
+    const text = 'The race starts from the host menu.';
+    return action.by
+      ? refuse(state, action.by, 'useStartRace', text)
+      : { state, refusal: 'useStartRace', effects: [] };
+  }
   if (canEnter(state.phase, action.to)) {
     return { state: { ...state, phase: action.to }, effects: [] };
   }
@@ -32,7 +42,7 @@ function setPhase(state: State, action: Extract<Action, { type: 'setPhase' }>): 
 export function reduce(state: State, action: Action): Result {
   switch (action.type) {
     case 'tick':
-      return { state: advanceClock(state), effects: [] };
+      return tick(state);
     case 'setPhase':
       return setPhase(state, action);
     case 'playerSpawned':
@@ -67,6 +77,10 @@ export function reduce(state: State, action: Action): Result {
       return arenaBuildFailed(state, action);
     case 'setLit':
       return setLit(state, action);
+    case 'startRace':
+      return startRace(state, action);
+    case 'interactClue':
+      return interactClue(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);
