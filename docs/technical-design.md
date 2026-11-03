@@ -63,6 +63,10 @@ src/
     persist.ts            chunked JSON save/load over a PropertyBag, validation, additive defaults
     session.ts            live state holder: load, dispatch → reduce → effects, save timing
     log.ts                Logger (event + key=value fields keyed by race clock) and guard()
+    items.ts              Race Control / Passport recognition (type + name tag + lore), plain clock
+    host.ts               host claim / replace / transfer, Passport on rejoin
+    menu.ts               item-use routing, phase-aware host menu + Passport models (HOST_ENTRIES)
+    retry.ts              bounded retry while busy (forms' UserBusy)
     rng.ts                seeded PRNG (mulberry32); seed stored in state
     vec.ts                distance, heading, yaw→direction
     plan.ts               derived plan (legs, radius, boundary) + elimination schedule
@@ -79,7 +83,8 @@ src/
   mc/
     loop.ts               single runInterval(1): advance clock, run periodic systems by modulo
     store.ts              world dynamic properties as the core's PropertyBag
-    items.ts              Race Control / Passport create + recognise
+    items.ts              Race Control / Passport create, find, give, take
+    wiring.ts             event subscriptions: item use (air + block fallback), spawn, /scriptevent
     world.ts              effect executor, block/entity helpers, safe chunk access
     terrainProbe.ts       ticking area load + column sampling + landmark scan
     builder.ts            arena build/lighting as runJob generators, retry queue
@@ -166,6 +171,8 @@ Detour, Roadblock, Speed Bump and Recall reuse the same interface; the engine on
 - `forms.ts` wraps `show()` with a `UserBusy` retry (every 10 ticks, up to 5 s) and ignores cancelled responses.
 - Host menu is built from `phase` → list of `{label, handler}`; racer Passport shows team, leg, current clue, advantages, and clue-box screens are routed by the stop type and team progress.
 - Forms never mutate state directly; they dispatch actions so the same validation runs as for tests.
+- Menus are core models (`menu.ts`): a host menu entry is a `HOST_ENTRIES` row (command, label, phases) plus a handler in `mc/ui/host.ts`'s `COMMANDS`; the record type makes a missing handler a type error.
+- One form per player at a time; a second request while one is open or retrying is ignored.
 
 ### 2.9 Testing strategy
 
@@ -199,6 +206,12 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Save interrupted part-way | Chunks can briefly mix old and new text; the in-memory state is kept and the 5 s retry rewrites every chunk. Only closing the world inside that window loses the save (`badJson` on load). |
 | Where the host id is stored (§3) | Inside the chunked state as `hostId`, not in its own dynamic property; it persists the same way. |
 | "Saved immediately after any state change" | Every accepted action is saved at once; race clock ticks alone are saved every 5 s. |
+| `itemUse` vs. block-use fallback (§3) | Both paths are wired until the in-game check settles it: `itemUse` (air) and `playerInteractWithBlock` holding a menu item (default interaction cancelled). Uses within 5 ticks count once, so a game that fires both opens one menu. |
+| Old Race Control after a host change | Removed from the previous host if online; an offline copy, or one in the offhand (only the inventory container is searched), stays but is inert, because Race Control opens the menu only for the stored host. The new host's stale copies are removed before a fresh one is given. |
+| "Any plain vanilla Clock" (§3) | A clock with no custom name and no lore. A non-host sneak-using Race Control with no host stored also claims. |
+| Becoming host on spawn | Any spawn (join or respawn) while no host is stored claims the role; with an unreadable save nobody becomes host. Players already online when the state loads (spawned before `worldLoad`, or a script reload) are treated as joining then. |
+| Unreadable save and clock gestures | With no state, Race Control and sneak-using any plain clock open the host menu for anyone, to show "Saved race unreadable"; there is no stored host to check against. |
+| Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---
 

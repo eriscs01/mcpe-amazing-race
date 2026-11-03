@@ -6,6 +6,7 @@ import { guard } from './core/log.js';
 import { Session } from './core/session.js';
 import { startLoop } from './mc/loop.js';
 import { worldBag } from './mc/store.js';
+import { greetOnlinePlayers, wireEvents } from './mc/wiring.js';
 import { executeEffects } from './mc/world.js';
 
 import type { Level } from './core/log.js';
@@ -23,7 +24,10 @@ const session: Session = new Session({
   newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });
 
+wireEvents(session);
+
 world.afterEvents.worldLoad.subscribe(guard(session.log, 'worldLoad', () => {
   session.load();
+  greetOnlinePlayers(session);
   startLoop(session);
 }));

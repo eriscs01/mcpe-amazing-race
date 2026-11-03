@@ -19,11 +19,18 @@ export interface SessionDeps {
   newSeed: () => number;
 }
 
+export type LoadStatus = 'pending' | 'ready' | 'unreadable';
+
+/** Characters of state JSON per `stateDumpPart` line, short enough for one Content Log entry. */
+export const DUMP_PART_CHARS = 2000;
+
 export class Session {
   /** Undefined until loaded, and for good if the save could not be read. */
   state: State | undefined;
 
   readonly log: Logger;
+
+  private status: LoadStatus = 'pending';
 
   /** A change that must be saved before the tick ends. */
   private dirty = false;
@@ -39,9 +46,15 @@ export class Session {
     this.log = new Logger(deps.sink, () => ({ clock: this.state?.clock }));
   }
 
+  /** `unreadable` keeps the add-on idle; the host menu explains why. */
+  get loadStatus(): LoadStatus {
+    return this.status;
+  }
+
   load(): void {
     const result = loadState(this.deps.bag);
     if (result.kind === 'corrupt') {
+      this.status = 'unreadable';
       // Leave the stored chunks untouched and stay idle; never overwrite them with a new race.
       this.log.error('loadFailed', new Error('saved race state is unreadable'), {
         reason: result.reason,
@@ -52,6 +65,7 @@ export class Session {
     const fresh = result.kind === 'empty';
     const state = fresh ? createState(this.deps.newSeed()) : result.state;
     this.state = state;
+    this.status = 'ready';
     this.log.info('loaded', {
       version: ADDON_VERSION,
       schema: state.v,
@@ -91,6 +105,9 @@ export class Session {
         by: 'by' in action ? action.by : undefined,
       });
     }
+    if (out.state.hostId !== state.hostId) {
+      this.log.info('hostChanged', { from: state.hostId, to: out.state.hostId, via: action.type });
+    }
     this.state = out.state;
     if (out.state !== state) {
       if (action.type === 'tick' && out.effects.length === 0) this.clockMoved = true;
@@ -109,6 +126,31 @@ export class Session {
     // Periodic save: the moved clock, and the retry of a save that failed.
     if (this.clockMoved) this.dirty = true;
     this.flush();
+  }
+
+  /**
+   * Read-only diagnosis (`/scriptevent race:dump`): a summary line, then the state JSON in parts.
+   * Joined in order, the parts' `json` values (log-quoted ones decoded) are the state.
+   */
+  dumpState(): void {
+    const { state } = this;
+    if (!state) {
+      this.log.info('stateDump', { status: this.status });
+      return;
+    }
+    const json = JSON.stringify(state);
+    const parts = Math.ceil(json.length / DUMP_PART_CHARS);
+    this.log.info('stateDump', {
+      phase: state.phase,
+      host: state.hostId,
+      teams: state.teams.length,
+      stops: state.stops.length,
+      parts,
+    });
+    for (let i = 0; i < parts; i += 1) {
+      const slice = json.slice(i * DUMP_PART_CHARS, (i + 1) * DUMP_PART_CHARS);
+      this.log.info('stateDumpPart', { part: i + 1, of: parts, json: slice });
+    }
   }
 
   private flush(): void {
