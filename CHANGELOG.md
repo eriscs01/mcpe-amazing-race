@@ -28,6 +28,9 @@ Versions follow `package.json`; the release workflow publishes the section match
   time snapshot, kit, ring teleport, 10-second movement-locked countdown with a GO title, only
   leg 1 lit (clearing the debug lights), clue boxes with the presence rule, Route Info clues
   and step advance, sidebar scoreboard and race/leg chat announcements (G8).
+- Racer HUD: action-bar compass bar with distance and stop label, `<< TURN AROUND >>`, task line
+  (penalty, lockout, departure countdown), a private particle trail, and coordinates only for
+  blind stops (G9).
 
 ## [0.1.0]
 
