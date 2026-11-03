@@ -66,7 +66,9 @@ function wireItemUse(session: Session): void {
     // A clue box wins over the menu fallback: a racer holding the Passport opens one screen.
     const { state } = session;
     const at = ev.block.location; // read now: the block may be gone by the next tick
-    if (state?.phase === 'running' && ev.block.dimension.id === OVERWORLD && clueBoxAt(state, at)) {
+    const racing = state?.players[ev.player.id]?.teamId !== undefined;
+    if (racing && state?.phase === 'running' && ev.block.dimension.id === OVERWORLD
+      && clueBoxAt(state, at)) {
       ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API
       const { player } = ev;
       system.run(guard(session.log, 'clueBox', () => useClueBox(session, player, at)));

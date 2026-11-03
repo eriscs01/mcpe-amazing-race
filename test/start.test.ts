@@ -160,6 +160,16 @@ test('Ready to Running cannot be forced around the start rules', () => {
   assert.equal(out.refusal, 'useStartRace');
 });
 
+test('a crowd of racers stays inside the arena ring and still gets a spot each', () => {
+  const base = readyRace();
+  const many = Array.from({ length: 40 }, (_, i) => `p${i}`);
+  const [red, blue] = base.teams;
+  const state = { ...base, teams: [{ ...red, members: many }, blue] as State['teams'] };
+  const [kit] = of(reduce(state, start('h', many)).effects, 'startRacers');
+  assert.equal(kit?.racers.length, 40);
+  for (const r of kit?.racers ?? []) assert.ok(Math.hypot(r.spawn.x, r.spawn.z) <= 7.5);
+});
+
 test('with nobody online the race still starts, with no kit to give', () => {
   const out = reduce(readyRace(), start('h', []));
   assert.equal(out.refusal, undefined);

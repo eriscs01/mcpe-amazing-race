@@ -3,7 +3,7 @@
 import { allArenasBuilt, lightEffects, unbuilt } from '../arenas.js';
 import { advanceClock } from '../clock.js';
 import { clueText, legStops, sidebarRows } from '../clue.js';
-import { RACE } from '../config.js';
+import { ARENA, RACE } from '../config.js';
 import { refuse, refuseUnlessHost } from '../host.js';
 import { planOf } from '../plan.js';
 import { MIN_TEAMS } from '../teams.js';
@@ -22,7 +22,8 @@ const members = (state: State): PlayerId[] => state.teams.flatMap((t) => t.membe
 
 /** `count` spots on a ring around the start line's centre, one block above its floor. */
 function ringSpots(centre: Vec3, count: number): Vec3[] {
-  const radius = Math.max(RACE.ringRadius, Math.ceil(count / 3));
+  // Wider for a crowd, but inside the flags and torches; beyond that racers share blocks.
+  const radius = Math.min(ARENA.half - 2, Math.max(RACE.ringRadius, Math.ceil(count / 3)));
   return Array.from({ length: count }, (_, i) => {
     const angle = (2 * Math.PI * i) / Math.max(1, count);
     return {
