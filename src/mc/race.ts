@@ -81,6 +81,9 @@ export function startRacers(effect: Of<'startRacers'>, log: Logger): void {
 export function lockMovement(effect: Of<'lockMovement'>, log: Logger): void {
   for (const id of effect.players) {
     const player = online(id);
+    if (!player) {
+      log.warn('movementLockSkipped', { player: id, locked: effect.locked, reason: 'offline' });
+    }
     try {
       player?.inputPermissions.setPermissionCategory(
         InputPermissionCategory.Movement,

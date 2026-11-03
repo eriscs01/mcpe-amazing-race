@@ -37,15 +37,21 @@ function checkInRemaining(start: State): Result {
     .sort((x, y) => (x.team.arrivedAt ?? 0) - (y.team.arrivedAt ?? 0) || x.index - y.index);
   const afterServing = serving.reduce<Result>((acc, { team }) => {
     const left = Math.max(0, (team.arrivedAt ?? 0) + team.penaltyOwed - start.clock);
-    return merge(acc, completeCheckIn(acc.state, team.id, left));
+    return merge(acc, completeCheckIn(acc.state, team.id, { remaining: left, forced: true }));
   }, same(start));
-  const stragglers = waiting(afterServing.state);
+  // Teams that never arrived rank by how far they got, then in team order.
+  const stragglers = waiting(afterServing.state)
+    .map((team, index) => ({ team, index }))
+    .sort((x, y) => y.team.step - x.team.step || x.index - y.index)
+    .map(({ team }) => team);
   const teleports: Effect[] = stragglers.flatMap((t) => {
     const stop = targetStop(afterServing.state, t);
     return stop ? [{ kind: 'teleport' as const, players: t.members, pos: matCentre(stop) }] : [];
   });
   return stragglers.reduce<Result>(
-    (acc, t) => merge(acc, completeCheckIn(acc.state, t.id, t.penaltyOwed)),
+    (acc, t) => merge(acc, completeCheckIn(acc.state, t.id, {
+      remaining: t.penaltyOwed, forced: true,
+    })),
     { ...afterServing, effects: [...afterServing.effects, ...teleports] },
   );
 }
@@ -178,13 +184,17 @@ function settleFinal(state: State): Result {
   if (state.winner === undefined) return same(state);
   if (waiting(state).length > 0 && state.clock < (state.finishEnd ?? 0)) return same(state);
   const logs: LogLine[] = [{
-    event: 'raceFinished', fields: { winner: state.winner, clock: state.clock },
+    event: 'raceFinished',
+    fields: {
+      winner: state.winner, clock: state.clock, unplaced: waiting(state).map((t) => t.id).join(),
+    },
   }];
   return {
     state: { ...state, phase: 'finished' },
     effects: [
       { kind: 'lockMovement', players: membersOf(state.teams), locked: false },
       { kind: 'broadcast', text: 'The race is over!' },
+      { kind: 'sidebar', rows: sidebarRows(state) },
     ],
     logs,
   };
@@ -254,10 +264,6 @@ export function endLeg(state: State, a: Of<'endLeg'>): Result {
       'finalLeg',
       'The final leg ends when a team checks in at the Finish.',
     );
-  }
-  const out = waiting(state).filter((t) => t.arrivedAt === undefined).length;
-  if (out >= 2) {
-    return refuse(state, a.by, 'teamsStillOut', `${out} teams have not reached the Pit Stop yet.`);
   }
   const ended = endCurrentLeg(state);
   const logs = [

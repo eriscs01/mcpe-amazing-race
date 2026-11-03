@@ -54,7 +54,7 @@ function taskLine(state: State, team: Team): string | undefined {
     ? (state.leg.graceEnd ?? 0) - state.clock : 0;
   const parts = [
     // Task progress joins here when the challenges arrive (G11-G12).
-    team.arrivedAt !== undefined && onMat
+    onMat && team.arrivedAt !== undefined
       ? `Checking in: ${seconds(team.arrivedAt + team.penaltyOwed - state.clock)}s` : undefined,
     team.penaltyOwed > 0 && !onMat ? `Penalty owed: ${seconds(team.penaltyOwed)}s` : undefined,
     graceLeft > 0 ? `Grace: ${seconds(graceLeft)}s` : undefined,

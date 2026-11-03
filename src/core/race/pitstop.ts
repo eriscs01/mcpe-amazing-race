@@ -22,9 +22,14 @@ const replace = (state: State, team: Team): State => ({
 
 /**
  * Completes a team's check-in now: it takes the next place, the Pit Stop counts as cleared, and
- * the leg winner is rewarded. `remaining` is the penalty it did not serve (a forced end).
+ * the leg winner is rewarded. A forced end (the host's, or grace running out) leaves the penalty
+ * it did not serve in `remaining` and earns no reward: the check-in was not completed.
  */
-export function completeCheckIn(state: State, id: string, remaining = 0): Result {
+export function completeCheckIn(
+  state: State,
+  id: string,
+  { remaining = 0, forced = false } = {},
+): Result {
   const found = state.teams.find((t) => t.id === id);
   const stop = found ? targetStop(state, found) : undefined;
   if (!found || !stop) return { state, effects: [] };
@@ -51,7 +56,7 @@ export function completeCheckIn(state: State, id: string, remaining = 0): Result
     ...(wins ? [{
       kind: 'broadcast' as const, text: `${teamLabel(found)} wins the Amazing Race!`,
     }] : []),
-    ...(place === 1 ? [{
+    ...(place === 1 && !forced ? [{
       kind: 'reward' as const, to: found.members, levels: RACE.winnerLevels, at: matCentre(stop),
     }] : []),
     { kind: 'sidebar', rows: sidebarRows(next) },

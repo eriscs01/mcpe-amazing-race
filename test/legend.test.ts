@@ -197,11 +197,27 @@ test('the host ends the leg with one team still out: same as grace running out',
   assert.equal(out.state.leg.phase, 'rest');
 });
 
-test('the host cannot end a leg while two teams are still out', () => {
+test('the host can end a leg with several teams out; the furthest along rank first', () => {
   const { state } = run(pitRace(), 1, arrive(pitRace(), ['h', 'b']));
-  const out = reduce(state, { type: 'endLeg', by: 'h' });
-  assert.equal(out.refusal, 'teamsStillOut');
-  assert.equal(out.state, state);
+  const progress = {
+    ...state, teams: state.teams.map((t) => (t.id === 'blue' ? { ...t, step: 2 } : t)),
+  };
+  const out = reduce(progress, { type: 'endLeg', by: 'h' });
+  assert.equal(out.refusal, undefined);
+  assert.equal(teamOf(out.state, 'green').checkIns[0]?.place, 2, 'further along: green at step 3');
+  assert.equal(teamOf(out.state, 'blue').status, 'eliminated');
+  assert.equal(of(out.effects, 'reward').length, 0, 'forced check-ins earn no reward');
+});
+
+test('a forced check-in never takes the winner\'s reward', () => {
+  const base = pitRace();
+  const owing = {
+    ...base, teams: base.teams.map((t) => (t.id === 'red' ? { ...t, penaltyOwed: 600 } : t)),
+  };
+  const waiting = run(owing, 1, arrive(owing, ['h', 'b'])).state;
+  const out = reduce(waiting, { type: 'endLeg', by: 'h' });
+  assert.equal(of(out.effects, 'reward').length, 0);
+  assert.equal(teamOf(out.state, 'red').checkIns[0]?.place, 1);
 });
 
 test('the host cannot end a leg outside a leg or on the final leg', () => {
