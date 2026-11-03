@@ -25,7 +25,9 @@ the technical design (§4) add their checks here and record the result in their 
 
 ### M1 — walking skeleton (G1–G8)
 
-- [ ] Pack loads with no Content Log errors; "Amazing Race loaded" appears.
+- [ ] Pack loads with no Content Log errors; `[race] loaded … version=<pkg> schema=1 source=new` appears.
+- [ ] Reopening the world logs `source=saved` with the same `seed` (state persisted).
+- [ ] Closing the world while the race runs, then reopening it, logs `pausedOnLoad`.
 - [ ] Forms open (host menu, Passport).
 - [ ] HUD direction matches facing.
 

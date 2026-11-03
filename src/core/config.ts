@@ -2,6 +2,9 @@
 // Vanilla identifiers live only in the BLOCK / ITEM / ENTITY tables below, which
 // test/ids.test.ts checks against vanilla-data for the oldest supported and the latest game.
 
+/** Logged at load; must equal package.json and the manifest (checked by tests and packaging). */
+export const ADDON_VERSION = '0.1.0';
+
 // ── Vanilla identifiers ─────────────────────────────────────────────────────
 
 export const BLOCK = {
@@ -82,6 +85,9 @@ export type ItemId = (typeof ITEM)[keyof typeof ITEM];
 export const TICKS_PER_SECOND = 20;
 /** One race hour in race-clock ticks (30 real seconds). Used only for penalties. */
 export const HOUR = 30 * TICKS_PER_SECOND;
+
+/** Periodic save of the race clock (spec §13); real state changes are saved at once. */
+export const SAVE_EVERY_TICKS = 5 * TICKS_PER_SECOND;
 
 /** Penalties in race hours (spec §8.8). Host-added penalties are chosen in the form. */
 export const PENALTY_HOURS = {

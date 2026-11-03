@@ -10,7 +10,12 @@ import minecraftLinting from 'eslint-plugin-minecraft-linting';
 const root = fileURLToPath(new URL('.', import.meta.url));
 
 export default [
-  { ignores: ['behavior_pack/scripts/**', 'build/**', 'dist/**', 'node_modules/**'] },
+  {
+    // Review agents' worktrees hold whole copies of the repo outside both tsconfigs.
+    ignores: [
+      '.claude/worktrees/**', 'behavior_pack/scripts/**', 'build/**', 'dist/**', 'node_modules/**',
+    ],
+  },
 
   { name: 'js/recommended', ...js.configs.recommended },
   plugins.stylistic,
