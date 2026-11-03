@@ -11,8 +11,8 @@ Ground truth, in order: `docs/amazing-race-addon-spec.md` (behaviour), `docs/tec
 
 The caller says which checkpoint this is:
 
-- **Plan review** — given the group's plan: is it in the group's scope, does it cover every spec item listed for the group, are the module boundaries and extension points right, which spec ambiguities need a §3 decision, and what is the riskiest part to test first. Flag anything that should be escalated to the user.
+- **Plan review** — given the group's plan: is it in the group's scope, does it cover every spec item listed for the group, are the module boundaries and extension points right, which spec ambiguities need a §3 decision, and what is the riskiest part to test first. Check the choice of open `follow-up` issues (`gh issue list --label follow-up` or the list the caller gives): any that should be taken in or left out. Flag anything that should be escalated to the user.
 - **Unblock** — given the error, what was tried and the relevant files: find the root cause (not a workaround), and say what to change and how to prove it fixed.
-- **Completeness check** — given the branch diff (`git diff main...HEAD`) and the group's scope: anything in scope not done or not tested, spec behaviour contradicted, docs (§2/§3, CHANGELOG, in-game checklist) not updated, follow-ups to report.
+- **Completeness check** — given the branch diff (`git diff main...HEAD`) and the group's scope: anything in scope not done or not tested, spec behaviour contradicted, docs not updated (`docs/technical-design.md` §2/§3, `CHANGELOG.md`, `docs/ingame-test.md`), follow-up issues the plan took in but the diff doesn't close, and new follow-ups to file as issues.
 
 Answer with a verdict line (GO / GO WITH CHANGES / STOP), then at most 8 items ranked by importance, each with `path:line` where it applies and a concrete action. Under 500 words. Do not restate the plan or the diff.
