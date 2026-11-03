@@ -1,6 +1,7 @@
 // Persisted race state (technical design §2.3) and the actions and effects that cross the
 // core/adapter boundary. Everything in State is plain JSON so it survives the chunked store.
 import type { TaskKindName, Terrain } from './config.js';
+import type { Fields } from './log.js';
 import type { Vec3 } from './vec.js';
 
 /** Bumped only for a change that old saves cannot be read as; additive fields keep it. */
@@ -138,6 +139,14 @@ export type Action = { type: 'tick' }
   }
   | {
     type: 'transferHost'; by: PlayerId; to: PlayerId; toName: string;
+  }
+  | { type: 'saveSettings'; by: PlayerId; settings: Settings }
+  /** `players`: everyone online; `seed` drives the shuffle and is logged to reproduce it. */
+  | {
+    type: 'autoAssignTeams'; by: PlayerId; players: { id: PlayerId; name: string }[]; seed: number;
+  }
+  | {
+    type: 'swapPlayers'; by: PlayerId; a: PlayerId; b: PlayerId;
   };
 
 /** What the adapter must do in the world. */
@@ -146,9 +155,17 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   /** Removes every copy of the item from the player's inventory. */
   | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole };
 
+/** An outcome line for the Content Log; the session adds the race clock. */
+export interface LogLine {
+  event: string;
+  fields: Fields;
+}
+
 export interface Result {
   /** Stable code when the action was refused; state is then unchanged. */
   refusal?: string;
   state: State;
   effects: Effect[];
+  /** Outcome lines of an accepted action (debuggability: one line per outcome). */
+  logs?: LogLine[];
 }

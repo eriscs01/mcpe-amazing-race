@@ -108,6 +108,7 @@ export class Session {
     if (out.state.hostId !== state.hostId) {
       this.log.info('hostChanged', { from: state.hostId, to: out.state.hostId, via: action.type });
     }
+    for (const line of out.logs ?? []) this.log.info(line.event, line.fields);
     this.state = out.state;
     if (out.state !== state) {
       if (action.type === 'tick' && out.effects.length === 0) this.clockMoved = true;

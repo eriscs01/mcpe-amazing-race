@@ -11,7 +11,7 @@ const PASSPORT_PHASES: readonly Phase[] = ['running', 'paused', 'dayEnded'];
 
 const CLAIMED = 'You are now the race host. Use Race Control to open the host menu.';
 
-const notify = (to: PlayerId, code: string, text: string): Effect => ({
+export const notify = (to: PlayerId, code: string, text: string): Effect => ({
   kind: 'notify', to, code, text,
 });
 
@@ -20,14 +20,27 @@ export function hostName(state: State): string {
 }
 
 /** Records the player's current name; returns the same state when nothing changed. */
-function withName(state: State, player: PlayerId, name: string): State {
+export function withName(state: State, player: PlayerId, name: string): State {
   const known = state.players[player];
   if (known?.name === name) return state;
   return { ...state, players: { ...state.players, [player]: { ...known, name } } };
 }
 
-function refuse(state: State, to: PlayerId, code: string, text: string): Result {
+export function refuse(state: State, to: PlayerId, code: string, text: string): Result {
   return { state, refusal: code, effects: [notify(to, code, text)] };
+}
+
+/** The refusal for a host-menu action by a non-host or in the wrong phase; undefined if allowed. */
+export function refuseUnlessHost(
+  state: State,
+  by: PlayerId,
+  phases: readonly Phase[],
+): Result | undefined {
+  if (state.hostId !== by) return refuse(state, by, 'notHost', 'Only the host can do that.');
+  if (!phases.includes(state.phase)) {
+    return refuse(state, by, 'badPhase', `Not possible while the race is in ${state.phase}.`);
+  }
+  return undefined;
 }
 
 /** The host's item is replaced: any old copies are removed so only one is in circulation. */

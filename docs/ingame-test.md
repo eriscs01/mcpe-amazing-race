@@ -31,7 +31,7 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] Forms open (host menu, Passport).
 - [ ] First player to join a fresh world gets Race Control and `hostChanged … via=playerSpawned` is logged.
 - [ ] Race Control opens the host menu (in the air and on a block; one menu, block not opened);
-      it shows `Phase: Setup` and **Transfer host**.
+      it shows `Phase: Setup` with **Setup**, **Teams** and **Transfer host**.
 - [ ] A non-host using Race Control is told who the host is; sneak-using a plain clock is refused.
 - [ ] Host sneak-uses a plain clock: the old Race Control is replaced by a fresh one.
 - [ ] Transfer host to the second player: the item moves, both get a message.
@@ -40,6 +40,13 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] Opening the host menu with chat open shows it once chat closes (UserBusy retry).
 - [ ] With a corrupted save (`race:n` set to a bad value), Race Control shows
       "Saved race unreadable — see Content Log".
+- [ ] Setup (only in Setup phase) shows the copy-world reminder, the five controls with current
+      values, and minutes step by 15; saving reopens the host menu with
+      e.g. `6 legs · ~1,800-block radius · …` and logs `settingsSaved`.
+- [ ] Teams → Auto-assign with 3+ online racers: each racer is told their team and teammates,
+      the screen shows the coloured teams, and `teamsAssigned … seed=…` is logged.
+- [ ] Teams → Swap two players moves them (and lets an unassigned player in); with only one
+      team possible, Auto-assign is refused and explained.
 - [ ] HUD direction matches facing.
 
 ### M2–M4
