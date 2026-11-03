@@ -71,12 +71,16 @@ src/
     vec.ts                distance, heading, yaw→direction
     plan.ts               derived plan (legs, radius, boundary) + elimination schedule, summary
     setup.ts              Setup form model, reading its values, saving settings
+    generation.ts         landmarks, starting a job, its result, discarding the course, stop list, failure texts
     teams.ts              auto-assign, swap, View teams text, roadblock caps
     course/skeleton.ts    stop types per leg, blind flags, Detour / Roadblock / Recall, pin slots
     course/layout.ts      distance rules, candidate draws, look-ahead search (geometry only)
     course/walk.ts        places stops from probe results: a generator the generation job drives
     course/names.ts       unique place names from the terrain tables
-    course/terrain.ts     ground walk + classification from a column sample (pure)
+    course/terrain.ts     ground walk + classification + site assessment from block ids (pure)
+    course/landmarks.ts   landmark detection from scan evidence, arena offset spots (pure)
+    course/scan.ts        probes one candidate through an `AreaLoader` (ground, landmark, offset)
+    course/job.ts         drives the walk across ticks over a `ProbeSource` (async)
     tasks/*.ts            one file per kind: setup spec + progress reducer + completion
     quiz/bank.ts          trivia (≥30, verified), arithmetic, anagram generators, normaliser
     race/engine.ts        reducer: clue box, step advance, check-in, leg end, departures
@@ -90,10 +94,11 @@ src/
     items.ts              Race Control / Passport create, find, give, take
     wiring.ts             event subscriptions: item use (air + block fallback), spawn, /scriptevent
     world.ts              effect executor, block/entity helpers, safe chunk access
-    terrainProbe.ts       ticking area load + column sampling + landmark scan
+    terrainProbe.ts       `AreaLoader` over the `race_scan` ticking area: load, read columns, scan entities and blocks
+    generationJob.ts      runs the job for a `generateCourse` effect, action-bar progress, reports the outcome
     builder.ts            arena build/lighting as runJob generators, retry queue
     protect.ts            break/place cancellation, mob sweep, item sweep
-    ui/host.ts, ui/racer.ts, ui/forms.ts (UserBusy retry, phase-aware menus)
+    ui/host.ts, ui/course.ts, ui/racer.ts, ui/forms.ts (UserBusy retry, phase-aware menus)
 test/
   *.test.ts               node:test unit tests for core
   sim/fakeWorld.ts        flat-terrain world + scripted players
@@ -155,11 +160,11 @@ Transient (not persisted): open forms, separation timers, HUD caches, retry queu
 ### 2.6 Course generation pipeline
 
 1. `course/skeleton.ts` (pure) produces the **skeleton**: ordered stop types per leg, pinned waypoint slots, task kinds, blind flags, Recall on final leg, hunt excluded on Peaceful.
-2. `course/walk.ts` is a generator, `generateCourse(input)`: it **yields** each candidate position and takes back a `Probe` (`{pos, terrain, spread, landmark?}`, or `undefined` when rejected). G6's job drives it across ticks: `terrainProbe.ts` loads the candidate via the `race_scan` ticking area, `terrain.ts` (pure) accepts/rejects and classifies, and an arena moved next to a landmark comes back as a different `pos`. Tests drive the same generator with `planCourse(input, probe)`. Between long searches it also yields `PAUSE` (wait a tick, then call `next()` again): each step's work is bounded by a count (`COURSE.workPerPause`), not by time, so courses stay reproducible; G6's in-game check should confirm no tick overruns on the slower in-game interpreter. The start line and pins never move: their probe supplies only height, terrain and landmark. It returns `{ok: true, stops, probes, inserted}` or a failure (`noGround`/`noRoom` with the stop, or a pin problem) for the host message.
+2. `course/walk.ts` is a generator, `generateCourse(input)`: it **yields** each candidate position and takes back a `Probe` (`{pos, terrain, spread, landmark?}`, or `undefined` when rejected). G6's job (`course/job.ts`, run by `mc/generationJob.ts`) drives it across ticks: for each candidate `course/scan.ts` asks `mc/terrainProbe.ts` to load the area (the `race_scan` ticking area), `terrain.ts` (pure) accepts/rejects and classifies, and an arena moved next to a landmark comes back as a different `pos`. Tests drive the same generator with `planCourse(input, probe)`. Between long searches it also yields `PAUSE` (wait a tick, then call `next()` again): each step's work is bounded by a count (`COURSE.workPerPause`), not by time, so courses stay reproducible; G6's in-game check should confirm no tick overruns on the slower in-game interpreter. The start line and pins never move: their probe supplies only height, terrain and landmark. It returns `{ok: true, stops, probes, inserted}` or a failure (`noGround`/`noRoom` with the stop, or a pin problem) for the host message.
 3. Candidates come from `course/layout.ts`: random heading and length within the distance rules, accepted only if a bounded depth-first search can still place the rest of the course after it (geometry only, no probes). The way that search found is kept, so when no random draw is viable the walk falls back to it; with any terrain the probe accepts, generation therefore does not dead-end.
 4. Names drawn from terrain tables as stops are placed, unique per course (`course/names.ts`).
-5. Builder enqueues arena builds; each is a `runJob` generator. The host sees "Generating stop k/N…" on the action bar.
-6. Generation is re-runnable: the walk itself cannot resume part-way (its RNG position depends on every candidate probed, rejected ones included), so after a reload the host re-runs Generate from the start. The same seed, start, pins and terrain replay the same course; G6 decides how already-built arenas are kept (`built`) or replaced.
+5. While the walk runs the host sees "Generating stop k/N…" on the action bar (`CourseInput.onStop`; N counts the planned stops, so inserted Route Info stops can push k past it). Arena builds (G7) are a separate `runJob` per stop, started after the course is ready.
+6. Generation is re-runnable: the walk itself cannot resume part-way (its RNG position depends on every candidate probed, rejected ones included), so after a reload the host re-runs Generate from the start. The same seed, start, pins and terrain replay the same course; Generate from `ready` replaces the stops; built arenas are never removed (spec §4), so G7 must treat an existing arena at a new stop's position as already built.
 
 ### 2.7 Tasks as plug-ins
 
@@ -235,8 +240,17 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Peaceful and Detour pairs (§7.3) | Pairs with a hunt option (Fight/Find, Brains/Brawn) are left out, not half-replaced. |
 | Where pins go (§6.4) | In nearest-neighbour order, spread evenly over the Detour and Roadblock stops (pin i of k takes the middle of the i-th k-th). Refused before probing (`pinOutsideCourse` beyond R, `pinTooClose` within 300 of the start line or an earlier pin, `tooManyPins` beyond the 2 per leg). A pin the probe rejects is kept where the host put it, with the fallback terrain; the segment into a pin may be under 600. |
 | Extra Route Info stops (§6.4) | Only when a pin is "forced" (farther from the start line or previous pin than the stops in between can cover); then also before the Finish if the last pin leaves it out of reach. Unpinned courses always have 4 × L + 1 stops. |
-| Finish room (§5) | Every stop but the Finish and pins stays at least 700 blocks (400 + 300) from the start line, so the Finish's 300–400 circle is never blocked; no Pit Stop is ever near home. Pins 300–700 from the start can block part of the circle; enough of them could leave the Finish no room (`noRoom`), which is unlikely enough not to be refused up front. |
+| Finish room (§5) | Every stop but the Finish and pins stays at least 700 blocks (400 + 300) from the start line, so the Finish's 300–400 circle is never blocked; no Pit Stop is ever near home. Pins 300–700 from the start can block part of the circle; enough of them (four on a ring 350 blocks out) leave the Finish no room (`noRoom`), reported to the host after generation starts. |
 | Candidate choice (§6.2) | Up to 6 probed per stop, stopping at the first valid one with a landmark or once 3 are valid (the flattest wins, the earliest on a tie). A candidate moved next to a landmark is re-checked against the rules. 6 rejections end generation with `noGround` for that stop. |
+| Landmark pins are late-checked (§6.4) | `addPin` only checks host and phase (`setup`). The refusals (`pinOutsideCourse`, `pinTooClose`, `tooManyPins`) depend on the start line (the host's position at Generate) and the legs, so they come back through `courseFailed` with a host message naming the landmark. `noRoom` (landmarks ringed around the start) is reported the same way. Landmarks can be cleared (Setup phase), never edited one by one. |
+| Generation messages and stale jobs | `startGeneration` (host; `setup` or `ready`) sets phase `generating`, `state.job += 1` and emits `generateCourse`. `courseGenerated` / `courseFailed` are system actions that carry the job id and are refused (`staleJob`) unless the phase is `generating` and the id is the newest. A world that closes mid-generation reloads in `generating` with no job running, so load moves it to `setup` (`ready` if an earlier course exists) and logs `generationAbandonedOnLoad`. |
+| Failed or re-run generation | The old course stays until a new one arrives. A failed first run returns to `setup`; a failed re-run returns to `ready` with the old stops. |
+| Settings after a course exists (#23) | The host can **Discard course** in `ready` (confirmation): stops and start are removed and the phase returns to `setup`; landmarks, teams and the seed are kept. Settings can then change again. Discard is not offered once the race has started. |
+| Re-running generation (#26) | Generate from `ready` runs the walk again from the new start line and replaces `stops`. The same seed, start, pins and terrain replay the same course. Already built arenas stay in the world (spec §4 reminder), so the course may leave unused arenas behind. |
+| Who can list stops | The host, in `ready` only (the list spoils the course once racing starts); each line is leg, stop type, place name (and landmark) and coordinates. |
+| What the ticking area loads (§6.1, §6.3) | The `race_scan` circle (radius 2 chunks) loads about 32 blocks around a candidate, so the landmark scan covers entities within 48 blocks but landmark blocks only inside the loaded 64 × 24 × 64 volume. An arena offset spot (20–30 blocks from a landmark) can lie outside it, so each spot is loaded in turn (up to 4) and checked with the §6.2 rules; if none passes, the candidate keeps its own position without the landmark. |
+| Ticking-area failure (§6.1) | `runCommand` reports only success or failure. A failed `tickingarea add` is treated as "the world is full" (host told to remove one) and ends the job; a failed `remove` is ignored. The area is removed before each load and when the job ends. |
+| Landmark kinds | `village` (villager, `villager_v2`, iron golem or a bell), `outpost`, `desert temple`, `ruined portal`, tested in the spec's order: a village beats an outpost beats a temple beats a portal. |
 | Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---

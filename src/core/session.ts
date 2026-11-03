@@ -78,6 +78,12 @@ export class Session {
       this.state = { ...state, phase: 'paused' };
       this.log.warn('pausedOnLoad');
     }
+    if (state.phase === 'generating') {
+      // The job died with the world: nothing will report back, so the host starts it again.
+      const phase = state.stops.length > 0 ? 'ready' : 'setup';
+      this.state = { ...state, phase };
+      this.log.warn('generationAbandonedOnLoad', { job: state.job, to: phase });
+    }
     this.dirty = fresh || this.state !== state;
     this.flush();
   }

@@ -51,6 +51,38 @@ the technical design (§4) add their checks here and record the result in their 
       team possible, Auto-assign is refused and explained.
 - [ ] HUD direction matches facing.
 
+### G6 — course generation ✱
+
+- [ ] ✱ Host menu in Setup shows **Add landmark here**, **Clear landmarks** and **Generate course here**;
+      in Ready it shows **Generate course here**, **List stops** and **Discard course**.
+- [ ] ✱ `/tickingarea add circle … race_scan true` works from script without cheats enabled
+      (no "Commands are disabled"); if it fails, Generate says to remove a ticking area.
+- [ ] ✱ With 10 ticking areas in the world, Generate stops with the "remove one" message and
+      the phase returns to Setup.
+- [ ] ✱ Generate on a 2-leg course: the action bar counts "Generating stop k/N…", no stop takes
+      longer than 30 s to load, and `race_scan` is gone afterwards (`/tickingarea list`).
+- [ ] ✱ A 6-leg course finishes in about 2–4 minutes and logs `generationFinished` with its
+      ticks; the game does not stutter between probes (#25: no tick overruns on the in-game
+      interpreter; if `[Scripting] watchdog` appears, lower `COURSE.workPerPause`).
+- [ ] ✱ List stops shows each stop's leg, type, place name and coordinates; the first stop is
+      the host's start position; walking to two stops confirms 600–900 blocks between them.
+- [ ] ✱ #25: a 12-leg course with several landmarks generates with no `[Scripting] watchdog`
+      warning, also with one candidate in a badlands biome (landmark block scan stays cheap).
+- [ ] ✱ A real village is detected with and without a bell loaded (villagers may report
+      `villager_v2`; if not tagged, check the entity type id in the log).
+- [ ] ✱ A stop near a swamp pond or desert cactus is never placed on water; after a world is
+      closed mid-generation, `tickingarea list` may show `race_scan` until the next Generate.
+- [ ] ✱ Stops near a village or an outpost are tagged with it and sit 20–30 blocks from it, on
+      flat ground, not on the structure.
+- [ ] ✱ Add landmark here at a spot 800+ blocks from the start line, then Generate: the course
+      includes a stop at the landmark's coordinates.
+- [ ] ✱ A landmark too close to the start line is refused after generation starts with a
+      message naming "Landmark 1"; the phase returns to Setup.
+- [ ] ✱ Closing the world during generation and reopening it: `generationAbandonedOnLoad` is
+      logged and the host menu is back in Setup.
+- [ ] ✱ Generate again from Ready replaces the course; Discard course returns to Setup and
+      Setup can be opened again, with landmarks and teams still there.
+
 ### M2–M4
 
 Add checks as the groups land.

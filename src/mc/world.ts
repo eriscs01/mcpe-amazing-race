@@ -11,7 +11,12 @@ function online(id: PlayerId): Player | undefined {
   return entity instanceof Player ? entity : undefined;
 }
 
-function apply(effect: Effect, log: Logger): void {
+/** What the executor needs from the rest of the adapter. */
+export interface EffectHost {
+  generate: (effect: Extract<Effect, { kind: 'generateCourse' }>) => void;
+}
+
+function apply(effect: Effect, log: Logger, host: EffectHost): void {
   switch (effect.kind) {
     case 'notify': {
       const player = online(effect.to);
@@ -38,6 +43,9 @@ function apply(effect: Effect, log: Logger): void {
       });
       break;
     }
+    case 'generateCourse':
+      host.generate(effect);
+      break;
     default: {
       const unknown: never = effect;
       throw new Error(`unknown effect ${JSON.stringify(unknown)}`);
@@ -45,6 +53,6 @@ function apply(effect: Effect, log: Logger): void {
   }
 }
 
-export function executeEffects(effects: Effect[], log: Logger): void {
-  for (const effect of effects) apply(effect, log);
+export function executeEffects(effects: Effect[], log: Logger, host: EffectHost): void {
+  for (const effect of effects) apply(effect, log, host);
 }

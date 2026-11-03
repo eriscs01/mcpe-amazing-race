@@ -1,5 +1,8 @@
 // What using a menu item does, and what each menu shows (spec §3, §4). Menus are plain models;
 // the adapter renders them as forms and turns the chosen command into actions.
+import {
+  DISCARD_PHASES, GENERATE_PHASES, LIST_PHASES, PIN_PHASES,
+} from './generation.js';
 import { hostName } from './host.js';
 import { isPlainClock, roleOf } from './items.js';
 import { planOf, planSummary } from './plan.js';
@@ -33,7 +36,8 @@ export function routeUse(use: Use, state: State | undefined): UseRoute | undefin
   return { kind: 'say', text: `Race Control belongs to the host (${hostName(state)}).` };
 }
 
-export type HostCommand = 'setup' | 'teams' | 'transferHost';
+export type HostCommand = 'setup' | 'teams' | 'addLandmark' | 'clearLandmarks' | 'generate'
+  | 'listStops' | 'discardCourse' | 'transferHost';
 
 export type TeamsCommand = 'autoAssign' | 'swap';
 
@@ -56,6 +60,11 @@ export const HOST_ENTRIES: readonly {
 }[] = [
   { command: 'setup', label: 'Setup', phases: SETTINGS_PHASES },
   { command: 'teams', label: 'Teams', phases: TEAM_PHASES },
+  { command: 'addLandmark', label: 'Add landmark here', phases: PIN_PHASES },
+  { command: 'clearLandmarks', label: 'Clear landmarks', phases: PIN_PHASES },
+  { command: 'generate', label: 'Generate course here', phases: GENERATE_PHASES },
+  { command: 'listStops', label: 'List stops', phases: LIST_PHASES },
+  { command: 'discardCourse', label: 'Discard course', phases: DISCARD_PHASES },
   { command: 'transferHost', label: 'Transfer host', phases: 'all' },
 ];
 

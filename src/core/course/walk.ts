@@ -35,6 +35,8 @@ export interface CourseInput {
   radius: number;
   peaceful: boolean;
   seed: number;
+  /** Called after each stop is placed, with the stops placed and the stops planned so far. */
+  onStop?: (placed: number, total: number) => void;
 }
 
 export type CourseOutcome = {
@@ -91,7 +93,11 @@ class Placed {
 
   private readonly used = new Set<string>();
 
-  constructor(private readonly rng: Rng) {}
+  constructor(
+    private readonly rng: Rng,
+    private readonly planned: number,
+    private readonly onStop?: CourseInput['onStop'],
+  ) {}
 
   get lastPos(): Vec3 | undefined {
     return this.stops.at(-1)?.pos;
@@ -116,6 +122,7 @@ class Placed {
     if (slot.task) stop.task = slot.task;
     if (slot.pin) stop.pinned = true;
     this.stops.push(stop);
+    this.onStop?.(this.stops.length, Math.max(this.planned, this.stops.length));
   }
 }
 
@@ -153,7 +160,7 @@ export function* generateCourse(
   if (problem) return { ok: false, ...problem };
   const slots = assignPins(base, input.start, input.pins);
   const layout = new Layout(input, slots, rng);
-  const course = new Placed(rng);
+  const course = new Placed(rng, slots.length, input.onStop);
   const [first] = slots;
   if (!first) throw new Error('a skeleton always has a start line');
   yield* fixedStop(course, layout, first, input.start, 1);

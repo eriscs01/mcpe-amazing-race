@@ -1,5 +1,8 @@
 // The race reducer: (state, action) → new state and the effects the adapter must apply.
 import { advanceClock } from '../clock.js';
+import {
+  addPin, clearPins, courseFailed, courseGenerated, discardCourse, startGeneration,
+} from '../generation.js';
 import { claimHost, playerSpawned, transferHost } from '../host.js';
 import { canEnter } from '../phase.js';
 import { saveSettings } from '../setup.js';
@@ -40,6 +43,18 @@ export function reduce(state: State, action: Action): Result {
       return autoAssignTeams(state, action);
     case 'swapPlayers':
       return swapPlayers(state, action);
+    case 'addPin':
+      return addPin(state, action);
+    case 'clearPins':
+      return clearPins(state, action);
+    case 'startGeneration':
+      return startGeneration(state, action);
+    case 'courseGenerated':
+      return courseGenerated(state, action);
+    case 'courseFailed':
+      return courseFailed(state, action);
+    case 'discardCourse':
+      return discardCourse(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

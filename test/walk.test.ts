@@ -294,3 +294,14 @@ test('rules hold when probes reject ground and move arenas to landmarks', () => 
     else assert.equal(!out.ok && 'reason' in out && out.reason, 'noGround');
   }
 });
+
+test('landmarks ringed close around the start leave no room: the walk reports noRoom (#29)', () => {
+  const ring = Array.from({ length: 4 }, (_, i) => pin(
+    Math.round(Math.cos((i * Math.PI) / 2) * 350),
+    Math.round(Math.sin((i * Math.PI) / 2) * 350),
+  ));
+  const out = planCourse(input({ legs: 3, pins: ring }), flat);
+  assert.deepEqual(out, {
+    ok: false, reason: 'noRoom', stop: 1, leg: 1, type: 'route',
+  });
+});
