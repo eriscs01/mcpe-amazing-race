@@ -51,7 +51,9 @@ export function showHud(session: Session, trail: boolean): void {
   const players = world.getAllPlayers().filter((p) => p.isValid);
   const views = players.flatMap((p) => {
     try {
-      return [viewOf(p)];
+      const view = viewOf(p);
+      failing.delete(`view:${p.id}`);
+      return [view];
     } catch (error) {
       guarded(session, 'view', p, () => {
         throw error;
@@ -60,6 +62,11 @@ export function showHud(session: Session, trail: boolean): void {
     }
   });
   const frames = hudFrames(state, views, { trail });
+  // Forget a player's failures once they leave, so the set does not grow.
+  const here = new Set(players.map((p) => `:${p.id}`));
+  failing.forEach((key) => {
+    if (!here.has(key.slice(key.indexOf(':')))) failing.delete(key);
+  });
   frames.forEach((frame) => {
     const player = players.find((p) => p.id === frame.to);
     if (player) display(session, player, frame);

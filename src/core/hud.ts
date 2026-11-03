@@ -84,11 +84,12 @@ function frameFor(state: State, team: Team, view: HudView, trail: boolean): HudF
   const lines = [nav?.line, taskLine(state, team)].filter((line) => line !== undefined);
   if (lines.length === 0) return undefined;
   const frame: HudFrame = { to: view.id, text: lines.join('\n') };
-  if (!trail || nav?.bearing === undefined) return frame;
+  const bearing = nav?.bearing;
+  if (!trail || bearing === undefined) return frame;
   const y = view.head.y - HUD.trailDrop;
   return {
     ...frame,
-    trail: HUD.trailDistances.map((d) => ({ ...offsetByYaw(view.head, nav.bearing ?? 0, d), y })),
+    trail: HUD.trailDistances.map((d) => ({ ...offsetByYaw(view.head, bearing, d), y })),
   };
 }
 

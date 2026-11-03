@@ -148,6 +148,8 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] ✱ A blind stop (Detour from leg 2) shows only `Detour: X n, Z n`: no bar, no trail.
 - [ ] ✱ In the Nether the bar reads "Return to the Overworld"; paused or eliminated racers
       see nothing.
+- [ ] ✱ The action bar really shows two lines (`\n` works on 1.21.90+).
+- [ ] ✱ `race:pause` blanks the HUD and stops the trail; resuming brings both back.
 - [ ] ✱ The HUD yaw matches facing (the `getRotation().y` sign is the one the bar assumes).
 
 ### M2–M4
