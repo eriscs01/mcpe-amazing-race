@@ -4,7 +4,9 @@ import { world } from '@minecraft/server';
 
 import { guard } from './core/log.js';
 import { Session } from './core/session.js';
+import { startArenaBuild } from './mc/builder.js';
 import { startGenerationJob } from './mc/generationJob.js';
+import { lightStops } from './mc/lighting.js';
 import { startLoop } from './mc/loop.js';
 import { worldBag } from './mc/store.js';
 import { greetOnlinePlayers, wireEvents } from './mc/wiring.js';
@@ -27,6 +29,12 @@ const session: Session = new Session({
       'generationJob',
       async (effect) => startGenerationJob(session, effect),
     ),
+    build: guard(
+      session.log,
+      'arenaBuild',
+      async (effect) => startArenaBuild(session, effect),
+    ),
+    light: guard(session.log, 'lightStops', (effect) => lightStops(session, effect)),
   }),
   newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });

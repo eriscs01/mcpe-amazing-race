@@ -1,5 +1,6 @@
 // What using a menu item does, and what each menu shows (spec §3, §4). Menus are plain models;
 // the adapter renders them as forms and turns the chosen command into actions.
+import { BUILD_PHASES, unbuilt } from './arenas.js';
 import {
   DISCARD_PHASES, GENERATE_PHASES, LIST_PHASES, PIN_PHASES,
 } from './generation.js';
@@ -37,7 +38,7 @@ export function routeUse(use: Use, state: State | undefined): UseRoute | undefin
 }
 
 export type HostCommand = 'setup' | 'teams' | 'addLandmark' | 'clearLandmarks' | 'generate'
-  | 'listStops' | 'discardCourse' | 'transferHost';
+  | 'listStops' | 'buildArenas' | 'discardCourse' | 'transferHost';
 
 export type TeamsCommand = 'autoAssign' | 'swap';
 
@@ -57,6 +58,8 @@ export const HOST_ENTRIES: readonly {
   readonly command: HostCommand;
   readonly label: string;
   readonly phases: 'all' | readonly Phase[];
+  /** An extra condition on the state, for entries that apply only some of the time. */
+  readonly when?: (state: State) => boolean;
 }[] = [
   { command: 'setup', label: 'Setup', phases: SETTINGS_PHASES },
   { command: 'teams', label: 'Teams', phases: TEAM_PHASES },
@@ -64,6 +67,12 @@ export const HOST_ENTRIES: readonly {
   { command: 'clearLandmarks', label: 'Clear landmarks', phases: PIN_PHASES },
   { command: 'generate', label: 'Generate course here', phases: GENERATE_PHASES },
   { command: 'listStops', label: 'List stops', phases: LIST_PHASES },
+  {
+    command: 'buildArenas',
+    label: 'Build arenas',
+    phases: BUILD_PHASES,
+    when: (s) => unbuilt(s).length > 0,
+  },
   { command: 'discardCourse', label: 'Discard course', phases: DISCARD_PHASES },
   { command: 'transferHost', label: 'Transfer host', phases: 'all' },
 ];
@@ -84,7 +93,8 @@ export function hostMenu(state: State | undefined): Menu<HostCommand> {
   const title = 'Race Control';
   if (!state) return { title, body: UNREADABLE_TEXT, buttons: [] };
   const buttons = HOST_ENTRIES
-    .filter((e) => e.phases === 'all' || e.phases.includes(state.phase))
+    .filter((e) => (e.phases === 'all' || e.phases.includes(state.phase))
+      && (e.when?.(state) ?? true))
     .map(({ command, label }) => ({ command, label }));
   const phase = `Phase: ${PHASE_LABEL[state.phase]}`;
   // The plan follows the settings and teams until the race starts; show it while they can change.

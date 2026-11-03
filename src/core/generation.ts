@@ -1,6 +1,7 @@
 // Course generation (spec §4, §6): the host's landmarks, starting a job, what its result does,
 // and discarding a finished course. The job itself runs in the adapter (course/job.ts drives
 // the walk); the core only decides what each message changes.
+import { buildEffects } from './arenas.js';
 import { COURSE } from './config.js';
 import { notify, refuseUnlessHost } from './host.js';
 import { planOf } from './plan.js';
@@ -130,15 +131,20 @@ function staleJob(state: State, job: number): Result | undefined {
 export function courseGenerated(state: State, a: Of<'courseGenerated'>): Result {
   const stale = staleJob(state, a.job);
   if (stale) return stale;
+  const next: State = {
+    ...state, phase: 'ready', start: a.start, stops: a.stops,
+  };
   return {
-    state: {
-      ...state, phase: 'ready', start: a.start, stops: a.stops,
-    },
-    effects: notHostFacing(
-      state,
-      'courseReady',
-      `Course ready: ${a.stops.length} stops. Use List stops to see them.`,
-    ),
+    state: next,
+    effects: [
+      ...notHostFacing(
+        state,
+        'courseReady',
+        `Course ready: ${a.stops.length} stops. Building the arenas now; `
+          + 'List stops shows where they are.',
+      ),
+      ...buildEffects(next),
+    ],
     logs: [{
       event: 'courseGenerated',
       fields: { job: a.job, stops: a.stops.length, inserted: a.inserted },

@@ -20,6 +20,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   probe with ground classification and landmark scan, arena offset from landmarks, progress on
   the action bar, List stops and Discard course, failure messages that say what to change,
   recovery from a world closed mid-generation (G6).
+- Arenas: 19 × 19 arena at every stop built automatically once the course is ready (floor,
+  beacon base, flags, torches, Pit Stop / Finish mat), recognised instead of rebuilt after a
+  re-run, lit / unlit switching with a 2-second chunk retry queue restored on reload, task zone
+  geometry, Build arenas retry, and `/scriptevent race:light` for checking beacons (G7).
 
 ## [0.1.0]
 

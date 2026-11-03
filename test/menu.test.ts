@@ -60,7 +60,8 @@ test('with an unreadable save, Race Control and sneak-clock open the host menu t
 test('the host menu lists only entries valid in the current phase', () => {
   for (const phase of Object.keys(PHASE_LABEL) as Phase[]) {
     const menu = hostMenu({ ...hosted, phase });
-    const expected = HOST_ENTRIES.filter((e) => e.phases === 'all' || e.phases.includes(phase))
+    const expected = HOST_ENTRIES
+      .filter((e) => (e.phases === 'all' || e.phases.includes(phase)) && (e.when?.(hosted) ?? true))
       .map((e) => e.command);
     assert.deepEqual(menu.buttons.map((b) => b.command), expected, phase);
     assert.match(menu.body, /Phase: /);

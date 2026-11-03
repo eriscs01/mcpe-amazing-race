@@ -1,4 +1,8 @@
 // The race reducer: (state, action) → new state and the effects the adapter must apply.
+import {
+  arenaBuildFailed,
+  arenaBuilt, buildArenas, setLit,
+} from '../arenas.js';
 import { advanceClock } from '../clock.js';
 import {
   addPin, clearPins, courseFailed, courseGenerated, discardCourse, startGeneration,
@@ -55,6 +59,14 @@ export function reduce(state: State, action: Action): Result {
       return courseFailed(state, action);
     case 'discardCourse':
       return discardCourse(state, action);
+    case 'buildArenas':
+      return buildArenas(state, action);
+    case 'arenaBuilt':
+      return arenaBuilt(state, action);
+    case 'arenaBuildFailed':
+      return arenaBuildFailed(state, action);
+    case 'setLit':
+      return setLit(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

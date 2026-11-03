@@ -50,6 +50,10 @@ export async function generateCourse(session: Session, player: Player): Promise<
   session.dispatch({ type: 'startGeneration', by: player.id, start: player.location });
 }
 
+export function buildArenas(session: Session, player: Player): void {
+  session.dispatch({ type: 'buildArenas', by: player.id });
+}
+
 export async function listStops(session: Session, player: Player): Promise<void> {
   if (!session.state) return;
   const menu = { title: 'Stops', body: stopList(session.state), buttons: [] };

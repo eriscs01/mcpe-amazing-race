@@ -89,19 +89,32 @@ function blocksNear(
 
 /** Loads candidates through one ticking area at a time. */
 export class TickingAreaLoader implements AreaLoader {
-  constructor(private readonly dimension: Dimension, private readonly log: Logger) {}
+  /** `areaName` keeps two users of this class (scan and arena build) from removing each other's. */
+  constructor(
+    private readonly dimension: Dimension,
+    private readonly log: Logger,
+    private readonly areaName: string = LOAD.areaName,
+  ) {}
+
+  /**
+   * Replaces the loader's ticking area with one around `pos` and waits until it reads.
+   * False on timeout; throws TickingAreaFull when the world cannot take another area.
+   */
+  async ensureLoaded(pos: Vec3): Promise<boolean> {
+    this.close();
+    const { radiusChunks } = LOAD;
+    const at = `${pos.x} 64 ${pos.z} ${radiusChunks}`;
+    const command = `tickingarea add circle ${at} ${this.areaName} true`;
+    // runCommand reports only success or failure; a failed add means the world is at its limit.
+    if (!succeeded(this.dimension, command, this.log)) throw new TickingAreaFull();
+    if (await this.waitUntilReadable(pos)) return true;
+    this.log.info('areaTimeout', { x: pos.x, z: pos.z, area: this.areaName });
+    return false;
+  }
 
   async load(pos: Vec3): Promise<Area | undefined> {
     const { dimension } = this;
-    this.close();
-    const { areaName, radiusChunks } = LOAD;
-    const command = `tickingarea add circle ${pos.x} 64 ${pos.z} ${radiusChunks} ${areaName} true`;
-    // runCommand reports only success or failure; a failed add means the world is at its limit.
-    if (!succeeded(dimension, command, this.log)) throw new TickingAreaFull();
-    if (!await this.waitUntilReadable(pos)) {
-      this.log.info('areaTimeout', { x: pos.x, z: pos.z });
-      return undefined;
-    }
+    if (!await this.ensureLoaded(pos)) return undefined;
     const onScanError = (type: string, error: unknown): void => this.blockScanFailed(type, error);
     return {
       groundAt: (x, z) => {
@@ -128,7 +141,7 @@ export class TickingAreaLoader implements AreaLoader {
 
   /** Removes the scan's ticking area; a failure just means there was none. */
   close(): void {
-    succeeded(this.dimension, `tickingarea remove ${LOAD.areaName}`);
+    succeeded(this.dimension, `tickingarea remove ${this.areaName}`);
   }
 
   /** Polls until the centre column reads, then waits for the surroundings to settle. */

@@ -2,10 +2,15 @@
 // periodic systems through the session.
 import { system } from '@minecraft/server';
 
+import { retryLights } from './lighting.js';
+import { ARENA } from '../core/config.js';
 import { guard } from '../core/log.js';
 
 import type { Session } from '../core/session.js';
 
 export function startLoop(session: Session): void {
   system.runInterval(guard(session.log, 'tick', () => session.onTick(system.currentTick)), 1);
+  // Lights wait for their chunks to load (spec §6.6).
+  const retry = guard(session.log, 'lightRetry', () => retryLights(session));
+  system.runInterval(retry, ARENA.retryTicks);
 }

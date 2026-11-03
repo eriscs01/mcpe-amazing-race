@@ -1,5 +1,6 @@
 // Holds the live race state and connects the reducer to persistence and the world: load on
 // world start, dispatch actions, hand effects to the adapter, save on change and periodically.
+import { resumeEffects } from './arenas.js';
 import { ADDON_VERSION, SAVE_EVERY_TICKS } from './config.js';
 import { Logger } from './log.js';
 import { loadState, saveState } from './persist.js';
@@ -86,6 +87,9 @@ export class Session {
     }
     this.dirty = fresh || this.state !== state;
     this.flush();
+    // Builds that never finished and lights (kept only in the world) are redone from the state.
+    const resume = this.state ? resumeEffects(this.state) : [];
+    if (resume.length > 0) this.deps.execute(resume);
   }
 
   /** Returns whether the action was accepted (false when refused or there is no state). */
