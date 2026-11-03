@@ -85,6 +85,7 @@ async function run(session: Session, effect: GenerateEffect): Promise<void> {
 export async function startGenerationJob(session: Session, effect: GenerateEffect): Promise<void> {
   if (running) {
     session.log.warn('generationAlreadyRunning', { job: effect.job });
+    session.dispatch({ type: 'courseFailed', job: effect.job, failure: { reason: 'error' } });
     return;
   }
   running = true;

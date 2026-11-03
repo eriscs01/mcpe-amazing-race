@@ -63,14 +63,25 @@ function entitiesNear(dimension: Dimension, pos: Vec3): Found[] {
     .map((e) => ({ type: e.typeId, pos: blockOf(e.location) }));
 }
 
-function blocksNear(dimension: Dimension, pos: Vec3, surface: number): Found[] {
+/**
+ * One position per landmark block type is all detection needs; badlands can hold tens of
+ * thousands of matches, so only the first is read. A failing query is logged, once per loader.
+ */
+function blocksNear(
+  dimension: Dimension,
+  pos: Vec3,
+  surface: number,
+  onError: (type: string, error: unknown) => void,
+): Found[] {
   const from = { x: pos.x - HALF, y: surface - BELOW, z: pos.z - HALF };
   const to = { x: pos.x + HALF - 1, y: surface + ABOVE, z: pos.z + HALF - 1 };
   return LANDMARK_BLOCKS.flatMap((type) => {
     try {
       const volume = dimension.getBlocks(new BlockVolume(from, to), { includeTypes: [type] }, true);
-      return [...volume.getBlockLocationIterator()].map((p) => ({ type, pos: p }));
-    } catch {
+      const first = volume.getBlockLocationIterator().next();
+      return first.done ? [] : [{ type, pos: first.value }];
+    } catch (error) {
+      onError(type, error);
       return [];
     }
   });
@@ -91,6 +102,7 @@ export class TickingAreaLoader implements AreaLoader {
       this.log.info('areaTimeout', { x: pos.x, z: pos.z });
       return undefined;
     }
+    const onScanError = (type: string, error: unknown): void => this.blockScanFailed(type, error);
     return {
       groundAt: (x, z) => {
         const top = topAt(dimension, x, z);
@@ -100,10 +112,18 @@ export class TickingAreaLoader implements AreaLoader {
         const surface = topAt(dimension, pos.x, pos.z) ?? pos.y;
         return {
           entities: entitiesNear(dimension, pos),
-          blocks: blocksNear(dimension, pos, surface),
+          blocks: blocksNear(dimension, pos, surface, onScanError),
         };
       },
     };
+  }
+
+  private blockScanWarned = false;
+
+  private blockScanFailed(type: string, error: unknown): void {
+    if (this.blockScanWarned) return;
+    this.blockScanWarned = true;
+    this.log.warn('blockScanFailed', { type, error: String(error) });
   }
 
   /** Removes the scan's ticking area; a failure just means there was none. */
