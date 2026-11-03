@@ -155,6 +155,8 @@ export const COURSE = {
   driftCone: 60,
   /** Extra Route Info stops head toward the stop they lead to, within this many degrees. */
   insertCone: 60,
+  /** Share of a free stop's draws aimed at the next pin, within this many degrees. */
+  pinLean: { share: 0.5, cone: 90 },
   /** Held back from the reach to a pin or the Finish, so the last segment has room to land. */
   reachMargin: 100,
   /** Probed candidates per stop, and how many valid ones are compared for flatness. */
@@ -165,6 +167,8 @@ export const COURSE = {
   /** Look-ahead: draws per stop, and positions in all, when checking the rest still fits. */
   searchTries: 6,
   searchBudget: 400,
+  /** Positions drawn by searches before the walk pauses for a tick. */
+  workPerPause: 2000,
   /** Searches from a stop whose position was fixed (start line, pin) before giving up. */
   searchRestarts: 40,
 } as const;

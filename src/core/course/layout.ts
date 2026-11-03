@@ -32,14 +32,23 @@ const FINISH_CLEARANCE = COURSE.finishFromStart + COURSE.spacing;
 
 /** Where the walk must arrive next: a pin exactly, or the Finish's circle round the start line. */
 interface Target {
-  pos: Vec3;
+  readonly pos: Vec3;
   /** Furthest a stop may be from `pos` with one segment to go. */
-  oneSegment: number;
+  readonly oneSegment: number;
   /** Index of the slot that arrives. */
-  at: number;
+  readonly at: number;
+  /** A pin, not the Finish. */
+  readonly pinned: boolean;
   /** Too far to reach from the previous pin or start line without extra Route Info stops. */
-  forced: boolean;
+  readonly forced: boolean;
 }
+
+/**
+ * Yielded by the walk between searches once enough work is done, so a game-tick driver can wait
+ * a tick before going on; the value sent back is ignored.
+ */
+export const PAUSE = 'pause';
+export type Pause = typeof PAUSE;
 
 const key = (pos: Vec3): string => `${pos.x},${pos.z}`;
 
@@ -50,6 +59,9 @@ export class Layout {
 
   /** Positions known to complete the course from the last placed stop. */
   private way: Vec3[] = [];
+
+  /** Positions drawn by searches since the last pause. */
+  private work = 0;
 
   /** The ways found from this stop's candidates, by position. */
   private readonly ways = new Map<string, Vec3[]>();
@@ -63,43 +75,45 @@ export class Layout {
     private readonly rng: Rng,
   ) {
     const isFixed = (s: Slot): boolean => s.pin !== undefined || s.type === 'finish';
-    // Each slot heads for the first pin or Finish at or after it; the Finish is always last.
-    const targets: Target[] = [];
-    let next = this.targetAt(slots.length - 1);
-    for (let j = slots.length - 1; j >= 0; j -= 1) {
-      const slot = slots[j];
-      if (slot && isFixed(slot)) next = this.targetAt(j, slot);
-      targets[j] = next;
-    }
     // A pin or Finish too far for the stops before it (from the start line or the previous pin)
     // is "forced": only then may the walk add Route Info stops or merely close in (spec §6.4).
+    const forced = new Map<number, boolean>();
     let from = { pos: input.start, at: 0 };
     for (const [j, slot] of slots.entries()) {
-      const target = targets[j];
-      if (target && isFixed(slot)) {
+      if (isFixed(slot)) {
+        const target = this.targetAt(j, slot, false);
         const reach = target.oneSegment + (j - from.at - 1) * COURSE.segment.max;
-        target.forced = dist(from.pos, target.pos) > reach;
+        forced.set(j, dist(from.pos, target.pos) > reach);
         from = { pos: target.pos, at: j };
       }
+    }
+    // Each slot heads for the first pin or Finish at or after it; the Finish is always last.
+    const targets: Target[] = [];
+    let next: Target | undefined;
+    for (let j = slots.length - 1; j >= 0; j -= 1) {
+      const slot = slots[j];
+      if (slot && isFixed(slot)) next = this.targetAt(j, slot, forced.get(j) ?? false);
+      if (next) targets[j] = next;
     }
     this.targets = targets;
   }
 
-  private targetAt(at: number, slot?: Slot): Target {
-    if (slot?.pin) {
+  private targetAt(at: number, slot: Slot, forced: boolean): Target {
+    if (slot.pin) {
       return {
-        pos: slot.pin, oneSegment: COURSE.segment.max, at, forced: false,
+        pos: slot.pin, oneSegment: COURSE.segment.max, at, pinned: true, forced,
       };
     }
     return {
       pos: this.input.start,
       oneSegment: COURSE.segment.max + COURSE.finishFromStart - COURSE.reachMargin,
       at,
-      forced: false,
+      pinned: false,
+      forced,
     };
   }
 
-  target(j: number): Target {
+  private target(j: number): Target {
     const target = this.targets[j] ?? this.targets.at(-1);
     if (!target) throw new Error('a course always has a Finish');
     return target;
@@ -114,7 +128,7 @@ export class Layout {
   }
 
   /** The spec §5 rules for a stop after `prev`; pins count as stops from the outset. */
-  keepsRules(pos: Vec3, prev: Vec3, finish: boolean, extra: readonly Vec3[]): boolean {
+  private keepsRules(pos: Vec3, prev: Vec3, finish: boolean, extra: readonly Vec3[]): boolean {
     const { start, radius, pins } = this.input;
     const seg = dist(prev, pos);
     if (seg < COURSE.segment.min || seg > COURSE.segment.max) return false;
@@ -130,7 +144,7 @@ export class Layout {
    * the Finish (in reach of it, or, when that one is forced, at least closer). An extra Route
    * Info stop must get closer.
    */
-  fits(pos: Vec3, from: Vec3, j: number, route: boolean, extra: readonly Vec3[]): boolean {
+  private fits(pos: Vec3, from: Vec3, j: number, route: boolean, extra: readonly Vec3[]): boolean {
     const finish = !route && this.slots[j]?.type === 'finish';
     if (!this.keepsRules(pos, from, finish, extra)) return false;
     if (finish) return true;
@@ -143,7 +157,7 @@ export class Layout {
   }
 
   /** A candidate for slot `j` after `from`. */
-  draw(from: Vec3, j: number, route: boolean): Vec3 {
+  private draw(from: Vec3, j: number, route: boolean): Vec3 {
     const { start, radius } = this.input;
     const { rng } = this;
     const along = (heading: number): Vec3 => block(
@@ -158,6 +172,12 @@ export class Layout {
       const r = rng.range(COURSE.spacing, COURSE.finishFromStart);
       return block(offsetByYaw(start, rng.range(-180, 180), r), from.y);
     }
+    // Half the draws lean toward the next pin, which may only be reachable from a narrow area.
+    const target = this.target(j);
+    if (target.pinned && rng.next() < COURSE.pinLean.share) {
+      const { cone } = COURSE.pinLean;
+      return along(yawTowards(from, target.pos) + rng.range(-cone, cone));
+    }
     const home = homeHeadings(from, start, radius);
     return along(home ? home.centre + rng.range(-home.spread, home.spread) : rng.range(-180, 180));
   }
@@ -167,7 +187,7 @@ export class Layout {
    * found by a depth-first search over the same draws and bounded by `budget` positions, or
    * undefined if none was found.
    */
-  completion(
+  private completion(
     from: Vec3,
     j: number,
     extra: readonly Vec3[],
@@ -183,6 +203,7 @@ export class Layout {
       return rest && [slot.pin, ...rest];
     }
     for (let i = 0; i < COURSE.searchTries; i += 1) {
+      this.work += 1;
       const pos = this.draw(from, j, route);
       const rest = this.fits(pos, from, j, route, extra)
         ? this.completion(pos, route ? j : j + 1, [...extra, pos], budget)
@@ -192,19 +213,28 @@ export class Layout {
     return undefined;
   }
 
+  /** Pauses once the searches since the last pause have drawn enough positions. */
+  private* rest(): Generator<Pause, void, unknown> {
+    if (this.work < COURSE.workPerPause) return;
+    this.work = 0;
+    yield PAUSE;
+  }
+
   /** Repeated searches from a fixed stop, whose next stop may only have a small area to land. */
-  private search(from: Vec3, next: number): Vec3[] | undefined {
+  private* search(from: Vec3, next: number): Generator<Pause, Vec3[] | undefined, unknown> {
     for (let i = 0; i < COURSE.searchRestarts; i += 1) {
       const way = this.completion(from, next, [], { left: COURSE.searchBudget });
       if (way) return way;
+      yield* this.rest();
     }
     return undefined;
   }
 
   /** Whether `pos` fits slot `j` and leaves the rest placeable; remembers the way it found. */
-  viable(pos: Vec3, from: Vec3, j: number, route: boolean): boolean {
+  * viable(pos: Vec3, from: Vec3, j: number, route: boolean): Generator<Pause, boolean, unknown> {
     if (!this.fits(pos, from, j, route, [])) return false;
     const rest = this.completion(pos, route ? j : j + 1, [pos], { left: COURSE.searchBudget });
+    yield* this.rest();
     if (rest) this.ways.set(key(pos), rest);
     return rest !== undefined;
   }
@@ -213,10 +243,10 @@ export class Layout {
    * A random candidate that is viable; failing that, once per stop, the next position on the
    * way found when the last stop was placed, which is known to complete the course.
    */
-  propose(from: Vec3, j: number, route: boolean): Vec3 | undefined {
+  * propose(from: Vec3, j: number, route: boolean): Generator<Pause, Vec3 | undefined, unknown> {
     for (let i = 0; i < COURSE.proposalTries; i += 1) {
       const pos = this.draw(from, j, route);
-      if (this.viable(pos, from, j, route)) return pos;
+      if (yield* this.viable(pos, from, j, route)) return pos;
     }
     const [next, ...rest] = this.way;
     if (!next || this.ways.has(key(next))) return undefined;
@@ -228,12 +258,12 @@ export class Layout {
    * Records a placed stop, `next` being the slot still to place, and follows the way found from
    * it; a stop placed off any known way (the start line, a pin, a moved candidate) searches anew.
    */
-  place(pos: Vec3, next: number): void {
+  * place(pos: Vec3, next: number): Generator<Pause, void, unknown> {
     const [ahead, ...rest] = this.way;
     const onWay = ahead && key(ahead) === key(pos) ? rest : undefined;
     const known = this.ways.get(key(pos)) ?? onWay;
     this.ways.clear();
     this.placed.push(pos);
-    this.way = known ?? this.search(pos, next) ?? [];
+    this.way = known ?? (yield* this.search(pos, next)) ?? [];
   }
 }
