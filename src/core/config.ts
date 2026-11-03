@@ -139,6 +139,36 @@ export const PLAN = {
   finalists: 3,
 } as const;
 
+// ── Course walk (spec §5, §6.2, §6.4) ───────────────────────────────────────
+
+/** Distances in blocks, angles in degrees. */
+export const COURSE = {
+  /** Straight-line length between consecutive stops. */
+  segment: { min: 600, max: 900 },
+  /** Least distance between any two stops. */
+  spacing: 300,
+  /** The Finish lies within this distance of the start line. */
+  finishFromStart: 400,
+  /** Past this share of the radius, the next heading turns back toward the start line... */
+  driftBias: 0.6,
+  /** ...within this many degrees either side. */
+  driftCone: 60,
+  /** Extra Route Info stops head toward the stop they lead to, within this many degrees. */
+  insertCone: 60,
+  /** Held back from the reach to a pin or the Finish, so the last segment has room to land. */
+  reachMargin: 100,
+  /** Probed candidates per stop, and how many valid ones are compared for flatness. */
+  candidatesPerStop: 6,
+  validToChoose: 3,
+  /** Positions drawn for a candidate before the stop is given up as having no room. */
+  proposalTries: 20,
+  /** Look-ahead: draws per stop, and positions in all, when checking the rest still fits. */
+  searchTries: 6,
+  searchBudget: 400,
+  /** Searches from a stop whose position was fixed (start line, pin) before giving up. */
+  searchRestarts: 40,
+} as const;
+
 // ── Teams (spec §4) ─────────────────────────────────────────────────────────
 
 export const TEAM_COLORS = [

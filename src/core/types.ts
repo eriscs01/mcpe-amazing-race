@@ -1,6 +1,6 @@
 // Persisted race state (technical design §2.3) and the actions and effects that cross the
 // core/adapter boundary. Everything in State is plain JSON so it survives the chunked store.
-import type { TaskKindName, Terrain } from './config.js';
+import type { DetourOption, RoadblockKind, Terrain } from './config.js';
 import type { Fields } from './log.js';
 import type { Vec3 } from './vec.js';
 
@@ -35,10 +35,13 @@ export interface Landmark {
   pos: Vec3;
 }
 
-/** A challenge placed at a stop; its parameters are added by the task groups. */
-export interface TaskSpec {
-  kind: TaskKindName;
-}
+/**
+ * The challenge a stop holds (spec §7.3): a Detour's two options, or a Roadblock's kind. Names
+ * and kinds are stored, not table indexes, so a save stays readable if the tables change. The
+ * task groups add each kind's parameters.
+ */
+export type TaskSpec = { type: 'detour'; options: [DetourOption, DetourOption] }
+  | { type: 'roadblock'; kind: RoadblockKind };
 
 /** Per-team, per-option task progress; each task kind defines its own counters. */
 export type TaskProgress = Record<string, number>;
@@ -53,6 +56,8 @@ export interface Stop {
   landmark?: Landmark;
   blind: boolean;
   task?: TaskSpec;
+  /** Placed on a host-pinned waypoint (spec §6.4). */
+  pinned?: boolean;
   built: boolean;
   lit: boolean;
 }

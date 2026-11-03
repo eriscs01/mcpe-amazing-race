@@ -72,7 +72,10 @@ src/
     plan.ts               derived plan (legs, radius, boundary) + elimination schedule, summary
     setup.ts              Setup form model, reading its values, saving settings
     teams.ts              auto-assign, swap, View teams text, roadblock caps
-    course/planner.ts     stop sequence, segment walk, pinned waypoints, names, task assignment
+    course/skeleton.ts    stop types per leg, blind flags, Detour / Roadblock / Recall, pin slots
+    course/layout.ts      distance rules, candidate draws, look-ahead search (geometry only)
+    course/walk.ts        places stops from probe results: a generator the generation job drives
+    course/names.ts       unique place names from the terrain tables
     course/terrain.ts     ground walk + classification from a column sample (pure)
     tasks/*.ts            one file per kind: setup spec + progress reducer + completion
     quiz/bank.ts          trivia (≥30, verified), arithmetic, anagram generators, normaliser
@@ -118,7 +121,9 @@ interface State {
 }
 interface Stop { id: number; leg: number; type: "start"|"route"|"detour"|"roadblock"|"pit"|"finish";
   pos: Vec3; terrain: Terrain; name: string; landmark?: Landmark; blind: boolean;
-  task?: TaskSpec; built: boolean; lit: boolean; }
+  task?: TaskSpec; pinned?: boolean; built: boolean; lit: boolean; }
+type TaskSpec = { type: "detour"; options: [DetourOption, DetourOption] }   // names + kinds
+  | { type: "roadblock"; kind: RoadblockKind };
 interface Team { id: string; name: string; color: string; members: string[]; status: "racing"|"checkedIn"|"eliminated";
   leg: number; step: number;              // index into the leg's stops
   penaltyOwed: number;                     // clock ticks
@@ -149,11 +154,12 @@ Transient (not persisted): open forms, separation timers, HUD caches, retry queu
 
 ### 2.6 Course generation pipeline
 
-1. `planner.ts` (pure) produces the **skeleton**: ordered stop types per leg, pinned waypoint placement, task kinds, blind flags, Recall on final leg, hunt excluded on Peaceful.
-2. For each stop, the planner proposes candidates (heading, distance) from a seeded RNG; `terrainProbe.ts` loads each via the `race_scan` ticking area and returns a `ColumnSample` + landmarks; `terrain.ts` (pure) accepts/rejects and classifies.
-3. Names drawn from terrain tables, unique per course.
-4. Builder enqueues arena builds; each is a `runJob` generator. The host sees "Generating stop k/N…" on the action bar.
-5. Generation is resumable: progress is in `state.stops`; if the world reloads mid-generation, the host re-runs Generate and finished stops are kept.
+1. `course/skeleton.ts` (pure) produces the **skeleton**: ordered stop types per leg, pinned waypoint slots, task kinds, blind flags, Recall on final leg, hunt excluded on Peaceful.
+2. `course/walk.ts` is a generator, `generateCourse(input)`: it **yields** each candidate position and takes back a `Probe` (`{pos, terrain, spread, landmark?}`, or `undefined` when rejected). G6's job drives it across ticks: `terrainProbe.ts` loads the candidate via the `race_scan` ticking area, `terrain.ts` (pure) accepts/rejects and classifies, and an arena moved next to a landmark comes back as a different `pos`. Tests drive the same generator with `planCourse(input, probe)`. It returns `{ok: true, stops, probes, inserted}` or a failure (`noGround`/`noRoom` with the stop, or a pin problem) for the host message.
+3. Candidates come from `course/layout.ts`: random heading and length within the distance rules, accepted only if a bounded depth-first search can still place the rest of the course after it (geometry only, no probes). The way that search found is kept, so when no random draw is viable the walk falls back to it; with any terrain the probe accepts, generation therefore does not dead-end.
+4. Names drawn from terrain tables as stops are placed, unique per course (`course/names.ts`).
+5. Builder enqueues arena builds; each is a `runJob` generator. The host sees "Generating stop k/N…" on the action bar.
+6. Generation is resumable: progress is in `state.stops`; if the world reloads mid-generation, the host re-runs Generate and finished stops are kept.
 
 ### 2.7 Tasks as plug-ins
 
@@ -224,6 +230,13 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Team ids and names | Id is the lower-case colour name (`red`), used as the `team=` log key; name and colour come from `TEAM_COLORS` in order. |
 | View teams | The Teams screen's body is the view (each team in its colour, then racers on no team, then the 2-team warning); its buttons are Auto-assign and Swap. |
 | Roadblock cap team size (§8.7) | The team's actual member count (`roadblockCapFor`), so a smaller team's members may each perform more. |
+| Start line as a stop (§5) | Stop 0 on leg 0, with a generated name like any stop; a Pit Stop is the last stop of its leg, so "the stop a leg started from" is always the previous leg's last stop. |
+| Blind segment (§5) | The segment into each Detour from leg 2 on, including the final leg's (Roadblock → Detour), so every leg from 2 has exactly one. |
+| Peaceful and Detour pairs (§7.3) | Pairs with a hunt option (Fight/Find, Brains/Brawn) are left out, not half-replaced. |
+| Where pins go (§6.4) | In nearest-neighbour order, spread evenly over the Detour and Roadblock stops (pin i of k takes the middle of the i-th k-th). Refused before probing (`pinOutsideCourse` beyond R, `pinTooClose` within 300 of the start line or an earlier pin, `tooManyPins` beyond the 2 per leg). A pin the probe rejects is kept where the host put it, with the fallback terrain; the segment into a pin may be under 600. |
+| Extra Route Info stops (§6.4) | Only when a pin is "forced" (farther from the start line or previous pin than the stops in between can cover); then also before the Finish if the last pin leaves it out of reach. Unpinned courses always have 4 × L + 1 stops. |
+| Finish room (§5) | Every stop but the Finish stays at least 700 blocks (400 + 300) from the start line, so the Finish's 300–400 circle is never blocked. |
+| Candidate choice (§6.2) | Up to 6 probed per stop, stopping at the first valid one with a landmark or once 3 are valid (the flattest wins, the earliest on a tie). A candidate moved next to a landmark is re-checked against the rules. 6 rejections end generation with `noGround` for that stop. |
 | Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---

@@ -13,6 +13,9 @@ Versions follow `package.json`; the release workflow publishes the section match
   and `race:dump`, phase-aware host menu and Passport shell with busy-retry forms (G3).
 - Setup screen with the derived plan, elimination schedule, team auto-assign / swap / view
   with the fixed colour list, and the Roadblock cap (G4).
+- Course planner: leg skeleton, Detour / Roadblock / Recall assignment, blind segments,
+  pinned waypoints, distance-rule walk with look-ahead, candidate choice from terrain probes
+  and unique place names (G5).
 
 ## [0.1.0]
 
