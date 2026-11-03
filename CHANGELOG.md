@@ -9,6 +9,8 @@ Versions follow `package.json`; the release workflow publishes the section match
 - Release packaging: pack icon, manifest metadata, version checks, tagged-release workflow.
 - Race state, race clock, phase machine and chunked world persistence; shared logger and
   handler guard (G2).
+- Race Control and Race Passport items, host claim / replace / transfer, `/scriptevent race:host`
+  and `race:dump`, phase-aware host menu and Passport shell with busy-retry forms (G3).
 
 ## [0.1.0]
 

@@ -122,12 +122,29 @@ export interface State {
   leg: LegState;
 }
 
+/** The script-tagged vanilla items (spec §3). */
+export type MenuItemRole = 'raceControl' | 'passport';
+
 /** Inputs to the core reducer. Later groups add cases; the reducer's switch is exhaustive. */
 export type Action = { type: 'tick' }
-  | { type: 'setPhase'; to: Phase; by?: PlayerId };
+  | { type: 'setPhase'; to: Phase; by?: PlayerId }
+  /** `initial` is the first spawn of a session (a join), not a respawn. */
+  | {
+    type: 'playerSpawned'; player: PlayerId; name: string; initial: boolean; hasPassport: boolean;
+  }
+  /** `clock`: sneak-using a plain clock; `command`: `/scriptevent race:host`. */
+  | {
+    type: 'claimHost'; by: PlayerId; name: string; via: 'clock' | 'command';
+  }
+  | {
+    type: 'transferHost'; by: PlayerId; to: PlayerId; toName: string;
+  };
 
 /** What the adapter must do in the world. */
-export interface Effect { kind: 'notify'; to: PlayerId; code: string; text: string }
+export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string }
+  | { kind: 'giveItem'; to: PlayerId; item: MenuItemRole }
+  /** Removes every copy of the item from the player's inventory. */
+  | { kind: 'takeItem'; from: PlayerId; item: MenuItemRole };
 
 export interface Result {
   /** Stable code when the action was refused; state is then unchanged. */

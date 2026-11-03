@@ -89,6 +89,13 @@ export const HOUR = 30 * TICKS_PER_SECOND;
 /** Periodic save of the race clock (spec §13); real state changes are saved at once. */
 export const SAVE_EVERY_TICKS = 5 * TICKS_PER_SECOND;
 
+/** A form refused with UserBusy (chat open) is retried this often, for up to 5 s (§2.8). */
+export const FORM_RETRY_TICKS = 10;
+export const FORM_TRIES = (5 * TICKS_PER_SECOND) / FORM_RETRY_TICKS;
+
+/** Uses of a menu item this close together count once (air use and block use can both fire). */
+export const USE_DEBOUNCE_TICKS = 5;
+
 /** Penalties in race hours (spec §8.8). Host-added penalties are chosen in the form. */
 export const PENALTY_HOURS = {
   quitRoadblock: 4,

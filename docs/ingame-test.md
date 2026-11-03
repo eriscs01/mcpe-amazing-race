@@ -29,6 +29,17 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] Reopening the world logs `source=saved` with the same `seed` (state persisted).
 - [ ] Closing the world while the race runs, then reopening it, logs `pausedOnLoad`.
 - [ ] Forms open (host menu, Passport).
+- [ ] First player to join a fresh world gets Race Control and `hostChanged … via=playerSpawned` is logged.
+- [ ] Race Control opens the host menu (in the air and on a block; one menu, block not opened);
+      it shows `Phase: Setup` and **Transfer host**.
+- [ ] A non-host using Race Control is told who the host is; sneak-using a plain clock is refused.
+- [ ] Host sneak-uses a plain clock: the old Race Control is replaced by a fresh one.
+- [ ] Transfer host to the second player: the item moves, both get a message.
+- [ ] `/scriptevent race:host` makes the sender host; `/scriptevent race:dump` logs `stateDump`.
+- [ ] Race Control is kept on death and cannot be dropped.
+- [ ] Opening the host menu with chat open shows it once chat closes (UserBusy retry).
+- [ ] With a corrupted save (`race:n` set to a bad value), Race Control shows
+      "Saved race unreadable — see Content Log".
 - [ ] HUD direction matches facing.
 
 ### M2–M4

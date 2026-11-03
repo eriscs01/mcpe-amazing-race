@@ -117,7 +117,9 @@ test('a refused action changes nothing, reaches the player and is logged with it
   session.dispatch({ type: 'setPhase', to: 'running', by: 'p1' });
   assert.equal(session.state?.phase, 'setup');
   assert.equal(bag.writes, 0);
-  assert.deepEqual(executed.map((e) => [e.to, e.code]), [['p1', 'badPhase']]);
+  assert.deepEqual(executed, [{
+    kind: 'notify', to: 'p1', code: 'badPhase', text: 'Not possible while the race is in setup.',
+  }]);
   assert.match(cap.find('refused')[0]?.line ?? '', /code=badPhase action=setPhase by=p1/);
 });
 
@@ -168,4 +170,53 @@ test('a failed save is logged once, keeps the state in memory and is retried', (
   assert.equal(saved(bag).clock, session.state?.clock);
   assert.equal(saved(bag).phase, 'running');
   assert.equal(cap.find('saveRecovered').length, 1);
+});
+
+test('load status is pending, then ready, or unreadable for a corrupt save', () => {
+  const ok = setup();
+  assert.equal(ok.session.loadStatus, 'pending');
+  ok.session.load();
+  assert.equal(ok.session.loadStatus, 'ready');
+  const bad = setup();
+  bad.bag.map.set(COUNT_KEY, 1);
+  bad.bag.map.set(chunkKey(0), '{not json');
+  bad.session.load();
+  assert.equal(bad.session.loadStatus, 'unreadable');
+});
+
+test('a host change is logged with the old and new host and the action', () => {
+  const { cap, executed, session } = setup();
+  session.load();
+  session.dispatch({
+    type: 'playerSpawned', player: 'a', name: 'Ana', initial: true, hasPassport: false,
+  });
+  assert.equal(session.state?.hostId, 'a');
+  assert.match(cap.find('hostChanged')[0]?.line ?? '', /to=a via=playerSpawned/);
+  assert.equal(executed[0]?.kind, 'giveItem');
+  session.dispatch({
+    type: 'transferHost', by: 'a', to: 'b', toName: 'Ben',
+  });
+  assert.match(cap.find('hostChanged')[1]?.line ?? '', /from=a to=b via=transferHost/);
+});
+
+test('dumpState logs the whole state in parts that join back to its JSON', () => {
+  const { cap, session } = setup();
+  session.load();
+  const big = 'x'.repeat(5000);
+  const loaded = session.state ?? assert.fail('not loaded');
+  session.state = { ...loaded, players: { p: { name: big } } };
+  session.dumpState();
+  assert.match(cap.find('stateDump')[0]?.line ?? '', /phase=setup .*parts=3/);
+  const json = cap.find('stateDumpPart')
+    .map((l) => / json=(.*)$/.exec(l.line)?.[1] ?? '')
+    .map((v) => (v.startsWith('"') ? JSON.parse(v) as string : v))
+    .join('');
+  assert.deepEqual(JSON.parse(json), session.state);
+});
+
+test('dumpState with no state says so', () => {
+  const { cap, session } = setup();
+  session.dumpState();
+  assert.match(cap.find('stateDump')[0]?.line ?? '', /status=pending/);
+  assert.equal(cap.find('stateDumpPart').length, 0);
 });

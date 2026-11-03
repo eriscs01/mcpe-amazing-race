@@ -1,0 +1,110 @@
+// Event subscriptions: translate Minecraft events into core actions and menu openings.
+// Menus open from `itemUse` (air) and, as the spec §3 fallback, from using the item on a block.
+import { Player, system, world } from '@minecraft/server';
+
+import { hasItem, heldOf } from './items.js';
+import { openHostMenu } from './ui/host.js';
+import { openPassport } from './ui/racer.js';
+import { USE_DEBOUNCE_TICKS } from '../core/config.js';
+import { guard } from '../core/log.js';
+import { routeUse } from '../core/menu.js';
+
+import type { ItemStack, ScriptEventCommandMessageAfterEvent } from '@minecraft/server';
+
+import type { UseRoute } from '../core/menu.js';
+import type { Session } from '../core/session.js';
+
+function route(session: Session, player: Player, stack: ItemStack): UseRoute | undefined {
+  if (session.loadStatus === 'pending') return undefined;
+  const use = { held: heldOf(stack), player: player.id, sneaking: player.isSneaking };
+  return routeUse(use, session.state);
+}
+
+function wireItemUse(session: Session): void {
+  const lastUse = new Map<string, number>();
+  const act = async (player: Player, to: UseRoute): Promise<void> => {
+    const last = lastUse.get(player.id);
+    if (last !== undefined && system.currentTick - last < USE_DEBOUNCE_TICKS) return;
+    lastUse.set(player.id, system.currentTick);
+    switch (to.kind) {
+      case 'hostMenu':
+        await openHostMenu(session, player);
+        break;
+      case 'passport':
+        await openPassport(session, player);
+        break;
+      case 'claimHost':
+        session.dispatch({
+          type: 'claimHost', by: player.id, name: player.name, via: 'clock',
+        });
+        break;
+      case 'say':
+        player.sendMessage(to.text);
+        break;
+      default: {
+        const unknown: never = to;
+        throw new Error(`unknown route ${JSON.stringify(unknown)}`);
+      }
+    }
+  };
+
+  world.afterEvents.itemUse.subscribe(guard(session.log, 'itemUse', async (ev) => {
+    const to = route(session, ev.source, ev.itemStack);
+    if (to) await act(ev.source, to);
+  }));
+
+  // Before-event: decide `cancel` from memory only, then act on the next tick.
+  world.beforeEvents.playerInteractWithBlock.subscribe(guard(session.log, 'useOnBlock', (ev) => {
+    if (!ev.isFirstEvent || !ev.itemStack) return;
+    const to = route(session, ev.player, ev.itemStack);
+    if (!to) return;
+    ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API
+    const { player } = ev;
+    system.run(guard(session.log, 'useOnBlock', async () => act(player, to)));
+  }));
+}
+
+function wireSpawn(session: Session): void {
+  world.afterEvents.playerSpawn.subscribe(guard(session.log, 'playerSpawn', (ev) => {
+    const { player, initialSpawn } = ev;
+    session.dispatch({
+      type: 'playerSpawned',
+      player: player.id,
+      name: player.name,
+      initial: initialSpawn,
+      hasPassport: hasItem(player, 'passport'),
+    });
+  }));
+}
+
+/** `/scriptevent race:<name>` handlers: optional operator backups, never required. */
+type ScriptEventHandler = (session: Session, ev: ScriptEventCommandMessageAfterEvent) => void;
+
+const SCRIPT_EVENTS: Record<string, ScriptEventHandler> = {
+  'race:host': (session, ev) => {
+    const player = ev.sourceEntity;
+    if (!(player instanceof Player)) {
+      session.log.warn('scriptEventNeedsPlayer', { id: ev.id });
+      return;
+    }
+    session.dispatch({
+      type: 'claimHost', by: player.id, name: player.name, via: 'command',
+    });
+  },
+  'race:dump': (session) => session.dumpState(),
+};
+
+function wireScriptEvents(session: Session): void {
+  system.afterEvents.scriptEventReceive.subscribe(guard(session.log, 'scriptEvent', (ev) => {
+    const handler = SCRIPT_EVENTS[ev.id];
+    if (handler) handler(session, ev);
+    else session.log.warn('unknownScriptEvent', { id: ev.id });
+  }), { namespaces: ['race'] });
+}
+
+/** Subscribes every handler; call at module top level (Script API 2.0). */
+export function wireEvents(session: Session): void {
+  wireItemUse(session);
+  wireSpawn(session);
+  wireScriptEvents(session);
+}
