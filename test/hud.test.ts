@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  boxOf, racing, stopOf, team,
+  boxOf, matOf, pitRace, racing, stopOf, team,
 } from './helpers/race.js';
 import { HUD } from '../src/core/config.js';
 import { compassBar, hudFrames } from '../src/core/hud.js';
@@ -156,4 +156,57 @@ test('a team with no target left gets no navigation line', () => {
   const done = { ...state, teams: state.teams.map((t) => ({ ...t, step: 9 })) };
   assert.deepEqual(hudFrames(done, [view(0)], { trail: true }), []);
   assert.equal(stopOf(state, 1).type, 'route');
+});
+
+test('on the way to a Pit Stop the bar points at its mat, not its clue box', () => {
+  const state = pitRace();
+  const mat = matOf(state, 4);
+  const at = view(0, { id: 'b', head: { x: mat.x, y: 71.6, z: mat.z - 10 } });
+  assert.equal(frameOf(state, at)?.text, '[----------O----------] 10m Pit Stop');
+});
+
+test('a team counting down on the mat sees the time left; owing is not repeated', () => {
+  const state = pitRace();
+  const mat = matOf(state, 4);
+  const waiting = {
+    ...state,
+    clock: 100,
+    teams: state.teams.map((t) => (t.id === 'red'
+      ? {
+        ...t, arrivedAt: 40, penaltyOwed: 400, step: 4,
+      } : t)),
+  };
+  const frame = frameOf(waiting, view(0, { head: { x: mat.x, y: 71.6, z: mat.z } }));
+  assert.equal(frame?.text, 'Checking in: 17s');
+});
+
+test('the last team out sees the grace countdown', () => {
+  const state = pitRace();
+  const grace = {
+    ...state,
+    clock: 100,
+    leg: { n: 1, phase: 'grace' as const, graceEnd: 700 },
+    teams: state.teams.map((t) => (t.id === 'red'
+      ? t : { ...t, status: 'checkedIn' as const, step: 4 })),
+  };
+  assert.match(frameOf(grace, view(0))?.text ?? '', /\nGrace: 30s$/);
+  assert.equal(frameOf(grace, view(0, { id: 'c' })), undefined);
+});
+
+test('a checked-in team has no bar, only its departure countdown', () => {
+  const state = pitRace();
+  const done = {
+    ...state,
+    clock: 10,
+    teams: state.teams.map((t) => (t.id === 'red'
+      ? { ...t, status: 'checkedIn' as const, step: 4 } : t)),
+  };
+  assert.deepEqual(hudFrames(done, [view(0)], { trail: true }), []);
+  const leaving = {
+    ...done,
+    teams: done.teams.map((t) => (t.id === 'red' ? {
+      ...t, leg: 2, step: 0, departAt: 210,
+    } : t)),
+  };
+  assert.match(frameOf(leaving, view(0))?.text ?? '', /\nDeparting in 10s$/);
 });

@@ -151,7 +151,12 @@ test('a reload in the countdown locks movement again; later phases refresh the s
   const departing = reduce(readyRace(), start()).state;
   const kinds = (s: State) => raceResumeEffects(s).map((e) => e.kind);
   assert.deepEqual(kinds(departing), ['lockMovement', 'sidebar']);
-  assert.deepEqual(kinds({ ...departing, leg: { n: 1, phase: 'racing' } }), ['sidebar']);
+  const released = {
+    ...departing,
+    leg: { n: 1, phase: 'racing' as const },
+    teams: departing.teams.map(({ departAt, ...t }) => t),
+  };
+  assert.deepEqual(kinds(released), ['sidebar']);
   assert.deepEqual(kinds(readyRace()), []);
 });
 

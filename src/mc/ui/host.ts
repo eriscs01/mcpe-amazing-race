@@ -6,7 +6,7 @@ import {
   addLandmark, buildArenas, clearLandmarks, discardCourse, generateCourse, listStops,
 } from './course.js';
 import { showForm, showMenu } from './forms.js';
-import { startRace } from './race.js';
+import { endLeg, startRace } from './race.js';
 import { hostMenu, teamsMenu } from '../../core/menu.js';
 import { COPY_WORLD_REMINDER, settingsFromValues, setupFields } from '../../core/setup.js';
 import { swapCandidates } from '../../core/teams.js';
@@ -148,6 +148,7 @@ const COMMANDS: Record<HostCommand, Handler> = {
   listStops: once(listStops),
   buildArenas: once(buildArenas),
   startRace: once(startRace),
+  endLeg: once(endLeg),
   discardCourse: once(discardCourse),
   transferHost,
 };

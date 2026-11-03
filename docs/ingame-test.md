@@ -152,6 +152,30 @@ the technical design (§4) add their checks here and record the result in their 
 - [ ] ✱ `race:pause` blanks the HUD and stops the trail; resuming brings both back.
 - [ ] ✱ The HUD yaw matches facing (the `getRotation().y` sign is the one the bar assumes).
 
+### G10 — Pit Stop & leg end (not ✱; run these on the first real leg)
+
+- [ ] Reaching the Pit Stop mat (the checkered 3 × 3, south of the arena's centre) with all
+      teammates checks the team in: chat says "Team … — you are team number n!". Standing
+      3 blocks off does not.
+- [ ] The leg winner gets 5 levels and sees a firework (a plain rocket may vanish without
+      bursting; note what it does).
+- [ ] With a penalty owed (use the debug state or wait for G14+), the team is held on the mat,
+      the action bar shows "Checking in: Ns", and a team arriving meanwhile is placed ahead.
+- [ ] When one team is left, chat announces 60 seconds of grace; the action bar of that team
+      shows "Grace: Ns".
+- [ ] An elimination leg: the last team is set to Spectator, loses the Passport and shows
+      `[OUT]`; a non-elimination leg only announces the Speed Bump.
+- [ ] Rest: everyone is frozen for 20 seconds, healed and fed (instant health and saturation),
+      then "Leg n begins." with the new clue; the old beam goes out and the new one lights.
+- [ ] Departures are staggered by the finish gap (max 45 s); a team released early can play
+      while the others still show "Departing in Ns".
+- [ ] Host menu → End leg now (confirm): refused while two teams are still out; with one team
+      out it behaves like grace expiring (that team is teleported to the mat).
+- [ ] Final leg: the first team on the Finish mat wins ("… wins the Amazing Race!"); the race
+      ends when all are in or 60 s later, and everyone can move.
+- [ ] A reload during rest or a departure countdown re-locks the racers (see #39 for the
+      reload pausing the race).
+
 ### M2–M4
 
 Add checks as the groups land.

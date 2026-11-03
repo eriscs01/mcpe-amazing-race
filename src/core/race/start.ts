@@ -1,11 +1,11 @@
 // Race start (spec §8.1) and the countdown that ends it: who may start, what the start fixes in
 // the state, and the effects that put racers on the line with the kit and their movement locked.
 import { allArenasBuilt, lightEffects, unbuilt } from '../arenas.js';
-import { advanceClock } from '../clock.js';
 import { clueText, legStops, sidebarRows } from '../clue.js';
 import { ARENA, RACE } from '../config.js';
 import { refuse, refuseUnlessHost } from '../host.js';
 import { planOf } from '../plan.js';
+import { lockedPlayers } from './locks.js';
 import { MIN_TEAMS } from '../teams.js';
 
 import type {
@@ -17,8 +17,6 @@ type Of<T extends Action['type']> = Extract<Action, { type: T }>;
 
 export const START_PHASES: readonly Phase[] = ['ready'];
 const RUN_PHASES: readonly Phase[] = ['running', 'paused', 'dayEnded'];
-
-const members = (state: State): PlayerId[] => state.teams.flatMap((t) => t.members);
 
 /** `count` spots on a ring around the start line's centre, one block above its floor. */
 function ringSpots(centre: Vec3, count: number): Vec3[] {
@@ -109,34 +107,13 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
   };
 }
 
-/** The clock tick: advances the clock, and ends the start countdown when it is due. */
-export function tick(state: State): Result {
-  const next = advanceClock(state);
-  if (next.leg.phase !== 'departing') return { state: next, effects: [] };
-  if (!next.teams.every((t) => t.departAt === undefined || next.clock >= t.departAt)) {
-    return { state: next, effects: [] };
-  }
-  const everyone = members(next);
-  return {
-    state: {
-      ...next,
-      leg: { ...next.leg, phase: 'racing' },
-      teams: next.teams.map(({ departAt, ...t }) => t),
-    },
-    effects: [
-      { kind: 'lockMovement', players: everyone, locked: false },
-      { kind: 'title', to: everyone, text: 'GO!' },
-    ],
-    logs: [{ event: 'raceReleased', fields: { leg: next.leg.n } }],
-  };
-}
-
 /** What a reloaded world redoes: the movement lock of a countdown still running, the sidebar. */
 export function raceResumeEffects(state: State): Effect[] {
   if (!RUN_PHASES.includes(state.phase)) return [];
+  const locked = lockedPlayers(state);
   return [
-    ...(state.leg.phase === 'departing'
-      ? [{ kind: 'lockMovement' as const, players: members(state), locked: true }] : []),
+    ...(locked.length > 0
+      ? [{ kind: 'lockMovement' as const, players: locked, locked: true }] : []),
     { kind: 'sidebar', rows: sidebarRows(state) },
   ];
 }

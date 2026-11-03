@@ -3,7 +3,7 @@
 import { createState } from '../../src/core/state.js';
 
 import type {
-  Phase, State, Stop, StopType, Team,
+  Action, Effect, Phase, State, Stop, StopType, Team,
 } from '../../src/core/types.js';
 import type { Vec3 } from '../../src/core/vec.js';
 
@@ -80,3 +80,39 @@ export const boxOf = (state: State, id: number): Vec3 => {
   const { pos } = stopOf(state, id);
   return { ...pos, y: pos.y + 1 };
 };
+
+/**
+ * Three teams (red h+b, blue c+d, green f+g) all heading for the leg 1 Pit Stop (stop 4, the
+ * fourth step), on a two-leg plan whose leg 1 eliminates (`eliminating`) or does not.
+ */
+export function pitRace(eliminating = true): State {
+  const state = racing();
+  const green = team('green', '§a', ['f', 'g']);
+  const players = {
+    ...state.players, f: { name: 'Fay', teamId: 'green' }, g: { name: 'Gus', teamId: 'green' },
+  };
+  return {
+    ...state,
+    players,
+    plan: {
+      legs: 2, legsPerDay: 2, radius: 400, eliminationLegs: eliminating ? [1] : [],
+    },
+    teams: [...state.teams, { ...green, leg: 1 }].map((t) => ({ ...t, step: 3 })),
+  };
+}
+
+/** The centre of a stop's mat: the stop's block centre, six blocks south (spec §6.5). */
+export const matOf = (state: State, id: number): Vec3 => {
+  const { pos } = stopOf(state, id);
+  return { x: pos.x + 0.5, y: pos.y + 1, z: pos.z + 6.5 };
+};
+
+/** What the adapter reports for `ids` standing on stop `id`'s mat. */
+export const onMat = (state: State, id: number, ids: string[]): Action => ({
+  type: 'racerPositions' as const,
+  players: ids.map((p) => ({ id: p, pos: matOf(state, id) })),
+});
+
+/** The text of every broadcast, without colour codes. */
+export const broadcasts = (effects: Effect[]): string[] => effects.flatMap((e) => (
+  e.kind === 'broadcast' ? [e.text.replace(/§./g, '')] : []));

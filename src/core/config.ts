@@ -523,6 +523,20 @@ export const RACE = {
   clueBoxHeight: 1,
   /** The game rules the race sets, as the world names them. */
   rules: { keepInventory: true, showCoordinates: true },
+  /** Every online teammate must be this close (horizontally) to the mat's centre to check in. */
+  matRadius: 2,
+  /** The last team still out gets this long once every other team has checked in (spec §8.5). */
+  graceTicks: 60 * TICKS_PER_SECOND,
+  /** Rest between legs: racers are healed and fed, movement locked (spec §8.5). */
+  restTicks: 20 * TICKS_PER_SECOND,
+  /** A team leaves this long after the winner at most, however far behind it checked in. */
+  departCapTicks: 45 * TICKS_PER_SECOND,
+  /** The final leg ends this long after the winner checks in at the Finish (spec §8.4). */
+  finishWindowTicks: 60 * TICKS_PER_SECOND,
+  /** The adapter reports where the racers are this often (Pit Stop arrival, later the rules). */
+  positionTicks: 10,
+  /** The leg winner's reward: experience levels (and a firework). */
+  winnerLevels: 5,
 };
 
 /** How each stop type reads in a clue: its label and the beam colour to look for. */
@@ -534,6 +548,13 @@ export const CLUE = {
   pit: { label: 'Pit Stop', beam: 'lime' },
   finish: { label: 'Finish', beam: 'lime' },
 } as const satisfies Record<StopType, { label: string; beam: string }>;
+
+/** Vanilla identifiers the Pit Stop effects use (hand-verified; vanilla-data has no entity ids). */
+export const PITSTOP = {
+  firework: 'minecraft:fireworks_rocket',
+  heal: 'instant_health',
+  feed: 'saturation',
+} as const;
 
 // ── Racer HUD (spec §9.1) ───────────────────────────────────────────────────
 

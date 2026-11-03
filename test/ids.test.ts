@@ -8,7 +8,7 @@ import * as oldest from 'vanilla-data-min';
 
 import * as config from '../src/core/config.js';
 import {
-  BLOCK, ENTITY, ITEM, PARTICLE,
+  BLOCK, ENTITY, ITEM, PARTICLE, PITSTOP,
 } from '../src/core/config.js';
 
 type Data = typeof latest;
@@ -35,6 +35,7 @@ test('config uses no vanilla id outside the checked id tables', () => {
   const registered = new Set<string>([
     ...categories.flatMap((c) => Object.values(c.ids)),
     ...Object.values(PARTICLE),
+    ...Object.values(PITSTOP),
   ]);
   const found = new Set<string>();
   const walk = (v: unknown): void => {
