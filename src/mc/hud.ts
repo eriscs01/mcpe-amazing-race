@@ -15,13 +15,17 @@ import type { Session } from '../core/session.js';
 const failing = new Set<string>();
 
 function guarded(session: Session, kind: string, player: Player, show: () => void): void {
+  const key = `${kind}:${player.id}`;
   try {
     show();
-    failing.delete(kind);
+    failing.delete(key);
   } catch (error) {
-    if (failing.has(kind)) return;
-    failing.add(kind);
-    session.log.warn('hudFailed', { kind, player: player.id, error: String(error) });
+    if (failing.has(key)) return;
+    failing.add(key);
+    const team = session.state?.players[player.id]?.teamId;
+    session.log.warn('hudFailed', {
+      kind, player: player.id, team, leg: session.state?.leg.n, error: String(error),
+    });
   }
 }
 
@@ -43,8 +47,19 @@ function display(session: Session, player: Player, frame: HudFrame): void {
 export function showHud(session: Session, trail: boolean): void {
   const { state } = session;
   if (state?.phase !== 'running') return;
+  // One player whose position cannot be read must not blank everyone else's HUD.
   const players = world.getAllPlayers().filter((p) => p.isValid);
-  const frames = hudFrames(state, players.map(viewOf), { trail });
+  const views = players.flatMap((p) => {
+    try {
+      return [viewOf(p)];
+    } catch (error) {
+      guarded(session, 'view', p, () => {
+        throw error;
+      });
+      return [];
+    }
+  });
+  const frames = hudFrames(state, views, { trail });
   frames.forEach((frame) => {
     const player = players.find((p) => p.id === frame.to);
     if (player) display(session, player, frame);

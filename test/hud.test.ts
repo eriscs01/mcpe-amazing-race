@@ -22,6 +22,10 @@ const view = (yaw: number, over: Partial<HudView> = {}): HudView => ({
 const frameOf = (state: State, v: HudView, trail = false) => hudFrames(state, [v], { trail })[0];
 const cellOf = (bar: string) => bar.slice(1, -1).search(/O/);
 
+test('the trail cadence is a whole number of HUD refreshes', () => {
+  assert.equal(HUD.trailEveryTicks % HUD.everyTicks, 0);
+});
+
 test('the bar is 21 cells between brackets with the target at its relative bearing', () => {
   const bar = compassBar(0);
   assert.equal(bar?.length, WIDTH + 2);
@@ -137,7 +141,7 @@ test('penalty owed and a lockout are task-line parts only while they last', () =
     ...team('red', '§c', ['h', 'b']), leg: 1, penaltyOwed: 45 * 20, lockoutUntil: 50 + 3 * 20,
   };
   const held = { ...state, clock: 50, teams: state.teams.map((t) => (t.id === 'red' ? red : t)) };
-  assert.equal(frameOf(held, view(-90))?.text.split('\n')[1], 'Penalty owed: 45s · Locked out: 3s');
+  assert.equal(frameOf(held, view(-90))?.text.split('\n')[1], 'Penalty owed: 45s | Locked out: 3s');
   const paid = { ...red, penaltyOwed: 0 };
   const later = {
     ...held,

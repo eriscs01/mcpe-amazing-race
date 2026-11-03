@@ -57,19 +57,17 @@ function taskLine(state: State, team: Team): string | undefined {
     team.departAt !== undefined && team.departAt > state.clock
       ? `Departing in ${seconds(team.departAt - state.clock)}s` : undefined,
   ].filter((part) => part !== undefined);
-  return parts.length > 0 ? parts.join(' · ') : undefined;
+  return parts.length > 0 ? parts.join(' | ') : undefined;
 }
 
 /** Whether a team's racers get a HUD now. G14's checked-in countdown extends this. */
 const showsHud = (state: State, team: Team): boolean => state.phase === 'running'
   && team.status !== 'eliminated';
 
-const ascii = (n: number): string => String(n);
-
 function navigation(stop: Stop, view: HudView): { line: string; bearing?: number } {
   const { label } = CLUE[stop.type];
   if (stop.blind) {
-    return { line: `${label}: X ${ascii(stop.pos.x)}, Z ${ascii(stop.pos.z)}` };
+    return { line: `${label}: X ${stop.pos.x}, Z ${stop.pos.z}` };
   }
   const box = clueBoxPos(stop);
   const metres = Math.round(horizontalDistance(view.head, box));

@@ -139,7 +139,7 @@ the technical design (§4) add their checks here and record the result in their 
 
 ### G9 — HUD & navigation ✱
 
-- [ ] ✱ With 2 players: the action bar shows `[---O|---] 412m Route Info`-style text; turning
+- [ ] ✱ With 2 players: the action bar shows a 21-cell `[----------|---O-----] 412m Route Info`-style bar; turning
       moves the `O` the right way (target to your right → `O` right of the centre mark).
 - [ ] ✱ Facing away from the target shows `<< TURN AROUND >>`; the distance counts down as you walk.
 - [ ] ✱ During the 10-second countdown a second line shows "Departing in Ns" under the bar.
