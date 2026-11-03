@@ -29,11 +29,6 @@ docs/            spec, technical design, in-game test checklist
 
 ## Group workflow
 
-Each implementation group goes through these steps in order:
+Every implementation group follows the `group-workflow` skill (`/group-workflow G<n>`): branch, explore (Haiku), plan + advisor review (Opus), TDD (Sonnet), local checks, isolated review, completeness check, PR and CI, cleanup after merge, then log follow-ups and **stop**. Never start the next group until told to.
 
-1. **Branch** from the latest `main`, named for the group (e.g. `feat/g2-state-clock`).
-2. **TDD:** failing test first, then code, per the `test-driven-development` skill. Typecheck, lint, coverage and package pass locally.
-3. **Isolated review:** run a nested agent on Sonnet in its own worktree to review the branch diff read-only against the spec, technical design, this file and the skills; it returns a verdict and ranked findings.
-4. **Address findings** from that review and from CI on the PR. Fix what matters; report what was left and why.
-5. **After merge, clean up:** delete the merged local and remote branch, remove agent worktrees (`.claude/worktrees/`), and drop build output and other data the next group doesn't need (`build/`, `dist/`).
-6. **Stop.** Do not start the next group until told to. Report follow-ups first (open review nits, deferred items, in-game checks, spec questions) so each can be implemented or deferred.
+Follow-ups are GitHub issues labelled `follow-up` (template in `.github/ISSUE_TEMPLATE/follow-up.md`), never only chat. Each group reads the open ones first and takes in those that fit; its PR closes them with `Closes #n`.
