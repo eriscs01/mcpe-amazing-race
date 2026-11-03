@@ -60,9 +60,9 @@ const merge = (acc: Result, out: Result): Result => ({
   logs: [...(acc.logs ?? []), ...(out.logs ?? [])],
 });
 
-const contextOf = (state: State, stop: Stop, offer: Offer): TaskContext => {
+const contextOf = (state: State, stop: Stop, offer: Offer): TaskContext | undefined => {
   const zone = zonesFor(stop.type, stop.pos).find((z) => z.zone === offer.option);
-  if (!zone) throw new Error(`stop ${stop.id} has no zone ${offer.option}`);
+  if (!zone) return undefined;
   return {
     stop,
     zone: offer.option,
@@ -72,6 +72,13 @@ const contextOf = (state: State, stop: Stop, offer: Offer): TaskContext => {
     hidden: stop.zones?.[offer.option]?.hidden ?? [],
     label: offer.label,
   };
+};
+
+/** For an offer just made from the stop itself, whose zone always exists. */
+const requireContext = (state: State, stop: Stop, offer: Offer): TaskContext => {
+  const ctx = contextOf(state, stop, offer);
+  if (!ctx) throw new Error(`stop ${stop.id} has no zone ${offer.option}`);
+  return ctx;
 };
 
 /** The seeded draw for a zone's hidden wool: the same race gives the same pile. */
@@ -100,8 +107,10 @@ function playing(state: State, team: Team): Playing | undefined {
     return undefined;
   }
   const offer = offersOf(stop).find((o) => o.option === mine.option);
-  return offer ? {
-    stop, offer, ctx: contextOf(state, stop, offer), key: keyOf(stop, mine.option),
+  const ctx = offer ? contextOf(state, stop, offer) : undefined;
+  // A task whose option or zone no longer exists is treated as none (never thrown into a tick).
+  return offer && ctx ? {
+    stop, offer, ctx, key: keyOf(stop, mine.option),
   } : undefined;
 }
 
@@ -119,7 +128,7 @@ function prepareZone(state: State, stop: Stop, offer: Offer): Result {
   if (have && !emptied) return { state, effects: [] };
   const refills = have ? (have.refills ?? 0) + 1 : 0;
   const build = offer.kind.build(
-    contextOf(state, stop, offer),
+    requireContext(state, stop, offer),
     rngFor(state, stop, offer.option, refills),
   );
   const zone = {
@@ -158,13 +167,13 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
   const players = roadblock ? [performer] : team.members;
   const effects: Effect[] = [
     ...zone.effects,
-    ...offer.kind.equip(contextOf(zone.state, current, offer), players),
+    ...offer.kind.equip(requireContext(zone.state, current, offer), players),
     {
       kind: 'title',
       to: players,
       text: offer.kind.progressText(
         started.progress[key] ?? offer.kind.initial,
-        contextOf(zone.state, current, offer),
+        requireContext(zone.state, current, offer),
       ),
       chat: true,
     },
@@ -184,10 +193,13 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
  */
 export function useTaskBox(state: State, team: Team, stop: Stop, player: PlayerId): Result {
   if (team.task?.stopId === stop.id) {
-    const text = taskProgressText(state, team) ?? 'Task in progress.';
+    // A zone whose build failed was forgotten (`zoneBuildFailed`); using the box again retries.
+    const offer = offersOf(stop).find((o) => o.option === team.task?.option);
+    const zone = offer ? prepareZone(state, stop, offer) : { state, effects: [] };
+    const text = taskProgressText(zone.state, team) ?? 'Task in progress.';
     return {
-      state,
-      effects: [{
+      ...zone,
+      effects: [...zone.effects, {
         kind: 'notify', to: player, code: 'taskProgress', text,
       }],
     };
@@ -269,4 +281,23 @@ export function taskStanding(state: State, a: Of<'racerPositions'>): Result {
     const event: TaskEvent = { type: 'standing', pos: player.pos };
     return merge(acc, advanceTask(acc.state, team.id, player.id, event));
   }, { state, effects: [] });
+}
+
+/** The adapter could not build a zone: forget it, and tell the teams waiting on it to retry. */
+export function zoneBuildFailed(state: State, a: Of<'zoneBuildFailed'>): Result {
+  const stop = state.stops.find((s) => s.id === a.stop);
+  if (!stop?.zones?.[a.zone]) return { state, effects: [] };
+  const { [a.zone]: lost, ...zones } = stop.zones;
+  const waiting = state.teams.filter((t) => t.task?.stopId === stop.id
+    && t.task.option === a.zone).flatMap((t) => t.members);
+  return {
+    state: replaceStop(state, { ...stop, zones }),
+    effects: waiting.map((to) => ({
+      kind: 'notify' as const,
+      to,
+      code: 'zoneBuildFailed',
+      text: 'The task area did not build. Use the clue box again to retry.',
+    })),
+    logs: [{ event: 'zoneForgotten', fields: { stop: stop.id, zone: a.zone, task: lost?.kind } }],
+  };
 }

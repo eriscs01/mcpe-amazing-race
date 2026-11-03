@@ -15,7 +15,11 @@ import type { Effect } from '../core/types.js';
 type Of<K extends Effect['kind']> = Extract<Effect, { kind: K }>;
 
 /** Builds a zone's blocks now: the team is standing in the arena, so its chunks are loaded. */
-export function buildZone(effect: Of<'zoneBlocks'>, log: Logger): void {
+export function buildZone(
+  effect: Of<'zoneBlocks'>,
+  log: Logger,
+  failed: (stop: number, zone: Of<'zoneBlocks'>['zone']) => void,
+): void {
   try {
     const dimension = world.getDimension(OVERWORLD);
     // The operations are few (at most a pile and nine blocks), so they run in one go.
@@ -24,6 +28,7 @@ export function buildZone(effect: Of<'zoneBlocks'>, log: Logger): void {
     log.info('zoneBuilt', { stop: effect.stop, zone: effect.zone, ops: effect.ops.length });
   } catch (error) {
     log.error('zoneBuildFailed', error, { stop: effect.stop, zone: effect.zone });
+    failed(effect.stop, effect.zone);
   }
 }
 

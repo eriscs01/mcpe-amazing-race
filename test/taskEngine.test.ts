@@ -328,3 +328,69 @@ test('zone ops stay inside the arena', () => {
     }
   }
 });
+
+test('a zone whose build failed is forgotten, the team told, and the next use retries', () => {
+  const state = aiming();
+  const failed = reduce(state, { type: 'zoneBuildFailed', stop: 2, zone: 'A' });
+  assert.equal(stopOf(failed.state, 2).zones?.A, undefined);
+  assert.ok(failed.effects.some((e) => e.kind === 'notify' && e.text.includes('did not build')));
+  assert.ok(failed.logs?.some((l) => l.event === 'zoneForgotten'));
+  const again = reduce(failed.state, { type: 'zoneBuildFailed', stop: 2, zone: 'A' });
+  assert.equal(again.state, failed.state);
+  const retry = click(failed.state, 'h', 2);
+  assert.ok(kinds(retry.effects).includes('zoneBlocks'));
+  assert.equal(retry.state.teams.find((t) => t.id === 'red')?.task?.option, 'A');
+  assert.ok(stopOf(retry.state, 2).zones?.A);
+  assert.ok(retry.logs?.some((l) => l.event === 'zoneBuilt'));
+});
+
+test('events outside a running race, or from a team that is not racing, change nothing', () => {
+  const state = aiming();
+  const shot = farShot(state, 0);
+  for (const phase of ['paused', 'dayEnded'] as const) {
+    assert.equal(event({ ...state, phase }, 'h', shot).state.phase, phase);
+    assert.deepEqual(
+      event({ ...state, phase }, 'h', shot).state.teams,
+      state.teams,
+    );
+  }
+  const out = { ...state, teams: state.teams.map((t) => ({ ...t, status: 'checkedIn' as const })) };
+  assert.equal(event(out, 'h', shot).state, out);
+  const paused = { ...state, phase: 'paused' as const };
+  assert.equal(stood(paused, [['h', { x: 0, y: 0, z: 0 }]]).state, paused);
+});
+
+test('racerPositions returns the same state when no task or mat moved', () => {
+  const state = aiming();
+  const away = stood(state, [['h', { x: 0, y: 70, z: 0 }], ['c', { x: 5, y: 70, z: 5 }]]);
+  assert.equal(away.state, state);
+});
+
+test('a task that points at a missing option is ignored, not thrown into a tick', () => {
+  const state = aiming();
+  const retask = (task: { stopId: number; option: 'A' | 'B' }): State => ({
+    ...state, teams: state.teams.map((t) => (t.id === 'red' ? { ...t, task } : t)),
+  });
+  const stale = retask({ stopId: 2, option: 'B' });
+  const roadblockStop = retask({ stopId: 99, option: 'A' });
+  const view = {
+    id: 'h', head: { x: 0, y: 71, z: 0 }, yaw: 0, overworld: true,
+  };
+  for (const broken of [stale, roadblockStop]) {
+    assert.doesNotThrow(() => hudFrames(broken, [view], { trail: false }));
+    assert.equal(event(broken, 'h', farShot(broken, 0)).state, broken);
+    assert.equal(stood(broken, [['h', { x: 1, y: 70, z: 1 }]]).state, broken);
+  }
+});
+
+test('while a Roadblock is under way only its performer must be near the box', () => {
+  const begun = click(at(course(), 2, ['red']), 'b', 3).state;
+  const box = boxOf(begun, 3);
+  const far = { ...box, x: box.x + 40 };
+  const call = (members: { id: string; pos: Vec3 }[]): Result => reduce(begun, {
+    type: 'interactClue', player: 'b', pos: box, members,
+  });
+  const ok = call([{ id: 'b', pos: box }, { id: 'h', pos: far }]);
+  assert.equal(ok.refusal, undefined);
+  assert.equal(call([{ id: 'b', pos: far }, { id: 'h', pos: box }]).refusal, 'notTogether');
+});

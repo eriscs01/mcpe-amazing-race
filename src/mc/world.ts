@@ -17,6 +17,8 @@ export interface EffectHost {
   generate: (effect: Extract<Effect, { kind: 'generateCourse' }>) => void;
   build: (effect: Extract<Effect, { kind: 'buildArenas' }>) => void;
   light: (effect: Extract<Effect, { kind: 'lightStops' }>) => void;
+  /** A task zone could not be built (the core forgets it so the next box use retries). */
+  zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
 }
 
 function apply(effect: Effect, log: Logger, host: EffectHost): void {
@@ -41,7 +43,7 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       giveVanilla(effect, log);
       break;
     case 'zoneBlocks':
-      buildZone(effect, log);
+      buildZone(effect, log, host.zoneFailed);
       break;
     case 'takeItem': {
       // An offline player's copy stays, but it is inert: Race Control works only for the host.

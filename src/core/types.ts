@@ -239,7 +239,9 @@ export type Action = { type: 'tick' }
   /** Host: ends the leg now (spec §8.5). */
   | { type: 'endLeg'; by: PlayerId }
   /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
-  | { type: 'taskEvent'; player: PlayerId; event: TaskEvent };
+  | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
+  /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
+  | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName };
 
 /** The world's settings before the race changed them (restored when it ends, spec §12). */
 export interface RaceSnapshot {

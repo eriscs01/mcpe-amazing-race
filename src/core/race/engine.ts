@@ -15,7 +15,7 @@ import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
 import { racerPositions } from './pitstop.js';
 import { startRace } from './start.js';
-import { taskEvent, taskStanding } from './task.js';
+import { taskEvent, taskStanding, zoneBuildFailed } from './task.js';
 import { tick } from './tick.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
 
@@ -96,6 +96,8 @@ export function reduce(state: State, action: Action): Result {
     }
     case 'taskEvent':
       return taskEvent(state, action);
+    case 'zoneBuildFailed':
+      return zoneBuildFailed(state, action);
     case 'endLeg':
       return endLeg(state, action);
     default: {
