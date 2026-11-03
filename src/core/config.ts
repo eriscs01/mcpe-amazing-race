@@ -55,6 +55,12 @@ export const BLOCK = {
   largeFern: 'minecraft:large_fern',
   vine: 'minecraft:vine',
   deadBush: 'minecraft:deadbush',
+  waterlily: 'minecraft:waterlily',
+  reeds: 'minecraft:reeds',
+  cactus: 'minecraft:cactus',
+  bamboo: 'minecraft:bamboo',
+  dandelion: 'minecraft:dandelion',
+  poppy: 'minecraft:poppy',
   bell: 'minecraft:bell',
   cryingObsidian: 'minecraft:crying_obsidian',
   chiseledSandstone: 'minecraft:chiseled_sandstone',
@@ -92,6 +98,8 @@ export const ITEM = {
 
 export const ENTITY = {
   villager: 'minecraft:villager',
+  /** Naturally spawned Bedrock villagers may report this type instead. */
+  villagerV2: 'minecraft:villager_v2',
   ironGolem: 'minecraft:iron_golem',
   pillager: 'minecraft:pillager',
 } as const satisfies Record<string, `minecraft:${string}`>;

@@ -66,6 +66,10 @@ the technical design (§4) add their checks here and record the result in their 
       interpreter; if `[Scripting] watchdog` appears, lower `COURSE.workPerPause`).
 - [ ] ✱ List stops shows each stop's leg, type, place name and coordinates; the first stop is
       the host's start position; walking to two stops confirms 600–900 blocks between them.
+- [ ] ✱ A real village is detected with and without a bell loaded (villagers may report
+      `villager_v2`; if not tagged, check the entity type id in the log).
+- [ ] ✱ A stop near a swamp pond or desert cactus is never placed on water; after a world is
+      closed mid-generation, `tickingarea list` may show `race_scan` until the next Generate.
 - [ ] ✱ Stops near a village or an outpost are tagged with it and sit 20–30 blocks from it, on
       flat ground, not on the structure.
 - [ ] ✱ Add landmark here at a spot 800+ blocks from the start line, then Generate: the course

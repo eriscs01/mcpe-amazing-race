@@ -250,7 +250,7 @@ Tooling: `tsconfig.test.json` compiles `src/core` + `test` to `build/test`; `npm
 | Who can list stops | The host, in `ready` only (the list spoils the course once racing starts); each line is leg, stop type, place name (and landmark) and coordinates. |
 | What the ticking area loads (§6.1, §6.3) | The `race_scan` circle (radius 2 chunks) loads about 32 blocks around a candidate, so the landmark scan covers entities within 48 blocks but landmark blocks only inside the loaded 64 × 24 × 64 volume. An arena offset spot (20–30 blocks from a landmark) can lie outside it, so each spot is loaded in turn (up to 4) and checked with the §6.2 rules; if none passes, the candidate keeps its own position without the landmark. |
 | Ticking-area failure (§6.1) | `runCommand` reports only success or failure. A failed `tickingarea add` is treated as "the world is full" (host told to remove one) and ends the job; a failed `remove` is ignored. The area is removed before each load and when the job ends. |
-| Landmark kinds | `village`, `outpost`, `desert temple`, `ruined portal`, tested in the spec's order: a village beats an outpost beats a temple beats a portal. |
+| Landmark kinds | `village` (villager, `villager_v2`, iron golem or a bell), `outpost`, `desert temple`, `ruined portal`, tested in the spec's order: a village beats an outpost beats a temple beats a portal. |
 | Diagnosis | `/scriptevent race:dump` logs a `stateDump` summary and the state JSON as `stateDumpPart` lines (read-only). |
 
 ---

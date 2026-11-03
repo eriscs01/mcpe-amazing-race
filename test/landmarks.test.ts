@@ -24,6 +24,13 @@ test('villagers, iron golems or a bell mean a village', () => {
   );
 });
 
+test('a villager_v2 (how natural villagers may report) also means a village', () => {
+  assert.equal(
+    detectLandmark({ entities: [{ type: ENTITY.villagerV2, pos: at(5, 5) }], blocks: [] })?.kind,
+    'village',
+  );
+});
+
 test('pillagers mean an outpost', () => {
   assert.equal(
     detectLandmark({ entities: [{ type: ENTITY.pillager, pos: at(2, 2) }], blocks: [] })?.kind,

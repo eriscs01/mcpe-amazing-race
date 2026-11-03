@@ -24,6 +24,8 @@ const LIQUID: ReadonlySet<string> = new Set([
 ]);
 const PLANTS: ReadonlySet<string> = new Set([
   BLOCK.shortGrass, BLOCK.tallGrass, BLOCK.fern, BLOCK.largeFern, BLOCK.vine, BLOCK.deadBush,
+  // The water lily sits on water: walking past it reaches the water, which rejects the site.
+  BLOCK.waterlily, BLOCK.reeds, BLOCK.cactus, BLOCK.bamboo, BLOCK.dandelion, BLOCK.poppy,
 ]);
 const TREE_SUFFIXES = ['_leaves', '_log', '_wood'];
 const PLANT_SUFFIXES = ['_sapling', '_flower', '_tulip', '_bush'];

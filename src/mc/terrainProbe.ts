@@ -8,6 +8,7 @@ import { ENTITY, LANDMARK, LOAD } from '../core/config.js';
 import { TickingAreaFull } from '../core/course/job.js';
 import { LANDMARK_BLOCKS } from '../core/course/landmarks.js';
 import { groundOf } from '../core/course/terrain.js';
+import { horizontalDistance } from '../core/vec.js';
 
 import type { Dimension } from '@minecraft/server';
 
@@ -17,10 +18,12 @@ import type { Logger } from '../core/log.js';
 import type { Vec3 } from '../core/vec.js';
 
 /** Runs a command and reports whether it succeeded; a refused command is not an error here. */
-function succeeded(dimension: Dimension, command: string): boolean {
+function succeeded(dimension: Dimension, command: string, log?: Logger): boolean {
   try {
     return dimension.runCommand(command).successCount > 0;
-  } catch {
+  } catch (error) {
+    // The caller decides whether this matters; a log shows the real cause when it does.
+    log?.warn('commandFailed', { command, error: String(error) });
     return false;
   }
 }
@@ -42,15 +45,22 @@ function topAt(dimension: Dimension, x: number, z: number): number | undefined {
   }
 }
 
+const blockOf = (p: Vec3): Vec3 => ({
+  x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z),
+});
+
 const HALF = 32;
 const BELOW = 12;
 const ABOVE = 11;
 
 function entitiesNear(dimension: Dimension, pos: Vec3): Found[] {
-  const types = [ENTITY.villager, ENTITY.ironGolem, ENTITY.pillager];
+  const types = [ENTITY.villager, ENTITY.villagerV2, ENTITY.ironGolem, ENTITY.pillager];
   return types.flatMap((type) => dimension.getEntities({
     location: pos, maxDistance: LANDMARK.scanRadius, type,
-  }).map((e) => ({ type, pos: e.location })));
+  }))
+    // The spec's 48 blocks are horizontal; the query's distance is 3D.
+    .filter((e) => horizontalDistance(e.location, pos) <= LANDMARK.scanRadius)
+    .map((e) => ({ type: e.typeId, pos: blockOf(e.location) }));
 }
 
 function blocksNear(dimension: Dimension, pos: Vec3, surface: number): Found[] {
@@ -76,7 +86,7 @@ export class TickingAreaLoader implements AreaLoader {
     const { areaName, radiusChunks } = LOAD;
     const command = `tickingarea add circle ${pos.x} 64 ${pos.z} ${radiusChunks} ${areaName} true`;
     // runCommand reports only success or failure; a failed add means the world is at its limit.
-    if (!succeeded(dimension, command)) throw new TickingAreaFull();
+    if (!succeeded(dimension, command, this.log)) throw new TickingAreaFull();
     if (!await this.waitUntilReadable(pos)) {
       this.log.info('areaTimeout', { x: pos.x, z: pos.z });
       return undefined;

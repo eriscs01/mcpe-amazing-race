@@ -39,6 +39,18 @@ test('snow layers are walked through and remembered', () => {
   });
 });
 
+test('a lily pad is walked past, so a pond under it is rejected as water', () => {
+  const g = groundOf(63, column(63, [BLOCK.waterlily, 'minecraft:water', BLOCK.sand]));
+  assert.equal(g?.liquid, true);
+});
+
+test('a cactus is walked past and the sand under it makes a desert', () => {
+  const g = groundOf(66, column(66, [BLOCK.cactus, BLOCK.cactus, BLOCK.sand]));
+  assert.ok(g);
+  assert.equal(g.y, 64);
+  assert.equal(classify(g), 'desert');
+});
+
 test('water and lava are ground the walk stops on, and are marked liquid', () => {
   assert.equal(groundOf(62, column(62, ['minecraft:water', BLOCK.sand]))?.liquid, true);
   assert.equal(groundOf(30, column(30, ['minecraft:lava', BLOCK.stone]))?.liquid, true);

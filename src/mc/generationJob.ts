@@ -16,22 +16,39 @@ type GenerateEffect = Extract<Effect, { kind: 'generateCourse' }>;
 
 let running = false;
 
-function progressTo(session: Session): (placed: number, total: number) => void {
+/** The host's action bar; it fades after about 3 s, so it is sent again before each probe. */
+function progressBar(session: Session): {
+  stop: (placed: number, total: number) => void;
+  show: () => void;
+} {
   const host = session.state?.hostId;
-  return (placed, total) => {
+  let text = 'Generating course…';
+  const show = (): void => {
     const player = host ? world.getEntity(host) : undefined;
-    if (player instanceof Player && player.isValid) {
-      player.onScreenDisplay.setActionBar(`Generating stop ${placed}/${total}…`);
-    }
+    if (player instanceof Player && player.isValid) player.onScreenDisplay.setActionBar(text);
+  };
+  return {
+    stop: (placed, total) => {
+      text = `Generating stop ${Math.min(placed + 1, total)}/${total}…`;
+      show();
+    },
+    show,
   };
 }
 
 async function run(session: Session, effect: GenerateEffect): Promise<void> {
   const { job } = effect;
   const loader = new TickingAreaLoader(world.getDimension('overworld'), session.log);
+  const bar = progressBar(session);
   const source: ProbeSource = {
-    load: async (pos) => scanCandidate(pos, loader, effect.seed),
-    pause: async () => system.waitTicks(1),
+    load: async (pos) => {
+      bar.show();
+      return scanCandidate(pos, loader, effect.seed);
+    },
+    pause: async () => {
+      bar.show();
+      return system.waitTicks(1);
+    },
   };
   const started = system.currentTick;
   try {
@@ -42,7 +59,7 @@ async function run(session: Session, effect: GenerateEffect): Promise<void> {
       radius: effect.radius,
       peaceful: world.getDifficulty() === Difficulty.Peaceful,
       seed: effect.seed,
-      onStop: progressTo(session),
+      onStop: bar.stop,
     }, source);
     session.log.info('generationFinished', {
       job, ok: outcome.ok, ticks: system.currentTick - started,
@@ -68,7 +85,6 @@ async function run(session: Session, effect: GenerateEffect): Promise<void> {
 export async function startGenerationJob(session: Session, effect: GenerateEffect): Promise<void> {
   if (running) {
     session.log.warn('generationAlreadyRunning', { job: effect.job });
-    session.dispatch({ type: 'courseFailed', job: effect.job, failure: { reason: 'error' } });
     return;
   }
   running = true;

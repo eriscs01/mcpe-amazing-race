@@ -28,7 +28,7 @@ const firstOf = (list: readonly Found[], types: readonly string[]): Found | unde
 /** The landmark the evidence shows, in the spec's order (village, outpost, temple, portal). */
 export function detectLandmark(evidence: Evidence): Landmark | undefined {
   const { entities, blocks } = evidence;
-  const village = firstOf(entities, [ENTITY.villager, ENTITY.ironGolem])
+  const village = firstOf(entities, [ENTITY.villager, ENTITY.villagerV2, ENTITY.ironGolem])
     ?? firstOf(blocks, [BLOCK.bell]);
   if (village) return { kind: 'village', pos: village.pos };
   const outpost = firstOf(entities, [ENTITY.pillager]);
