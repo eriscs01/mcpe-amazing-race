@@ -214,7 +214,7 @@ export const ANAGRAMS: readonly { answers: string[] }[] = [
   // Only words with no other common word among their anagrams (not wolf: "flow"; not spider).
   'creeper', 'zombie', 'skeleton', 'enderman', 'villager', 'pillager', 'blaze', 'ghast', 'witch',
   'phantom', 'drowned', 'husk', 'piglin', 'hoglin', 'ocelot', 'allay', 'panda', 'camel', 'turtle',
-  'zoglin', 'llama', 'evoker', 'guardian', 'pickaxe', 'diamond', 'emerald', 'redstone', 'compass',
+  'zoglin', 'llama', 'guardian', 'pickaxe', 'diamond', 'emerald', 'redstone', 'compass',
 ].map((word) => ({ answers: [word] }));
 
 const sum = (rng: Rng): Question => {

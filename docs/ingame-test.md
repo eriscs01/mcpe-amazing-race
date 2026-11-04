@@ -253,7 +253,8 @@ and a final leg (Recall). Use `/scriptevent race:dump` to find them.
 - [ ] Recall (final leg Roadblock): one dropdown per earlier leg, each listing every Pit Stop
       name (shuffled differently after a wrong submission); matching all of them finishes the
       race task, any wrong one locks the team out for 20 s. Note whether the dropdown labels and
-      a text field give the expected `formValues` (no extra slots).
+      a text field give the expected `formValues` (no extra slots). Check the Recall form's
+      title ("Recall: Which Pit Stop did you check in at, leg by leg?") is not cut off.
 
 ### M2–M4
 
