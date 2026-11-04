@@ -96,14 +96,18 @@ describe('placed blocks (spec §7.4)', () => {
   const place = (state: State, player = 'h', pos = at(200, 71, -20)) => reduce(
     state,
     {
-      type: 'blockPlaced', player, pos, item: 'minecraft:dirt',
+      type: 'blockPlaced', player, pos, block: 'minecraft:dirt', item: 'minecraft:dirt',
     },
   );
 
   it('takes a racer\'s block back inside a lit arena', () => {
     const out = place(arena());
     assert.deepEqual(out.effects, [{
-      kind: 'undoPlace', player: 'h', pos: at(200, 71, -20), item: 'minecraft:dirt',
+      kind: 'undoPlace',
+      player: 'h',
+      pos: at(200, 71, -20),
+      block: 'minecraft:dirt',
+      item: 'minecraft:dirt',
     }]);
     assert.equal(out.logs?.[0]?.event, 'blockUndone');
   });

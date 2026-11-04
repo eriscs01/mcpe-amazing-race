@@ -72,7 +72,7 @@ export function blockPlaced(state: State, a: Extract<Action, { type: 'blockPlace
   return {
     state,
     effects: [{
-      kind: 'undoPlace', player: a.player, pos: a.pos, item: a.item,
+      kind: 'undoPlace', player: a.player, pos: a.pos, block: a.block, item: a.item,
     }],
     logs: [{
       event: 'blockUndone', fields: { player: a.player, item: a.item, clock: state.clock },

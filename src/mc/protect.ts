@@ -27,7 +27,7 @@ export function wireProtection(session: Session): void {
     ev.cancel = true; // eslint-disable-line no-param-reassign -- cancelling is the event's API
     // A before-event cannot write to the world: the notice goes out next tick.
     system.run(guard(session.log, 'protectNotice', () => {
-      ev.player.onScreenDisplay.setActionBar('The arena is protected.');
+      if (ev.player.isValid) ev.player.onScreenDisplay.setActionBar('The arena is protected.');
     }));
   }));
 
@@ -37,6 +37,7 @@ export function wireProtection(session: Session): void {
       type: 'blockPlaced',
       player: ev.player.id,
       pos: ev.block.location,
+      block: ev.block.typeId,
       item: ev.block.getItemStack(1, true)?.typeId ?? ev.block.typeId,
     });
   }));
@@ -48,6 +49,13 @@ export function undoPlace(effect: Extract<Effect, { kind: 'undoPlace' }>, log: L
     const block = world.getDimension(OVERWORLD).getBlock(effect.pos);
     if (!block) {
       log.warn('undoPlaceSkipped', { player: effect.player, reason: 'unloaded' });
+      return;
+    }
+    // Only the block that was placed: something else there now is not ours to remove.
+    if (block.typeId !== effect.block) {
+      log.warn('undoPlaceSkipped', {
+        player: effect.player, reason: 'changed', placed: effect.block, now: block.typeId,
+      });
       return;
     }
     block.setType('minecraft:air');
@@ -84,7 +92,8 @@ export function sweepMobs(session: Session): void {
       mobs.forEach((mob) => mob.remove());
       return count + mobs.length;
     } catch (error) {
-      session.log.error('mobSweepFailed', error, { at: JSON.stringify(area.min) });
+      // Most likely an unloaded chunk: tried again in 5 s.
+      session.log.warn('mobSweepFailed', { at: JSON.stringify(area.min), error: String(error) });
       return count;
     }
   }, 0);

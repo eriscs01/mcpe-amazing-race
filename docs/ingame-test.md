@@ -327,7 +327,8 @@ limits while testing (use a second account for a non-racer).
 - [ ] A non-racer (host not on a team, other account) can break arena blocks but not the hay
       and wool of a pile (#50).
 - [ ] A block a racer places in a lit arena disappears and returns to the inventory (try a
-      slab, a door and redstone: does the right item come back? note which fail); the same in
+      slab, a door, tall grass and redstone: does the right item come back, is a door's upper half
+      left behind, is the replaced grass lost? note which fail); the same in
       an unlit arena or outside works normally.
 - [ ] Hostile mobs in a lit arena vanish within 5 s; a Hunt's husks stay while the team plays
       that Hunt, and disappear after Quit or a Switch away (a switch back tops them up).

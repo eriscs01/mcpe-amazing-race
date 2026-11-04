@@ -290,7 +290,7 @@ export type Action = { type: 'tick' }
    */
   | { type: 'racerPositions'; players: { id: PlayerId; pos?: Vec3; gliding?: boolean }[] }
   /** A racer placed a block (already in the world); inside a lit arena it is taken back. */
-  | { type: 'blockPlaced'; player: PlayerId; pos: Vec3; item: string }
+  | { type: 'blockPlaced'; player: PlayerId; pos: Vec3; block: string; item: string }
   /** Host: ends the leg now (spec §8.5). */
   | { type: 'endLeg'; by: PlayerId }
   /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
@@ -416,7 +416,7 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   /** Replaces the public sidebar scoreboard (spec §10). */
   | { kind: 'sidebar'; rows: SidebarRow[] }
   /** Removes a block a racer placed inside an arena and gives the item back (spec §7.4). */
-  | { kind: 'undoPlace'; player: PlayerId; pos: Vec3; item: string }
+  | { kind: 'undoPlace'; player: PlayerId; pos: Vec3; block: string; item: string }
   /** Moves the players to `pos` (the Overworld). */
   | { kind: 'teleport'; players: PlayerId[]; pos: Vec3 }
   /** The leg winner's reward (spec §8.4): experience levels and a firework at `at`. */

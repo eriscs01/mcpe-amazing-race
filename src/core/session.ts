@@ -124,8 +124,9 @@ export class Session {
     for (const line of out.logs ?? []) this.log.info(line.event, line.fields);
     this.state = out.state;
     if (out.state !== state) {
-      // A tick, or a position report that only moved a timer or a last position (nothing to
-      // log or do): saved with the periodic save, as a crash loses at most 5 s of it.
+      // A tick, or a position report that changed nothing worth a log or an effect (a rules
+      // timer, a last in-bounds position): saved with the periodic save, as a crash loses at
+      // most 5 s of it. Task progress that matters always logs or tells the player.
       const quiet = action.type === 'tick'
         || (action.type === 'racerPositions' && (out.logs ?? []).length === 0);
       if (quiet && out.effects.length === 0) this.clockMoved = true;

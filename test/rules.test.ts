@@ -242,3 +242,38 @@ describe('gliding (spec §9.4)', () => {
     assert.equal(owed(out.state), 0);
   });
 });
+
+describe('timers live in the state (spec §9.2, §9.3)', () => {
+  it('keeps the last in-bounds position while the racer is outside the line', () => {
+    const inside = report(clockAt(course(), 0), [{ id: 'h', pos: at(100) }]).state;
+    const outside = report(clockAt(inside, 200), [{ id: 'h', pos: at(650) }]).state;
+    assert.deepEqual(outside.players.h?.inBoundsPos, at(100));
+  });
+
+  it('returns from another dimension to the recorded position, not the start', () => {
+    const inside = report(clockAt(course(), 0), [{ id: 'h', pos: at(100) }]).state;
+    const out = report(clockAt(inside, 100), [{ id: 'h' }]);
+    assert.deepEqual(teleports(out.effects), [{ players: ['h'], pos: at(100) }]);
+  });
+
+  it('pauses a running separation timer when a teammate spawns', () => {
+    const apart = [{ id: 'h', pos: at(0) }, { id: 'b', pos: at(30) }];
+    const started = report(clockAt(course(), 100), apart).state;
+    assert.equal(started.teams[0]?.apartSince, 100);
+    const spawned = reduce(started, {
+      type: 'playerSpawned', player: 'b', name: 'Ben', initial: false, hasPassport: true,
+    }).state;
+    assert.equal(spawned.teams[0]?.apartSince, undefined);
+  });
+
+  it('does not count a paused race, and survives a save and a reload', () => {
+    const apart = [{ id: 'h', pos: at(0) }, { id: 'b', pos: at(30) }];
+    const started = report(clockAt(course(), 100), apart).state;
+    const paused = report({ ...clockAt(started, 5000), phase: 'paused' }, apart);
+    assert.equal(paused.state.teams[0]?.apartSince, 100);
+    assert.deepEqual(titles(paused.effects), []);
+    const reloaded = JSON.parse(JSON.stringify(started)) as State;
+    const later = report(clockAt(reloaded, 100 + RULES.separation.warnTicks), apart);
+    assert.equal(titles(later.effects).length, 1);
+  });
+});
