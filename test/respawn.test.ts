@@ -26,7 +26,7 @@ function race(): State {
   };
 }
 
-test('a death sends the racer to the last cleared stop and tells the teammate, with no penalty', () => {
+test('a death sends the racer to the last cleared stop and tells the teammate', () => {
   const state = race();
   const out = reduce(state, spawn('b', false));
   const [tp] = of(out.effects, 'teleport');
@@ -45,7 +45,10 @@ test('a Roadblock performer keeps the role and the progress after dying', () => 
   const set: State = {
     ...state,
     teams: state.teams.map((t) => (t === red ? {
-      ...t, performer: 'b', task: { stopId: 3, option: 'A' as const }, progress: { '3:A': { n: 2 } },
+      ...t,
+      performer: 'b',
+      task: { stopId: 3, option: 'A' as const },
+      progress: { '3:A': { n: 2 } },
     } : t)),
   };
   const after = reduce(set, spawn('b', false)).state.teams.find((t) => t.id === 'red');
@@ -75,7 +78,8 @@ test('no teleport for a spawn outside the race, an eliminated team, or a strange
 
 test('a rejoin goes to the nearest teammate, else to the last stop', () => {
   const state = race();
-  const near = reduce(state, spawn('b', true, { mates: [{ id: 'h', pos: { x: 7, y: 70, z: 7 } }] }));
+  const mates = [{ id: 'h', pos: { x: 7, y: 70, z: 7 } }];
+  const near = reduce(state, spawn('b', true, { mates }));
   assert.deepEqual(of(near.effects, 'teleport')[0]?.pos, { x: 7, y: 70, z: 7 });
   const alone = reduce(state, spawn('b', true));
   assert.deepEqual(of(alone.effects, 'teleport')[0]?.pos, matOf(state, 2));

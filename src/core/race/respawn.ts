@@ -60,7 +60,10 @@ function rejoined(state: State, team: Team, a: Extract<Action, { type: 'playerSp
   const [mate] = a.mates ?? [];
   const pos = mate?.pos ?? matOf(state, team);
   const next: State = kit
-    ? { ...state, players: { ...state.players, [a.player]: { name: a.name, ...record, kitted: true } } }
+    ? {
+      ...state,
+      players: { ...state.players, [a.player]: { name: a.name, ...record, kitted: true } },
+    }
     : state;
   return {
     state: next,

@@ -65,6 +65,12 @@ Versions follow `package.json`; the release workflow publishes the section match
   10 s; lit arenas protected (only a haystack pile's hay and wool may be broken, placed blocks
   are taken back) and hostile mobs swept every 5 s except the husks of a Hunt in play (G16).
   Position reports that only move a timer are saved with the periodic save.
+- Sessions and lifecycle: pause / unpause, End day (host or automatic after the day's planned
+  legs) with saved positions and time of day, Resume day (Pit Stop teams to their mat, others
+  back where they stood after a 10 s hold), the minutes reminder, death back to the last cleared
+  stop, rejoin (kit, name tag, lock, Spectator, teammate), host Team fixes (penalty, skip,
+  go to team, eliminate), Status and End race (husks, gamerules and time restored, sidebar
+  removed, players released) (G17).
 
 ## [0.1.0]
 

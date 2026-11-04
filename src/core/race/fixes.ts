@@ -22,7 +22,10 @@ function penalty(state: State, a: Fix, team: Team, minutes: number): Result {
   return {
     state: replaceTeam(state, owed.team),
     effects: [{
-      kind: 'title', to: team.members, text: `The host added a ${minutes} minute penalty.`, chat: true,
+      kind: 'title',
+      to: team.members,
+      text: `The host added a ${minutes} minute penalty.`,
+      chat: true,
     }],
     logs: [owed.log, { event: 'hostPenalty', fields: { by: a.by, team: team.id, minutes } }],
   };
@@ -74,7 +77,8 @@ function eliminate(state: State, a: Fix, team: Team): Result {
 
 function go(state: State, a: Fix, team: Team, at: Vec3 | undefined): Result {
   if (memberTeam(state, a.by)?.status === 'racing') {
-    return refuse(state, a.by, 'hostRaces', 'You are racing: leaving your team would break the rules.');
+    const text = 'You are racing: leaving your team would break the rules.';
+    return refuse(state, a.by, 'hostRaces', text);
   }
   if (!at) return refuse(state, a.by, 'nobodyOnline', `Nobody of ${team.name} is online.`);
   return {
@@ -89,7 +93,9 @@ export function teamFix(state: State, a: Fix): Result {
   if (denied) return denied;
   const team = state.teams.find((t) => t.id === a.team);
   if (!team) return refuse(state, a.by, 'noTeam', 'That team does not exist.');
-  if (team.status === 'eliminated') return refuse(state, a.by, 'eliminated', `${team.name} is out.`);
+  if (team.status === 'eliminated') {
+    return refuse(state, a.by, 'eliminated', `${team.name} is out.`);
+  }
   switch (a.fix.kind) {
     case 'penalty':
       return a.fix.minutes > 0

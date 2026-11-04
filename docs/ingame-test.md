@@ -336,6 +336,33 @@ limits while testing (use a second account for a non-racer).
 - [ ] Pause the race: arena protection still holds, while the boundary and separation timers
       stop. A cancelled break at a pile counts nothing for any task.
 
+### G17 ✱ Sessions & lifecycle
+
+- [ ] Pause: every racer is frozen (cannot move), the clock and daylight stop; Unpause frees
+      everyone except a team still in its countdown or on the mat. Does movement permission
+      survive a relog while paused and after the world is reopened (#39)? Note it.
+- [ ] Close the world mid-race and reopen it: the race is paused and locked; Unpause resumes;
+      a countdown that was running finishes or releases (#39).
+- [ ] End day mid-leg: positions and time of day are saved, daylight stops. Resume day: the time
+      of day returns, each racer is back where they stood (offline ones go to their last stop on
+      rejoin), and all are held for 10 s with no penalty.
+- [ ] A day ends by itself when the rest begins after the day's planned legs ("Day N complete");
+      Resume day puts each team on its Pit Stop mat and the staggered departures go on; the last
+      day never ends by itself.
+- [ ] The host is reminded once when the day's minutes have passed (race time); nothing ends.
+- [ ] Die: you return to your team's last cleared stop, a teammate is told, inventory is kept,
+      no penalty; a Roadblock performer keeps the role. Does movement stay locked after a
+      respawn during a countdown or a pause?
+- [ ] Leave and rejoin: you get the Passport back, the coloured name tag, and the kit if you
+      were offline at the start; you land next to a teammate (or at the last stop); an
+      eliminated team's member rejoins as Spectator without a Passport (#46, #40).
+- [ ] Team fixes: Add penalty (race minutes: 30 min = 15 s), Skip step (refused at a Pit Stop),
+      Teleport me to team, Eliminate team (confirmation; Spectator, husks gone, last team refused).
+- [ ] Status lists each team's leg, step, who is online, penalty and advantages.
+- [ ] End race: husks vanish, gamerules and time of day return, the sidebar is gone, everyone
+      is Survival with their plain name tag and no Passport (#40, #45, #53). Also try it on a
+      final leg nobody finished. A player offline at that moment is released on rejoin.
+
 ### M2–M4
 
 Add checks as the groups land.

@@ -2,11 +2,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { LogCapture } from './helpers/logCapture.js';
+import { MapBag } from './helpers/mapBag.js';
 import { matOf, onMat, pitRace } from './helpers/race.js';
 import { RACE } from '../src/core/config.js';
+import { saveState } from '../src/core/persist.js';
 import { reduce } from '../src/core/race/engine.js';
 import { lockedPlayers } from '../src/core/race/locks.js';
 import { raceResumeEffects } from '../src/core/race/start.js';
+import { Session } from '../src/core/session.js';
 
 import type {
   Action, Effect, State, Team,
@@ -63,7 +67,10 @@ test('End day by the host keeps positions, drops old ones, stops the daylight', 
   const state = pitRace();
   const old: State = {
     ...state,
-    players: { ...state.players, b: { name: 'Ben', teamId: 'red', savedPos: { x: 1, y: 1, z: 1 } } },
+    players: {
+      ...state.players,
+      b: { name: 'Ben', teamId: 'red', savedPos: { x: 1, y: 1, z: 1 } },
+    },
   };
   const out = go(old, {
     type: 'endDay',
@@ -104,7 +111,8 @@ test('the day ends by itself when the rest begins after the day\'s planned legs'
 test('the last day never ends by itself, nor does a day with legs left', () => {
   assert.equal(reduce(resting(1), { type: 'tick' }).state.phase, 'running');
   const state = resting();
-  const more: State = { ...state, plan: { ...(state.plan as NonNullable<State['plan']>), legsPerDay: 3 } };
+  const plan = { ...(state.plan as NonNullable<State['plan']>), legsPerDay: 3 };
+  const more: State = { ...state, plan };
   assert.equal(reduce(more, { type: 'tick' }).state.phase, 'running');
 });
 
@@ -146,7 +154,8 @@ test('resume mid-leg: each racer goes back where they stood and is held for 10 s
 
 test('a day that ends again during the countdown resumes from the saved positions', () => {
   const state = pitRace();
-  const first = go(go(state, { type: 'endDay', by: 'h', positions: [] }).state, { type: 'resumeDay', by: 'h' }).state;
+  const day1 = go(state, { type: 'endDay', by: 'h', positions: [] }).state;
+  const first = go(day1, { type: 'resumeDay', by: 'h' }).state;
   const again = go(first, {
     type: 'endDay', by: 'h', positions: [{ id: 'b', pos: { x: 3, y: 70, z: 3 } }],
   }).state;
@@ -161,7 +170,8 @@ test('a team serving a penalty on the mat or already checked in gets no countdow
   const state = pitRace();
   const mat: State = {
     ...state,
-    teams: state.teams.map((t) => (t.id === 'red' ? { ...t, arrivedAt: state.clock, penaltyOwed: 600 } : t)),
+    teams: state.teams.map((t) => (t.id === 'red'
+      ? { ...t, arrivedAt: state.clock, penaltyOwed: 600 } : t)),
   };
   const ended = go(mat, { type: 'endDay', by: 'h', positions: [] }).state;
   const out = go(ended, { type: 'resumeDay', by: 'h' });
@@ -184,4 +194,28 @@ test('the reminder reaches the host once a day, by the race clock only', () => {
   const after = ticks(early, 4);
   assert.equal(after.remindedDay, 1);
   assert.equal(of(reduce(after, { type: 'tick' }).effects, 'notify').length, 0);
+});
+
+test('through the session: the day ends by itself, its time is saved and the day resumes', () => {
+  const bag = new MapBag();
+  saveState(bag, { ...resting(), hostId: 'h' });
+  const seen: Effect[] = [];
+  const session: Session = new Session({
+    bag,
+    sink: new LogCapture().sink,
+    newSeed: () => 1,
+    // The adapter reads the time of day once the daylight stopped and reports it back.
+    execute: (effects) => effects.forEach((e) => {
+      seen.push(e);
+      if (e.kind === 'daylight' && e.save) session.dispatch({ type: 'dayTimeSaved', time: 15000 });
+    }),
+  });
+  session.load();
+  session.dispatch({ type: 'unpauseRace', by: 'h' });
+  session.dispatch({ type: 'tick' });
+  assert.equal(session.state?.phase, 'dayEnded');
+  assert.equal(session.state?.dayTime, 15000);
+  session.dispatch({ type: 'resumeDay', by: 'h' });
+  assert.ok(seen.some((e) => e.kind === 'daylight' && e.time === 15000));
+  assert.equal(session.state?.dayTime, undefined);
 });

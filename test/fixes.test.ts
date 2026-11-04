@@ -18,11 +18,12 @@ const team = (state: State, id: string): Team => {
   if (!found) throw new Error(`no team ${id}`);
   return found;
 };
-const fix = (state: State, id: string, f: Extract<Action, { type: 'teamFix' }>['fix'], by = 'e') => reduce({ ...state, hostId: 'e' }, {
+type Fix = Extract<Action, { type: 'teamFix' }>['fix'];
+const fix = (state: State, id: string, f: Fix, by = 'e') => reduce({ ...state, hostId: 'e' }, {
   type: 'teamFix', by, team: id, fix: f,
 });
 
-test('Add penalty: race minutes become owed ticks; only the host may, and not for a team that is out', () => {
+test('Add penalty: race minutes become owed ticks, for the host and a team still in', () => {
   const state = pitRace();
   const out = fix(state, 'blue', { kind: 'penalty', minutes: 30 });
   assert.equal(team(out.state, 'blue').penaltyOwed, HOUR / 2);
@@ -109,7 +110,8 @@ test('a leg that ends clears the husks of a Hunt left half way, and of an elimin
 
 test('End race restores the world, releases everyone and is done once', () => {
   const base = pitRace();
-  const state: State = { ...base, hostId: 'e', snapshot: { rules: { keepInventory: false }, time: 5 } };
+  const snapshot = { rules: { keepInventory: false }, time: 5 };
+  const state: State = { ...base, hostId: 'e', snapshot };
   const out = reduce(state, { type: 'endRace', by: 'e' });
   assert.equal(out.state.phase, 'finished');
   assert.equal(out.state.ended, true);
@@ -118,7 +120,8 @@ test('End race restores the world, releases everyone and is done once', () => {
   ]);
   assert.deepEqual(of(out.effects, 'clearHusks'), [{ kind: 'clearHusks' }]);
   assert.equal(of(out.effects, 'clearSidebar').length, 1);
-  assert.deepEqual(of(out.effects, 'resetPlayers')[0]?.players.sort(), ['b', 'c', 'd', 'f', 'g', 'h']);
+  const everyone = ['b', 'c', 'd', 'f', 'g', 'h'];
+  assert.deepEqual(of(out.effects, 'resetPlayers')[0]?.players.sort(), everyone);
   assert.equal(of(out.effects, 'takeItem').length, 6);
   assert.equal(reduce(out.state, { type: 'endRace', by: 'e' }).refusal, 'alreadyEnded');
   assert.equal(reduce(state, { type: 'endRace', by: 'h' }).refusal, 'notHost');

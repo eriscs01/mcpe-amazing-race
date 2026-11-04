@@ -1,6 +1,8 @@
 // What using a menu item does, and what each menu shows (spec §3, §4). Menus are plain models;
 // the adapter renders them as forms and turns the chosen command into actions.
 import { BUILD_PHASES, unbuilt } from './arenas.js';
+import { targetStop } from './clue.js';
+import { TICKS_PER_SECOND } from './config.js';
 import {
   DISCARD_PHASES, GENERATE_PHASES, LIST_PHASES, PIN_PHASES,
 } from './generation.js';
@@ -9,6 +11,7 @@ import { isPlainClock, roleOf } from './items.js';
 import { planOf, planSummary } from './plan.js';
 import { expressUsable } from './race/advantages.js';
 import { canEndLeg } from './race/legEnd.js';
+import { teamLabel } from './race/pitstop.js';
 import { START_PHASES } from './race/start.js';
 import { SETTINGS_PHASES } from './setup.js';
 import { TEAM_PHASES, teamsView } from './teams.js';
@@ -43,7 +46,8 @@ export function routeUse(use: Use, state: State | undefined): UseRoute | undefin
 }
 
 export type HostCommand = 'setup' | 'teams' | 'addLandmark' | 'clearLandmarks' | 'generate'
-  | 'listStops' | 'buildArenas' | 'startRace' | 'endLeg' | 'discardCourse' | 'transferHost';
+  | 'listStops' | 'buildArenas' | 'startRace' | 'endLeg' | 'discardCourse' | 'transferHost'
+  | 'pause' | 'unpause' | 'endDay' | 'resumeDay' | 'teamFixes' | 'status' | 'endRace';
 
 export type TeamsCommand = 'autoAssign' | 'swap';
 
@@ -79,8 +83,22 @@ export const HOST_ENTRIES: readonly {
     when: (s) => unbuilt(s).length > 0,
   },
   { command: 'startRace', label: 'Start race', phases: START_PHASES },
+  { command: 'resumeDay', label: 'Resume day', phases: ['dayEnded'] },
+  { command: 'pause', label: 'Pause', phases: ['running'] },
+  { command: 'unpause', label: 'Unpause', phases: ['paused'] },
+  { command: 'endDay', label: 'End day', phases: ['running', 'paused'] },
   {
     command: 'endLeg', label: 'End leg now', phases: ['running'], when: canEndLeg,
+  },
+  { command: 'teamFixes', label: 'Team fixes', phases: ['running', 'paused', 'dayEnded'] },
+  {
+    command: 'status', label: 'Status', phases: ['running', 'paused', 'dayEnded', 'finished'],
+  },
+  {
+    command: 'endRace',
+    label: 'End race',
+    phases: ['running', 'paused', 'dayEnded', 'finished'],
+    when: (s) => !s.ended,
   },
   { command: 'discardCourse', label: 'Discard course', phases: DISCARD_PHASES },
   { command: 'transferHost', label: 'Transfer host', phases: 'all' },
@@ -152,4 +170,25 @@ export function passportMenu(state: State, player: PlayerId): Menu<never> {
   const advantages = team ? advantageLines(state, team) : [];
   const body = [line, `Phase: ${PHASE_LABEL[state.phase]}`, ...advantages].join('\n');
   return { title: 'Race Passport', body, buttons: [] };
+}
+
+/**
+ * The Status screen (spec §4): per team, its leg and step, who is online, the penalty it owes
+ * and its advantages. `online` are player ids.
+ */
+export function statusMenu(state: State, online: readonly PlayerId[]): Menu<never> {
+  const lines = state.teams.map((team) => {
+    const name = teamLabel(team);
+    if (team.status === 'eliminated') return `${name}: out`;
+    const stop = targetStop(state, team);
+    const here = team.members.filter((id) => online.includes(id)).length;
+    const owed = Math.ceil(team.penaltyOwed / TICKS_PER_SECOND);
+    return [
+      `${name}: leg ${team.leg}, ${stop ? `${stop.type} ${stop.name}` : 'finished'}`,
+      `  online ${here}/${team.members.length}, penalty ${owed} s`,
+      ...advantageLines(state, team).map((l) => `  ${l}`),
+    ].join('\n');
+  });
+  const day = `Day ${state.day} · ${PHASE_LABEL[state.phase]}`;
+  return { title: 'Status', body: [day, ...lines].join('\n'), buttons: [] };
 }

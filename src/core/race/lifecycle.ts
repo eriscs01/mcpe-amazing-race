@@ -86,7 +86,8 @@ function closeDay(
 export function endDay(state: State, a: Of<'endDay'>): Result {
   const denied = refuseUnlessHost(state, a.by, ['running', 'paused']);
   if (denied) return denied;
-  return closeDay(state, a.positions, `Day ${state.day} ended by the host. See you next session.`, a.by);
+  const text = `Day ${state.day} ended by the host. See you next session.`;
+  return closeDay(state, a.positions, text, a.by);
 }
 
 /** The time of day, read once the daylight stopped; kept for the resume. */

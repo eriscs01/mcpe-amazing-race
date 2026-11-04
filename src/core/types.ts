@@ -237,7 +237,11 @@ export type Action = { type: 'tick' }
   | { type: 'setPhase'; to: Phase; by?: PlayerId }
   /** `initial` is the first spawn of a session (a join), not a respawn. */
   | {
-    type: 'playerSpawned'; player: PlayerId; name: string; initial: boolean; hasPassport: boolean;
+    type: 'playerSpawned';
+    player: PlayerId;
+    name: string;
+    initial: boolean;
+    hasPassport: boolean;
     /** Online teammates in the Overworld, where they stand (a rejoin goes to the nearest). */
     mates?: { id: PlayerId; pos: Vec3 }[];
   }
@@ -323,7 +327,9 @@ export type Action = { type: 'tick' }
   | { type: 'endRace'; by: PlayerId }
   /** Host Team fixes (spec §4): `minutes` are race minutes. */
   | {
-    type: 'teamFix'; by: PlayerId; team: string;
+    type: 'teamFix';
+    by: PlayerId;
+    team: string;
     fix: { kind: 'penalty'; minutes: number } | { kind: 'skip' } | { kind: 'eliminate' }
     | { kind: 'goto'; at?: Vec3 };
   }

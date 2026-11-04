@@ -28,7 +28,10 @@ export function endRace(state: State, a: Extract<Action, { type: 'endRace' }>): 
     logs: [{
       event: 'raceEnded',
       fields: {
-        by: a.by, from: state.phase, snapshot: state.snapshot !== undefined, players: players.length,
+        by: a.by,
+        from: state.phase,
+        snapshot: state.snapshot !== undefined,
+        players: players.length,
       },
     }],
   };
