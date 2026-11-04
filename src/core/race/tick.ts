@@ -2,8 +2,8 @@
 // served on the mat, the leg's end, the rest and the departures.
 import { advanceClock } from '../clock.js';
 import { chain } from './chain.js';
-import { autoEndDay, remind } from './lifecycle.js';
 import { settleLeg } from './legEnd.js';
+import { autoEndDay, remind } from './lifecycle.js';
 import { settlePenalties } from './pitstop.js';
 
 import type { Result, State } from '../types.js';

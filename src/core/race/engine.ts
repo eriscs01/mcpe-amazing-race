@@ -12,7 +12,8 @@ import {
 } from '../host.js';
 import { canEnter } from '../phase.js';
 import { chain } from './chain.js';
-import { blockPlaced } from './protect.js';
+import { endRace } from './endRace.js';
+import { teamFix } from './fixes.js';
 import { respawned } from './respawn.js';
 import { enforceRules, spawnedRacer } from './rules.js';
 import { saveSettings } from '../setup.js';
@@ -21,6 +22,7 @@ import {
   dayTimeSaved, endDay, pauseRace, resumeDay, unpauseRace,
 } from './lifecycle.js';
 import { racerPositions } from './pitstop.js';
+import { blockPlaced } from './protect.js';
 import { startRace } from './start.js';
 import {
   submitAnswer, targetDied, taskEvent, taskStanding, zoneBuildFailed,
@@ -131,8 +133,9 @@ export function reduce(state: State, action: Action): Result {
     case 'resumeDay':
       return resumeDay(state, action);
     case 'endRace':
+      return endRace(state, action);
     case 'teamFix':
-      return { state, effects: [] };
+      return teamFix(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

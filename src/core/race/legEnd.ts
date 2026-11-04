@@ -8,6 +8,7 @@ import { RACE, TICKS_PER_SECOND } from '../config.js';
 import { refuse, refuseUnlessHost } from '../host.js';
 import { chain } from './chain.js';
 import { completeCheckIn, isFinalLeg, teamLabel } from './pitstop.js';
+import { playing } from './task.js';
 
 import type {
   Action, Effect, LogLine, PlayerId, Result, State, Team,
@@ -63,6 +64,9 @@ function checkInRemaining(start: State): Result {
 function closeAdvantages(state: State): Result {
   const leg = state.leg.n;
   const expired: LogLine[] = [];
+  // A Hunt left half way: its husks go with the leg (#53).
+  const husks = state.teams.filter((t) => playing(state, t)?.offer.kind.name === 'hunt')
+    .map((t): Effect => ({ kind: 'clearHusks', team: t.id }));
   const teams = state.teams.map((t): Team => {
     const {
       task, performer, lockoutUntil, uTurnedAt, expressPassed, expressPass, ...rest
@@ -71,7 +75,7 @@ function closeAdvantages(state: State): Result {
     if (lapsed) expired.push({ event: 'expressExpired', fields: { team: t.id, leg } });
     return { ...rest, speedBump: false, ...(expressPass && !lapsed ? { expressPass } : {}) };
   });
-  return { state: { ...state, teams }, effects: [], logs: expired };
+  return { state: { ...state, teams }, effects: husks, logs: expired };
 }
 
 /** The team that checked in last gets the Speed Bump, or is out if this leg eliminates. */
@@ -82,7 +86,7 @@ function lastPlace(state: State): Result {
     (worst, t) => (worst === undefined || place(t, leg) > place(worst, leg) ? t : worst),
     undefined,
   );
-  if (!last || placed.length < 2) return same(state);
+  if (!last || placed.length < 2 || state.leg.eliminated) return same(state);
   const swap = (t: Team): State => ({
     ...state, teams: state.teams.map((x) => (x.id === t.id ? t : x)),
   });
@@ -92,6 +96,7 @@ function lastPlace(state: State): Result {
       state: out,
       effects: [
         { kind: 'spectate', players: last.members },
+        { kind: 'clearHusks', team: last.id },
         ...last.members.map((id): Effect => ({ kind: 'takeItem', from: id, item: 'passport' })),
         { kind: 'broadcast', text: `${teamLabel(last)} has been eliminated!` },
       ],
