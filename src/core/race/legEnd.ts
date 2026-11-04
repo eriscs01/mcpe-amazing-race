@@ -174,12 +174,13 @@ function endRest(state: State): Result {
 
 /** Teams whose departure time has come are let go, each on its own; the last ends the countdown. */
 function release(state: State): Result {
-  const due = state.teams.filter((t) => t.departAt !== undefined && state.clock >= t.departAt);
+  const due = state.teams.filter((t) => t.status !== 'eliminated'
+    && t.departAt !== undefined && state.clock >= t.departAt);
   if (due.length === 0) return same(state);
   const dueIds = new Set(due.map((t) => t.id));
   const teams = state.teams.map((t): Team => {
     if (!dueIds.has(t.id)) return t;
-    const { departAt, ...rest } = t;
+    const { departAt, hold, ...rest } = t;
     return rest;
   });
   const still = teams.some((t) => t.departAt !== undefined);

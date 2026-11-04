@@ -191,7 +191,7 @@ test('a world reloaded in the countdown re-locks movement through the session', 
   session.load();
   assert.equal(session.state?.phase, 'paused');
   assert.deepEqual(executed.map((e) => e.kind).filter((k) => k !== 'lightStops'), [
-    'lockMovement', 'sidebar']);
+    'daylight', 'lockMovement', 'sidebar']);
 });
 
 test('a first playable race: start, count down, clear Route Info, get the next clue', () => {

@@ -110,8 +110,12 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
 /** What a reloaded world redoes: the movement lock of a countdown still running, the sidebar. */
 export function raceResumeEffects(state: State): Effect[] {
   if (!RUN_PHASES.includes(state.phase)) return [];
-  const locked = lockedPlayers(state);
+  // A paused race holds everyone; otherwise only a countdown or the mat does.
+  const locked = state.phase === 'paused'
+    ? state.teams.filter((t) => t.status !== 'eliminated').flatMap((t) => t.members)
+    : lockedPlayers(state);
   return [
+    ...(state.phase === 'paused' ? [{ kind: 'daylight' as const, running: false }] : []),
     ...(locked.length > 0
       ? [{ kind: 'lockMovement' as const, players: locked, locked: true }] : []),
     { kind: 'sidebar', rows: sidebarRows(state) },

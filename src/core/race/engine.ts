@@ -16,6 +16,9 @@ import { blockPlaced } from './protect.js';
 import { enforceRules, spawnedRacer } from './rules.js';
 import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
+import {
+  dayTimeSaved, endDay, pauseRace, resumeDay, unpauseRace,
+} from './lifecycle.js';
 import { racerPositions } from './pitstop.js';
 import { startRace } from './start.js';
 import {
@@ -115,6 +118,19 @@ export function reduce(state: State, action: Action): Result {
       return taskChoice(state, action);
     case 'endLeg':
       return endLeg(state, action);
+    case 'pauseRace':
+      return pauseRace(state, action);
+    case 'unpauseRace':
+      return unpauseRace(state, action);
+    case 'endDay':
+      return endDay(state, action);
+    case 'dayTimeSaved':
+      return dayTimeSaved(state, action);
+    case 'resumeDay':
+      return resumeDay(state, action);
+    case 'endRace':
+    case 'teamFix':
+      return { state, effects: [] };
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

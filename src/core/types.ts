@@ -167,6 +167,8 @@ export interface Team {
   separationResumeAt?: number;
   /** The leg whose gliding penalty was charged (once per leg, spec §9.4). */
   glidedLeg?: number;
+  /** Why `departAt` is set when it is not a Pit Stop wait: the 10 s lock after a resume. */
+  hold?: 'resume';
 }
 
 export interface PlayerRecord {
@@ -181,6 +183,8 @@ export interface PlayerRecord {
   inBoundsAt?: number;
   /** Race clock of the last teleport back from another dimension. */
   returnedAt?: number;
+  /** The racer was given the kit (at the start, or on a later join); read with `??`. */
+  kitted?: boolean;
 }
 
 export interface LegState {
@@ -188,6 +192,8 @@ export interface LegState {
   phase: 'racing' | 'grace' | 'rest' | 'departing';
   graceEnd?: number;
   restEnd?: number;
+  /** The host eliminated a team in this leg: the leg's last place is not eliminated as well. */
+  eliminated?: boolean;
 }
 
 export interface State {
@@ -213,6 +219,14 @@ export interface State {
   /** The final leg's winner (spec §8.4), and the race clock at which the race ends regardless. */
   winner?: string;
   finishEnd?: number;
+  /** Time of day saved when the day ended, put back when it resumes (spec §11). */
+  dayTime?: number;
+  /** The leg that was current when the day began; the day's planned legs count from it. */
+  dayStartLeg?: number;
+  /** The day the host was last reminded of (spec §11), so it happens once a day. */
+  remindedDay?: number;
+  /** End race was done: the world was restored and the players released (spec §12). */
+  ended?: boolean;
 }
 
 /** The script-tagged vanilla items (spec §3). */
@@ -224,6 +238,8 @@ export type Action = { type: 'tick' }
   /** `initial` is the first spawn of a session (a join), not a respawn. */
   | {
     type: 'playerSpawned'; player: PlayerId; name: string; initial: boolean; hasPassport: boolean;
+    /** Online teammates in the Overworld, where they stand (a rejoin goes to the nearest). */
+    mates?: { id: PlayerId; pos: Vec3 }[];
   }
   /** `clock`: sneak-using a plain clock; `command`: `/scriptevent race:host`. */
   | {
@@ -293,6 +309,24 @@ export type Action = { type: 'tick' }
   | { type: 'blockPlaced'; player: PlayerId; pos: Vec3; block: string; item: string }
   /** Host: ends the leg now (spec §8.5). */
   | { type: 'endLeg'; by: PlayerId }
+  /** Host: freezes the race clock, the racers and the daylight (spec §11). */
+  | { type: 'pauseRace'; by: PlayerId }
+  | { type: 'unpauseRace'; by: PlayerId }
+  /** Host: ends the day. `positions` are the online racers (none in another dimension). */
+  | {
+    type: 'endDay'; by: PlayerId; positions: { id: PlayerId; pos?: Vec3 }[];
+  }
+  /** The time of day, read after the day ended and the daylight stopped. */
+  | { type: 'dayTimeSaved'; time: number }
+  | { type: 'resumeDay'; by: PlayerId }
+  /** Host: restores the world and releases the players (spec §12). */
+  | { type: 'endRace'; by: PlayerId }
+  /** Host Team fixes (spec §4): `minutes` are race minutes. */
+  | {
+    type: 'teamFix'; by: PlayerId; team: string;
+    fix: { kind: 'penalty'; minutes: number } | { kind: 'skip' } | { kind: 'eliminate' }
+    | { kind: 'goto'; at?: Vec3 };
+  }
   /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
   | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
   /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
@@ -417,6 +451,17 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   | { kind: 'sidebar'; rows: SidebarRow[] }
   /** Removes a block a racer placed inside an arena and gives the item back (spec §7.4). */
   | { kind: 'undoPlace'; player: PlayerId; pos: Vec3; block: string; item: string }
+  /** Stops or restarts the daylight cycle; `save` reports the time of day (`dayTimeSaved`). */
+  | { kind: 'daylight'; running: boolean; save?: boolean; time?: number }
+  /** Removes Hunt husks: a team's, or all of them. */
+  | { kind: 'clearHusks'; team?: string }
+  /** Puts the gamerules and the time of day back as the race found them (spec §12). */
+  | { kind: 'restoreWorld'; snapshot: RaceSnapshot }
+  | { kind: 'clearSidebar' }
+  /** The race is over for these players: Survival and the plain name tag. */
+  | { kind: 'resetPlayers'; players: PlayerId[] }
+  /** The kit, Survival and the coloured name tag for a racer who joined late. */
+  | { kind: 'kitRacer'; player: PlayerId; name: string; color: string }
   /** Moves the players to `pos` (the Overworld). */
   | { kind: 'teleport'; players: PlayerId[]; pos: Vec3 }
   /** The leg winner's reward (spec §8.4): experience levels and a firework at `at`. */
