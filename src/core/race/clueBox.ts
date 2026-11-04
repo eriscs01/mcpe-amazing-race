@@ -1,9 +1,9 @@
 // Clue box interaction (spec §8.2): is this the team's current stop, is the team together, and
 // what happens next. Route Info is complete here; a Pit Stop or Finish is checked in on its mat
-// (pitstop.ts); a Detour or Roadblock starts its task (task.ts) when it is playable, and until
-// the other kinds arrive says so.
+// (pitstop.ts); a Detour or Roadblock opens its menu (taskFlow.ts) when it is playable.
 import { advanceStep } from './advance.js';
-import { playable, useTaskBox } from './task.js';
+import { playable } from './task.js';
+import { useTaskBox } from './taskFlow.js';
 import { clueBoxAt, clueBoxPos, targetStop } from '../clue.js';
 import { RACE } from '../config.js';
 import { refuse } from '../host.js';

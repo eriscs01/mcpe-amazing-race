@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { play as click } from './helpers/flow.js';
 import {
   boxOf, racing, stopOf,
 } from './helpers/race.js';
@@ -55,12 +56,6 @@ const withTask = (state: State, stopId: number, task: Stop['task']): State => ({
   ...state, stops: state.stops.map((st) => (st.id === stopId ? { ...st, task } : st)),
 });
 
-const click = (state: State, player: string, stopId: number, members = ['h', 'b']): Result => {
-  const box = boxOf(state, stopId);
-  return reduce(state, {
-    type: 'interactClue', player, pos: box, members: members.map((id) => ({ id, pos: box })),
-  });
-};
 const event = (state: State, player: string, ev: TaskEvent): Result => reduce(
   state,
   { type: 'taskEvent', player, event: ev },
@@ -175,13 +170,13 @@ test('a second team at the same zone gets its gear but no second build', () => {
   assert.deepEqual(teamOf(out.state, 'blue').task, { stopId: 2, option: 'A' });
 });
 
-test('clicking again mid-task shows the progress and changes nothing', () => {
+test('clicking again mid-task shows the menu with the progress and changes nothing', () => {
   const state = aiming();
   const again = click(state, 'h', 2);
   assert.equal(again.refusal, undefined);
   assert.equal(again.state, state);
-  const note = again.effects.find((e) => e.kind === 'notify');
-  assert.match(note?.kind === 'notify' ? note.text : '', /Aim: targets 0\/4/);
+  const menu = again.effects.find((e) => e.kind === 'taskMenu');
+  assert.match(menu?.kind === 'taskMenu' ? menu.menu.body : '', /Aim: targets 0\/4/);
 });
 
 test('archery: four distinct far hits finish the Detour and send the team to its next clue', () => {
@@ -476,8 +471,8 @@ test('hunt: using the box again tops the husks up and shows the progress', () =>
   assert.equal(again.refusal, undefined);
   const [top] = spawns(again);
   assert.deepEqual(top?.kind === 'spawnTargets' && [top.count, top.topUp], [2, true]);
-  const note = again.effects.find((e) => e.kind === 'notify');
-  assert.match(note?.kind === 'notify' ? note.text : '', /Brawn: targets 1\/3/);
+  const menu = again.effects.find((e) => e.kind === 'taskMenu');
+  assert.match(menu?.kind === 'taskMenu' ? menu.menu.body : '', /Brawn: targets 1\/3/);
   assert.equal(teamOf(again.state, 'red').progress['2:A']?.kills, 1);
 });
 
@@ -499,15 +494,7 @@ const handedIn = (
   state: State,
   items: Record<string, Record<string, number>>,
   player = 'h',
-): Result => {
-  const box = boxOf(state, 2);
-  return reduce(state, {
-    type: 'interactClue',
-    player,
-    pos: box,
-    members: ['h', 'b'].map((id) => ({ id, pos: box, items: items[id] ?? {} })),
-  });
-};
+): Result => click(state, player, 2, ['h', 'b'], items);
 const seeds = ITEM.wheatSeeds;
 
 test('gather: starting shows what to bring from the stop\'s terrain and gives nothing', () => {

@@ -256,6 +256,30 @@ and a final leg (Recall). Use `/scriptevent race:dump` to find them.
       a text field give the expected `formValues` (no extra slots). Check the Recall form's
       title ("Recall: Which Pit Stop did you check in at, leg by leg?") is not cut off.
 
+### G14 — Detour and Roadblock flow ✱
+
+Run with 2 players on 1.21.90+ at a Detour and a Roadblock (`/scriptevent race:dump` lists them).
+
+- [ ] Detour box: a menu lists the two option names; the choice starts that option (zone, gear
+      for both players). Closing the menu with Escape starts nothing; the box shows it again.
+- [ ] Mid-task the menu shows the progress, and Get gear again, Switch to … and Quit (+6 h);
+      Hand in (Muscle) or Answer questions (Brains, Mind) appear for those kinds only.
+- [ ] Switch to the other option and back: both progresses are kept; the zone of each is built.
+- [ ] Quit asks to confirm; Yes gives the next clue, chat says +6 h, and the team then waits
+      180 s on the Pit Stop mat before checking in. Keep playing changes nothing.
+- [ ] Roadblock box: the menu shows only the hint and the member names; after one name is
+      picked the task is revealed to the team and only the performer gets the gear.
+- [ ] Both players open the Roadblock menu at once: only the first pick counts, the other is
+      told who is performing.
+- [ ] A player who already performed is missing from the list on the next Roadblock (2 players,
+      2 Roadblocks), and everyone is listed again when all are at the cap.
+- [ ] Performer logs out mid-Roadblock: the other player's box shows only Quit (+4 h).
+- [ ] Drop the bow, use the box, Get gear again: a bow and the missing arrows are given, no
+      duplicates. Hand in with the items in the inventory when the menu opened but moved away
+      before pressing the button: only what is held at the press counts.
+- [ ] A menu left open while a teammate finished the task does nothing when pressed (log
+      `taskChoiceIgnored`).
+
 ### M2–M4
 
 Add checks as the groups land.

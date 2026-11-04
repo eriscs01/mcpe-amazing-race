@@ -51,6 +51,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   anagrams), answers matched after normalising with aliases, one question per clue-box form,
   a 10-second lockout for a wrong Quiz answer and 20 seconds for a wrong Recall submission,
   and Recall's one dropdown per earlier leg listing the Pit Stops shuffled (G13).
+- Detour and Roadblock flow: a clue-box menu to choose the Detour option or the Roadblock
+  performer (hint first, capped per player), switch option with progress kept, Get gear again
+  (only what is missing), Hand in tallied fresh, and Quit with a confirmation and the 6 h / 4 h
+  penalty served at the Pit Stop; any member may quit while the performer is offline (G14).
 
 ## [0.1.0]
 

@@ -1,8 +1,7 @@
 // Playing a task (spec §7, §8.2): starting it at a clue box, the racers' actions it counts, the
 // shared zone it plays in and what completion does. What each kind builds and counts is in
-// tasks/*; this file only knows "eligible players" and the kind. The Detour and Roadblock forms
-// (option choice, performer pick, switching, quitting) arrive with G14; until then a Detour
-// starts its first playable option and a Roadblock's performer is whoever used the box.
+// tasks/*; this file only knows "eligible players" and the kind. The Detour and Roadblock menus
+// (option choice, performer pick, switching, quitting) are in taskFlow.ts.
 import { advanceStep } from './advance.js';
 import { zonesFor } from '../arena/layout.js';
 import { targetStop } from '../clue.js';
@@ -21,7 +20,7 @@ import type {
 type Of<T extends Action['type']> = Extract<Action, { type: T }>;
 
 /** One thing a stop offers: Detour option A or B (zone A or B), or a Roadblock's single task. */
-interface Offer {
+export interface Offer {
   option: ZoneName;
   label: string;
   kind: TaskKind;
@@ -29,7 +28,7 @@ interface Offer {
 
 const titled = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
-const offersOf = (stop: Stop): Offer[] => {
+export const offersOf = (stop: Stop): Offer[] => {
   const { task } = stop;
   const make = (option: ZoneName, label: string, name: TaskKindName): Offer[] => {
     const kind = kindOf(name);
@@ -45,18 +44,18 @@ const offersOf = (stop: Stop): Offer[] => {
 /** Whether a stop has a task that can be played now (its kind is in the registry). */
 export const playable = (stop: Stop): boolean => offersOf(stop).length > 0;
 
-const teamOf = (state: State, id: PlayerId): Team | undefined => {
+export const teamOf = (state: State, id: PlayerId): Team | undefined => {
   const teamId = state.players[id]?.teamId;
   return state.teams.find((t) => t.id === teamId);
 };
 
-const replaceTeam = (state: State, team: Team): State => ({
+export const replaceTeam = (state: State, team: Team): State => ({
   ...state, teams: state.teams.map((t) => (t.id === team.id ? team : t)),
 });
 const replaceStop = (state: State, stop: Stop): State => ({
   ...state, stops: state.stops.map((s) => (s.id === stop.id ? stop : s)),
 });
-const merge = (acc: Result, out: Result): Result => ({
+export const merge = (acc: Result, out: Result): Result => ({
   state: out.state,
   effects: [...acc.effects, ...out.effects],
   logs: [...(acc.logs ?? []), ...(out.logs ?? [])],
@@ -86,7 +85,12 @@ const contextOf = (
 };
 
 /** For an offer just made from the stop itself, whose zone always exists. */
-const requireContext = (state: State, stop: Stop, offer: Offer, team?: Team): TaskContext => {
+export const requireContext = (
+  state: State,
+  stop: Stop,
+  offer: Offer,
+  team?: Team,
+): TaskContext => {
   const ctx = contextOf(state, stop, offer, team);
   if (!ctx) throw new Error(`stop ${stop.id} has no zone ${offer.option}`);
   return ctx;
@@ -100,10 +104,10 @@ const rngFor = (state: State, stop: Stop, zone: ZoneName, refills: number): Rng 
 const keyOf = (stop: Stop, option: ZoneName): string => `${stop.id}:${option}`;
 
 /** Who may count: any member on a Detour, only the performer on a Roadblock (spec §7.3). */
-const eligible = (team: Team, stop: Stop, player: PlayerId): boolean => (
+export const eligible = (team: Team, stop: Stop, player: PlayerId): boolean => (
   stop.type === 'roadblock' ? team.performer === player : team.members.includes(player));
 
-interface Playing {
+export interface Playing {
   stop: Stop;
   offer: Offer;
   ctx: TaskContext;
@@ -111,7 +115,7 @@ interface Playing {
 }
 
 /** The task a team is playing, if it is still at its stop and racing. */
-function playing(state: State, team: Team): Playing | undefined {
+export function playing(state: State, team: Team): Playing | undefined {
   const mine = team.task;
   const stop = mine ? state.stops.find((s) => s.id === mine.stopId) : undefined;
   if (!mine || !stop || team.status !== 'racing' || targetStop(state, team)?.id !== stop.id) {
@@ -133,7 +137,7 @@ export function taskProgressText(state: State, team: Team): string | undefined {
 }
 
 /** Builds the zone if it has not been (or its haystack ran out); one build for every team. */
-function prepareZone(state: State, stop: Stop, offer: Offer): Result {
+export function prepareZone(state: State, stop: Stop, offer: Offer): Result {
   const have = stop.zones?.[offer.option];
   const emptied = offer.kind.name === 'haystack' && (have?.hidden?.length ?? 0) === 0;
   if (have && !emptied) return { state, effects: [] };
@@ -162,32 +166,41 @@ function prepareZone(state: State, stop: Stop, offer: Offer): Result {
   };
 }
 
-/** Starts a task for `team` at `stop`: the zone, the gear, the team's progress. */
-function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): Result {
-  const [offer] = offersOf(stop);
-  if (!offer) return { state, effects: [] };
+/**
+ * Starts `offer` for `team` at `stop`: the zone, the gear, the team's progress. A Roadblock has
+ * a `performer`, who alone gets the gear; on a Detour every member does. `by` is who chose it
+ * (a question kind asks them its first question).
+ */
+export function beginTask(
+  state: State,
+  team: Team,
+  stop: Stop,
+  offer: Offer,
+  by: PlayerId,
+  performer?: PlayerId,
+): Result {
   const zone = prepareZone(state, stop, offer);
   const current = zone.state.stops.find((s) => s.id === stop.id) ?? stop;
   const key = keyOf(stop, offer.option);
-  const roadblock = stop.type === 'roadblock';
   const started: Team = {
     ...team,
     task: { stopId: stop.id, option: offer.option },
-    ...(roadblock ? { performer } : {}),
+    ...(performer ? { performer } : {}),
     progress: { ...team.progress, [key]: team.progress[key] ?? offer.kind.initial },
   };
-  const players = roadblock ? [performer] : team.members;
+  const players = performer ? [performer] : team.members;
   const ctx = requireContext(zone.state, current, offer, team);
+  const progress = started.progress[key] ?? offer.kind.initial;
   const effects: Effect[] = [
     ...zone.effects,
     ...offer.kind.equip(ctx, players),
     {
       kind: 'title',
       to: players,
-      text: offer.kind.progressText(started.progress[key] ?? offer.kind.initial, ctx),
+      text: offer.kind.progressText(progress, ctx),
       chat: true,
     },
-    ...(offer.kind.prompt?.(started.progress[key] ?? offer.kind.initial, ctx, performer) ?? []),
+    ...(offer.kind.prompt?.(progress, ctx, performer ?? by) ?? []),
   ];
   const logs: LogLine[] = [...(zone.logs ?? []), {
     event: 'taskStarted',
@@ -199,17 +212,17 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
 }
 
 const seconds = (ticks: number): number => Math.ceil(ticks / TICKS_PER_SECOND);
-const lockoutNotice = (to: PlayerId, ticks: number): Effect => ({
+export const lockoutNotice = (to: PlayerId, ticks: number): Effect => ({
   kind: 'notify', to, code: 'lockedOut', text: `Locked out for ${seconds(ticks)}s.`,
 });
 /** Ticks of lockout the team still serves (the race clock stops while paused). */
-const lockedFor = (state: State, team: Team): number => Math.max(
+export const lockedFor = (state: State, team: Team): number => Math.max(
   0,
   (team.lockoutUntil ?? 0) - state.clock,
 );
 
 /** Applies an event to the team's task: its progress, the kind's response, and completion. */
-function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): Result {
+export function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): Result {
   const { kind } = now.offer;
   const before = team.progress[now.key] ?? kind.initial;
   const after = kind.onEvent(before, event, now.ctx);
@@ -250,7 +263,10 @@ function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): R
       ],
     };
   }
-  const { task, ...rest } = team;
+  // The performer and any lockout end with the task (technical design §3).
+  const {
+    task, performer, lockoutUntil, ...rest
+  } = team;
   const finished: Team = { ...rest, progress };
   const cleared = advanceStep(replaceTeam(state, finished), finished, now.stop.id);
   return {
@@ -273,7 +289,7 @@ function advanceTask(state: State, teamId: string, player: PlayerId, event: Task
  * An eligible racer used the box mid-task. A question task shows its current question, or the
  * lockout still to serve; any other kind answers the event.
  */
-function boxUsed(
+export function boxUsed(
   state: State,
   team: Team,
   now: Playing,
@@ -287,42 +303,6 @@ function boxUsed(
   return {
     state,
     effects: wait > 0 ? [lockoutNotice(player, wait)] : kind.prompt(progress, now.ctx, player),
-  };
-}
-
-/**
- * A racer used the clue box of a Detour or Roadblock whose task is playable and the team is
- * together: start the task, or, when it is under way, let the task answer (a Gather hand-in, a
- * Hunt top-up) and show its progress.
- */
-export function useTaskBox(
-  state: State,
-  team: Team,
-  stop: Stop,
-  player: PlayerId,
-  members: Of<'interactClue'>['members'],
-): Result {
-  if (team.task?.stopId !== stop.id) return beginTask(state, team, stop, player);
-  // A zone whose build failed was forgotten (`zoneBuildFailed`); using the box again retries.
-  const offer = offersOf(stop).find((o) => o.option === team.task?.option);
-  const zone = offer ? prepareZone(state, stop, offer) : { state, effects: [] };
-  const now = playing(zone.state, team);
-  const held = Object.fromEntries(members.filter((m) => eligible(team, stop, m.id))
-    .map((m) => [m.id, m.items ?? {}]));
-  const used = now && eligible(team, stop, player)
-    ? boxUsed(zone.state, team, now, player, held)
-    : { state: zone.state, effects: [] };
-  const merged = merge(zone, used);
-  const after = merged.state.teams.find((t) => t.id === team.id);
-  // A finished task has sent the next clue; a kind that spoke (what is still missing) has said it.
-  const said = !after?.task
-    || used.effects.some((e) => e.kind === 'notify' || e.kind === 'askQuestion');
-  const text = after ? taskProgressText(merged.state, after) ?? 'Task in progress.' : '';
-  return said ? merged : {
-    ...merged,
-    effects: [...merged.effects, {
-      kind: 'notify', to: player, code: 'taskProgress', text,
-    }],
   };
 }
 

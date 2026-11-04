@@ -10,6 +10,9 @@ import type {
 } from '../types.js';
 import type { Vec3 } from '../vec.js';
 
+/** What each player carries: player id to item id to count. */
+export type Held = Record<PlayerId, Record<string, number>>;
+
 /** What a kind needs to know about the task being played. */
 export interface TaskContext {
   stop: Stop;
@@ -42,8 +45,16 @@ export interface TaskKind {
   /** Progress when a team starts the task. */
   readonly initial: TaskProgress;
   build: (ctx: TaskContext, rng: Rng) => ZoneBuild;
-  /** Gifts for each player who plays (a bow, arrows). */
-  equip: (ctx: TaskContext, players: PlayerId[]) => Effect[];
+  /**
+   * Gifts for each player who plays (a bow, arrows). With `held` (what each carries now) only
+   * what they lack is given.
+   */
+  equip: (ctx: TaskContext, players: PlayerId[], held?: Held) => Effect[];
+  /**
+   * The clue-box menu button for what the kind does at the box (Gather: "Hand in"; Quiz and
+   * Recall: "Answer questions"). A kind without one acts on the box use itself (a Hunt top-up).
+   */
+  readonly boxAction?: string;
   /** Returns `progress` itself when the event changes nothing. */
   onEvent: (progress: TaskProgress, event: TaskEvent, ctx: TaskContext) => TaskProgress;
   /**

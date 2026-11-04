@@ -81,6 +81,20 @@ export type TaskEvent = { type: 'projectileHit'; block: Vec3; shooter: Vec3 }
   /** Quiz and Recall: a form was answered; `seq` says which question it was (answered + wrong). */
   | { type: 'answered'; by: PlayerId; seq: number; values: (string | number)[] };
 
+/**
+ * What a button of the clue-box menu of a Detour or Roadblock does (technical design §2.8).
+ * Each is re-checked against the state when it comes back: a form can be stale.
+ */
+export type TaskChoice = { type: 'option'; option: ZoneName }
+  | { type: 'perform'; who: PlayerId }
+  /** The kind's own box action: hand in (Gather) or answer (Quiz, Recall). */
+  | { type: 'continue' }
+  | { type: 'status' }
+  | { type: 'gear' }
+  | { type: 'switch' }
+  | { type: 'quit' }
+  | { type: 'confirmQuit' };
+
 /** One input of a question form (technical design §2.8): typed text or a dropdown choice. */
 export type FormField = { type: 'text'; label: string; placeholder: string }
   | { type: 'dropdown'; label: string; options: string[] };
@@ -259,6 +273,17 @@ export type Action = { type: 'tick' }
   /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
   | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName }
   /**
+   * A button of a `taskMenu` was chosen. `members` are the team's online members now, with what
+   * they carry (a hand-in is tallied from this, not from the click that opened the menu).
+   */
+  | {
+    type: 'taskChoice';
+    player: PlayerId;
+    stopId: number;
+    choice: TaskChoice;
+    members: { id: PlayerId; pos?: Vec3; items?: Record<string, number> }[];
+  }
+  /**
    * A Hunt husk died. `tag` is the one the team's husks carry (`huntTag`); `killer` is the player
    * who dealt the damage, if any. The core decides whether the kill counts.
    */
@@ -307,6 +332,16 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
     title: string;
     body: string;
     fields: FormField[];
+  }
+  /**
+   * Shows `to` the clue-box menu of a Detour or Roadblock; the chosen button returns as a
+   * `taskChoice`. The menu has the shape of `Menu<TaskChoice>` (core/menu.ts).
+   */
+  | {
+    kind: 'taskMenu';
+    to: PlayerId;
+    stopId: number;
+    menu: { title: string; body: string; buttons: { command: TaskChoice; label: string }[] };
   }
   | { kind: 'giveItem'; to: PlayerId; item: MenuItemRole }
   /** Gives a plain vanilla item (a task's bow and arrows). */

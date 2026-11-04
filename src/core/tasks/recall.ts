@@ -14,6 +14,7 @@ export const recallOptions = (ctx: TaskContext, seq: number): string[] => (
 
 export const recall: TaskKind = {
   name: 'recall',
+  boxAction: 'Answer questions',
   initial: { answered: 0, wrong: 0 },
   build: () => ({ ops: [] }),
   equip: () => [],

@@ -35,6 +35,7 @@ export function handIn(held: Held, required: Requirement): HandIn {
 
 export const gather: TaskKind = {
   name: 'gather',
+  boxAction: 'Hand in',
   initial: { handedIn: 0 },
   build: () => ({ ops: [] }),
   equip: () => [],

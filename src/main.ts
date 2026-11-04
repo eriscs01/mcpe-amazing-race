@@ -10,6 +10,7 @@ import { lightStops } from './mc/lighting.js';
 import { startLoop } from './mc/loop.js';
 import { worldBag } from './mc/store.js';
 import { askQuestion } from './mc/ui/quiz.js';
+import { showTaskMenu } from './mc/ui/taskMenu.js';
 import { greetOnlinePlayers, wireEvents } from './mc/wiring.js';
 import { executeEffects } from './mc/world.js';
 
@@ -37,6 +38,7 @@ const session: Session = new Session({
     ),
     light: guard(session.log, 'lightStops', (effect) => lightStops(session, effect)),
     ask: guard(session.log, 'askQuestion', async (effect) => askQuestion(session, effect)),
+    taskMenu: guard(session.log, 'taskMenu', async (effect) => showTaskMenu(session, effect)),
     // Next tick: the failure arrives while the effect that failed is still being applied.
     zoneFailed: (stop, zone) => system.run(guard(session.log, 'zoneBuildFailed', () => {
       session.dispatch({ type: 'zoneBuildFailed', stop, zone });
