@@ -11,7 +11,9 @@ export function reportPositions(session: Session): void {
   const players = world.getAllPlayers()
     .filter((p) => p.isValid && session.state?.players[p.id]?.teamId !== undefined)
     .map((p) => ({
-      id: p.id, pos: p.dimension.id === OVERWORLD ? p.location : undefined,
+      id: p.id,
+      pos: p.dimension.id === OVERWORLD ? p.location : undefined,
+      gliding: p.isGliding,
     }));
   session.dispatch({ type: 'racerPositions', players });
 }

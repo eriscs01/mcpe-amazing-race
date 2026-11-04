@@ -11,6 +11,9 @@ import {
   claimHost, playerSpawned, refuse, transferHost,
 } from '../host.js';
 import { canEnter } from '../phase.js';
+import { chain } from './chain.js';
+import { blockPlaced } from './protect.js';
+import { enforceRules, spawnedRacer } from './rules.js';
 import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
 import { racerPositions } from './pitstop.js';
@@ -53,7 +56,12 @@ export function reduce(state: State, action: Action): Result {
     case 'setPhase':
       return setPhase(state, action);
     case 'playerSpawned':
-      return playerSpawned(state, action);
+      return chain(state, [
+        (s) => playerSpawned(s, action),
+        (s) => spawnedRacer(s, action),
+      ]);
+    case 'blockPlaced':
+      return blockPlaced(state, action);
     case 'claimHost':
       return claimHost(state, action);
     case 'transferHost':
@@ -89,13 +97,11 @@ export function reduce(state: State, action: Action): Result {
     case 'interactClue':
       return interactClue(state, action);
     case 'racerPositions': {
-      const arrived = racerPositions(state, action);
-      const standing = taskStanding(arrived.state, action);
-      return {
-        state: standing.state,
-        effects: [...arrived.effects, ...standing.effects],
-        logs: [...(arrived.logs ?? []), ...(standing.logs ?? [])],
-      };
+      return chain(state, [
+        (s) => racerPositions(s, action),
+        (s) => taskStanding(s, action),
+        (s) => enforceRules(s, action),
+      ]);
     }
     case 'taskEvent':
       return taskEvent(state, action);

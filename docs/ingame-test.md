@@ -180,8 +180,8 @@ the technical design (§4) add their checks here and record the result in their 
 ### G11 — Physical tasks ✱
 
 Run with 2 players on 1.21.90+, a generated course with Detour and Roadblock stops (use
-`/scriptevent race:dump` to read their options). Arena protection is not in yet (G16), so
-racers can break course blocks; do not, except hay and wool where noted.
+`/scriptevent race:dump` to read their options). Arena protection arrived with G16; before it,
+racers could break course blocks.
 
 - [ ] Clue box of an Aim/Climb Detour: the first click starts Aim; chat/title says "Aim: targets
       0/4"; the arena's west edge (x−9) shows 6 free-standing target blocks at the spec heights; every online member
@@ -303,6 +303,38 @@ Run with 3 teams on a plan of 4 legs or more (the Express Pass is not given with
 - [ ] A Speed Bump form title (Speed Bump: Question 1 of 2) reads fully; the Passport shows
       the Speed Bump and U-Turn lines with real leg numbers.
 - [ ] A U-Turned team sees the board at the Detour and can use its own U-Turn.
+
+### G16 — Rules enforcement ✱
+
+Run with 2 players (3 for separation) on a generated course; `/gamerule` and Creative are off
+limits while testing (use a second account for a non-racer).
+
+- [ ] Walk past R+200 from the start line (R+200 and R+300 are in the plan summary): the title
+      and chat warn with a compass direction; coming back clears it; staying 10 s sends you
+      to your last in-bounds spot (about 2 s old). Past R+300 sends you back at once.
+- [ ] Enter the Nether (or any other dimension): you are brought back to the Overworld within
+      about 2 s, once, without a loop.
+- [ ] Two teammates 30+ blocks apart: a warning at 10 s, +0.5 h at 15 s (Passport / HUD show the
+      penalty), nothing again for 60 s. Standing together resets the timer.
+- [ ] No separation penalty during the start countdown, a rest, a Pit Stop wait, within 30 s of
+      a teammate dying or rejoining, or while a Roadblock's others wait within 40 blocks.
+- [ ] Gliding (give yourself an elytra with a command): +0.5 h, only once in the leg; both the
+      elytra and any ender pearls are gone from the inventory, the chest slot and the offhand
+      within 10 s.
+- [ ] In a lit arena a racer cannot break floor, flags, torches, targets, platforms or a
+      clue box; a cancelled break shows "The arena is protected." and counts for no task.
+      Hay and yellow wool of a haystack pile can be broken; hay outside the pile cannot.
+- [ ] A non-racer (host not on a team, other account) can break arena blocks but not the hay
+      and wool of a pile (#50).
+- [ ] A block a racer places in a lit arena disappears and returns to the inventory (try a
+      slab, a door, tall grass and redstone: does the right item come back, is a door's upper half
+      left behind, is the replaced grass lost? note which fail); the same in
+      an unlit arena or outside works normally.
+- [ ] Hostile mobs in a lit arena vanish within 5 s; a Hunt's husks stay while the team plays
+      that Hunt, and disappear after Quit or a Switch away (a switch back tops them up). With
+      two teams on two Hunts at once, both keep their husks.
+- [ ] Pause the race: arena protection still holds, while the boundary and separation timers
+      stop. A cancelled break at a pile counts nothing for any task.
 
 ### M2–M4
 

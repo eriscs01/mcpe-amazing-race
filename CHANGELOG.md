@@ -59,6 +59,12 @@ Versions follow `package.json`; the release workflow publishes the section match
   leg ceil(L/2) and never on the final leg), the U-Turn board on the first visit to a Detour with
   both options required of the target, the Speed Bump quiz at the next leg's Route Info, and the
   Passport listing them (G15).
+- Rules enforcement: course boundary with a warning, a return to the last in-bounds position
+  and a return from other dimensions; teammate separation (warning at 10 s, 0.5 h at 15 s) with
+  its exemptions; the 0.5 h gliding penalty once per leg; elytra and ender pearls removed every
+  10 s; lit arenas protected (only a haystack pile's hay and wool may be broken, placed blocks
+  are taken back) and hostile mobs swept every 5 s except the husks of a Hunt in play (G16).
+  Position reports that only move a timer are saved with the periodic save.
 
 ## [0.1.0]
 

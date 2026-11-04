@@ -5,7 +5,10 @@ import { system } from '@minecraft/server';
 import { showHud } from './hud.js';
 import { retryLights } from './lighting.js';
 import { reportPositions } from './positions.js';
-import { ARENA, HUD, RACE } from '../core/config.js';
+import { sweepItems, sweepMobs } from './protect.js';
+import {
+  ARENA, HUD, RACE, RULES,
+} from '../core/config.js';
 import { guard } from '../core/log.js';
 
 import type { Session } from '../core/session.js';
@@ -25,4 +28,13 @@ export function startLoop(session: Session): void {
   // Where the racers are: the core decides Pit Stop arrival (and later the rules) from it.
   const positions = guard(session.log, 'positions', () => reportPositions(session));
   system.runInterval(positions, RACE.positionTicks);
+  // The rules' sweeps (spec §7.4, §9.4): hostile mobs in lit arenas, elytra and ender pearls.
+  system.runInterval(
+    guard(session.log, 'mobSweep', () => sweepMobs(session)),
+    RULES.sweep.mobTicks,
+  );
+  system.runInterval(
+    guard(session.log, 'itemSweep', () => sweepItems(session)),
+    RULES.sweep.itemTicks,
+  );
 }
