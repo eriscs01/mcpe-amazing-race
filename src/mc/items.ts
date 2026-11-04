@@ -62,3 +62,34 @@ export function takeItem(player: Player, role: MenuItemRole): number {
   for (const slot of slots) container.setItem(slot);
   return slots.length;
 }
+
+/** What the player carries, as item id to total count (a Gather hand-in is judged from it). */
+export function inventoryCounts(player: Player): Record<string, number> {
+  const counts: Record<string, number> = {};
+  const container = inventory(player);
+  for (let slot = 0; container && slot < container.size; slot += 1) {
+    const stack = container.getItem(slot);
+    if (stack) counts[stack.typeId] = (counts[stack.typeId] ?? 0) + stack.amount;
+  }
+  return counts;
+}
+
+/** Removes up to `count` of the item from the player's inventory; returns how many went. */
+export function takeCounted(player: Player, item: string, count: number): number {
+  const container = inventory(player);
+  let left = count;
+  for (let slot = 0; container && slot < container.size && left > 0; slot += 1) {
+    const stack = container.getItem(slot);
+    if (stack?.typeId === item) {
+      const taken = Math.min(left, stack.amount);
+      if (taken === stack.amount) {
+        container.setItem(slot, undefined);
+      } else {
+        stack.amount -= taken;
+        container.setItem(slot, stack);
+      }
+      left -= taken;
+    }
+  }
+  return count - left;
+}

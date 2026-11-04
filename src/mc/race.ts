@@ -5,6 +5,7 @@ import {
   world,
 } from '@minecraft/server';
 
+import { inventoryCounts } from './items.js';
 import { online } from './online.js';
 import { KIT, RACE } from '../core/config.js';
 
@@ -141,7 +142,9 @@ export function useClueBox(session: Session, player: Player, pos: Vec3): void {
     const member = online(id);
     if (!member) return [];
     return [{
-      id, pos: member.dimension.id === OVERWORLD ? member.location : undefined,
+      id,
+      pos: member.dimension.id === OVERWORLD ? member.location : undefined,
+      items: inventoryCounts(member),
     }];
   });
   session.dispatch({

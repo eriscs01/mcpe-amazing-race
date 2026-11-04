@@ -201,7 +201,37 @@ racers can break course blocks; do not, except hay and wool where noted.
       rebuilt when the last wool is gone.
 - [ ] Roadblock: the player who clicked the box is the performer; a teammate's shots or breaks
       do not count, and only the performer must be within 10 blocks on later clicks.
-- [ ] A Hunt/Gather/Quiz stop still says it comes in a later update.
+- [ ] A Quiz or Recall stop still says it comes in a later update.
+
+### G12 — Combat and inventory tasks ✱
+
+Run with 2 players on 1.21.90+ on Easy or harder, a generated course with Fight/Brawn (Hunt) and
+Muscle/Haul (Gather) stops (use `/scriptevent race:dump`; a Detour box starts its first playable
+option, a Roadblock makes the clicker the performer).
+
+- [ ] Hunt: the first click spawns 3 husks (4 from leg 3) at the zone centre, each named with the
+      team colour, team name and "Target"; the title says "targets 0/3". Other teams' husks are
+      told apart by that name. Husks do not burn in daylight.
+- [ ] A husk killed by a team member (sword, and also an arrow) counts: action bar "targets 1/3".
+      Note whether `damagingEntity` is the shooter for an arrow kill.
+- [ ] A husk killed by a player of another team, by fall damage, by `/kill` or in the void comes
+      back as one new husk and the count does not move. Check `deadEntity` is still valid and
+      its tag readable in `entityDie` (log `targetDied` / no `guard` error).
+- [ ] The last kill finishes the Detour: title, chat and sidebar move on.
+- [ ] Husk survival: a named husk stays when everyone walks away 100+ blocks and comes back; a
+      husk that wanders into water (turns into a zombie) still counts when killed; `/difficulty
+      peaceful` removes them, and using the box again then logs `spawnTargetsFailed` or leaves no
+      husk (note which).
+- [ ] Using the box again with a husk missing tops up to the number left, never above it, and
+      does not double-spawn while a husk is dying.
+- [ ] Hunt Roadblock: only the performer's kills count; a teammate's kill respawns the husk.
+- [ ] Gather: the title names the item list from the stop's terrain (check desert, forest,
+      mountain); the first box click gives nothing and takes nothing.
+- [ ] A second box click while the team holds the items between them (split across both
+      players) removes exactly the required count (the rest stay), then shows the next clue; any
+      wood type counts in a forest; a short pile says "you hold n of m" and removes nothing.
+- [ ] Inventory tally: items in the hotbar, main inventory and stacks over several slots all
+      count; a partial stack is reduced, not removed.
 
 ### M2–M4
 
