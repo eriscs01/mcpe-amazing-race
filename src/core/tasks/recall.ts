@@ -3,14 +3,10 @@
 // out and reshuffles the lists. The dropdowns are rebuilt from the deck seed, so a form only
 // sends the chosen indexes and the core decides what they mean.
 import { TASK, TICKS_PER_SECOND } from '../config.js';
+import { answered, seqOf, wrong } from './quiz.js';
 import { Rng } from '../rng.js';
 
 import type { TaskContext, TaskKind } from './kind.js';
-import type { TaskProgress } from '../types.js';
-
-const answered = (progress: TaskProgress): number => progress.answered ?? 0;
-const wrong = (progress: TaskProgress): number => progress.wrong ?? 0;
-const seqOf = (progress: TaskProgress): number => answered(progress) + wrong(progress);
 
 /** The Pit Stop names as the dropdowns list them for question `seq`. */
 export const recallOptions = (ctx: TaskContext, seq: number): string[] => (

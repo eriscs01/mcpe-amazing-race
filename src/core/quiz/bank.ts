@@ -118,8 +118,8 @@ export const TRIVIA: readonly Trivia[] = [
     source: wiki('Carrot_on_a_Stick'),
   },
   {
-    prompt: 'Which block forms the top of a bed (three of them)?',
-    answers: ['wool'],
+    prompt: 'Which block makes up the top row of a bed recipe (three of them)?',
+    answers: ['wool', 'white wool', 'any wool'],
     source: wiki('Bed'),
   },
   {
@@ -134,7 +134,7 @@ export const TRIVIA: readonly Trivia[] = [
   },
   {
     prompt: 'Which item do you use to light a Nether portal?',
-    answers: ['flint and steel'],
+    answers: ['flint and steel', 'flint steel', 'fire charge'],
     source: wiki('Flint_and_Steel'),
   },
   {
@@ -211,9 +211,10 @@ export const TRIVIA: readonly Trivia[] = [
 
 /** Mob and item names to unscramble; the first is the answer, the rest are aliases. */
 export const ANAGRAMS: readonly { answers: string[] }[] = [
-  'creeper', 'zombie', 'skeleton', 'enderman', 'spider', 'villager', 'pillager', 'blaze', 'ghast',
-  'slime', 'witch', 'phantom', 'drowned', 'husk', 'piglin', 'hoglin', 'strider', 'wolf', 'ocelot',
-  'pickaxe', 'diamond', 'emerald', 'redstone', 'obsidian', 'compass', 'furnace', 'lantern', 'anvil',
+  // Only words with no other common word among their anagrams (not wolf: "flow"; not spider).
+  'creeper', 'zombie', 'skeleton', 'enderman', 'villager', 'pillager', 'blaze', 'ghast', 'witch',
+  'phantom', 'drowned', 'husk', 'piglin', 'hoglin', 'ocelot', 'allay', 'panda', 'camel', 'turtle',
+  'zoglin', 'llama', 'evoker', 'guardian', 'pickaxe', 'diamond', 'emerald', 'redstone', 'compass',
 ].map((word) => ({ answers: [word] }));
 
 const sum = (rng: Rng): Question => {

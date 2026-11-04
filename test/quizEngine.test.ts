@@ -251,3 +251,53 @@ test('Recall with a single earlier leg is always right (the literal spec)', () =
   const done = submit(out.state, 'h', ask, [0]);
   assert.equal(team(done.state).task, undefined);
 });
+
+test('a blank submit is no answer: no lockout, and the question is asked again', () => {
+  const { state, ask } = begun();
+  const out = submit(state, 'h', ask, ['  ']);
+  assert.deepEqual(team(out.state).progress['2:A'], { answered: 0, wrong: 0 });
+  assert.equal(team(out.state).lockoutUntil, undefined);
+  assert.equal(only(out).seq, 0);
+});
+
+test('the lockout ends when the race clock reaches it; a pause does not run it down', () => {
+  const { state, ask } = begun();
+  const locked = submit(state, 'h', ask, [wrong]).state;
+  const until = team(locked).lockoutUntil ?? 0;
+  assert.equal(asks(click({ ...locked, clock: until - 1 }, 'h', 2)).length, 0);
+  assert.equal(asks(click({ ...locked, clock: until }, 'h', 2)).length, 1);
+  // The clock does not tick while paused, so the same state is still locked out later.
+  const paused = { ...locked, phase: 'paused' as const };
+  assert.deepEqual(submit(paused, 'h', { ...ask, seq: 1 }, ['x']).effects, []);
+  assert.equal(team(paused).lockoutUntil, until);
+});
+
+test('a wrong answer is logged with what was typed and which question it was', () => {
+  const { state, ask } = begun();
+  const line = submit(state, 'h', ask, ['typo']).logs?.find((l) => l.event === 'lockout');
+  assert.equal(line?.fields.seq, 0);
+  assert.equal(line?.fields.given, '["typo"]');
+});
+
+test('two teams get different decks at the same stop', () => {
+  const { state } = begun();
+  const q = (id: string): string => questionAt(deckSeed(state.seed, id, 2, 'A'), 0).prompt;
+  const prompts = new Set(['red', 'blue', 'green', 'gold', 'pink'].map(q));
+  assert.ok(prompts.size > 1);
+});
+
+test('Recall: a wrong submission reshuffles the lists for the next try', () => {
+  const out = click(finalLeg(), 'h', 7);
+  const ask = only(out);
+  const [one, two] = ask.fields;
+  const idx = (f: typeof one, name: string): number => (
+    f?.type === 'dropdown' ? f.options.indexOf(name) : -1);
+  const bad = submit(out.state, 'h', ask, [idx(one, 'Place 4'), idx(two, 'Place 4')]);
+  const later = { ...bad.state, clock: (team(bad.state).lockoutUntil ?? 0) };
+  const orders = [0, 1, 2, 3, 4, 5].map((n) => {
+    const f = only(click({ ...later, seed: later.seed + n }, 'h', 7)).fields[0];
+    return f?.type === 'dropdown' ? f.options.join() : '';
+  });
+  assert.ok(new Set(orders).size > 1, 'the order depends on the draw');
+  assert.equal(only(click(later, 'h', 7)).seq, 1);
+});

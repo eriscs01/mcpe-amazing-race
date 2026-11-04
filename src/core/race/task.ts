@@ -242,7 +242,10 @@ function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): R
       logs: [
         { event: 'taskProgress', fields: { ...fields, text } },
         ...(locked ? [{
-          event: 'lockout', fields: { ...fields, seconds: seconds(ticks) },
+          event: 'lockout',
+          fields: {
+            ...fields, seconds: seconds(ticks), seq: event.seq, given: JSON.stringify(event.values),
+          },
         }] : []),
       ],
     };
@@ -425,7 +428,15 @@ export function submitAnswer(state: State, a: Of<'submitAnswer'>): Result {
   }
   if (!eligible(team, now.stop, a.player)) return ignored('notEligible');
   const wait = lockedFor(state, team);
-  if (wait > 0) return { state, effects: [lockoutNotice(a.player, wait)] };
+  if (wait > 0) {
+    return {
+      state,
+      effects: [lockoutNotice(a.player, wait)],
+      logs: [{
+        event: 'answerRefused', fields: { player: a.player, stop: a.stopId, reason: 'lockedOut' },
+      }],
+    };
+  }
   return applyEvent(state, team, now, {
     type: 'answered', by: a.player, seq: a.seq, values: a.values,
   });

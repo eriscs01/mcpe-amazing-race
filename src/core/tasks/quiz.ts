@@ -2,7 +2,7 @@
 // team's deck (`quiz/bank.ts`), one per form; a wrong answer locks the team out and uses the
 // question up, so the next one is a fresh draw. Progress is just two counters, so it persists.
 import { TASK, TICKS_PER_SECOND } from '../config.js';
-import { isCorrect, questionAt } from '../quiz/bank.js';
+import { isCorrect, normalise, questionAt } from '../quiz/bank.js';
 
 import type { TaskContext, TaskKind } from './kind.js';
 import type { TaskProgress } from '../types.js';
@@ -11,10 +11,10 @@ import type { TaskProgress } from '../types.js';
 export const quizCount = (ctx: TaskContext): number => (
   ctx.stop.type === 'roadblock' ? TASK.quiz.roadblock : TASK.quiz.detour);
 
-const answered = (progress: TaskProgress): number => progress.answered ?? 0;
-const wrong = (progress: TaskProgress): number => progress.wrong ?? 0;
+export const answered = (progress: TaskProgress): number => progress.answered ?? 0;
+export const wrong = (progress: TaskProgress): number => progress.wrong ?? 0;
 /** Which question of the deck is being asked: every answer, right or wrong, uses one. */
-const seqOf = (progress: TaskProgress): number => answered(progress) + wrong(progress);
+export const seqOf = (progress: TaskProgress): number => answered(progress) + wrong(progress);
 
 export const quiz: TaskKind = {
   name: 'quiz',
@@ -24,6 +24,8 @@ export const quiz: TaskKind = {
   onEvent: (progress, event, ctx) => {
     if (event.type !== 'answered' || event.seq !== seqOf(progress)) return progress;
     const text = event.values[0];
+    // An empty submit (a misclick) is not an answer: nobody is locked out for it.
+    if (typeof text === 'string' && normalise(text) === '') return progress;
     const right = typeof text === 'string'
       && isCorrect(questionAt(ctx.deck, event.seq), text);
     return right
