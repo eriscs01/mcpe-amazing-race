@@ -3,6 +3,7 @@
 import { Player, system, world } from '@minecraft/server';
 
 import { hasItem, heldOf } from './items.js';
+import { online } from './online.js';
 import { wireProtection } from './protect.js';
 import { OVERWORLD, useClueBox } from './race.js';
 import { wireTaskEvents } from './tasks.js';
@@ -13,11 +14,13 @@ import { clueBoxAt } from '../core/clue.js';
 import { USE_DEBOUNCE_TICKS } from '../core/config.js';
 import { guard } from '../core/log.js';
 import { routeUse } from '../core/menu.js';
+import { distance } from '../core/vec.js';
 
 import type { ItemStack, ScriptEventCommandMessageAfterEvent } from '@minecraft/server';
 
 import type { UseRoute } from '../core/menu.js';
 import type { Session } from '../core/session.js';
+import type { Vec3 } from '../core/vec.js';
 
 function route(session: Session, player: Player, stack: ItemStack): UseRoute | undefined {
   if (session.loadStatus === 'pending') return undefined;
@@ -85,6 +88,17 @@ function wireItemUse(session: Session): void {
   }));
 }
 
+/** The player's online teammates in the Overworld, nearest first (a rejoin goes to the first). */
+function matesOf(session: Session, player: Player): { id: string; pos: Vec3 }[] {
+  const teamId = session.state?.players[player.id]?.teamId;
+  const team = session.state?.teams.find((t) => t.id === teamId);
+  const mine = player.location;
+  return (team?.members ?? []).flatMap((id) => {
+    const mate = id === player.id ? undefined : online(id);
+    return mate?.dimension.id === OVERWORLD ? [{ id, pos: mate.location }] : [];
+  }).sort((a, b) => distance(a.pos, mine) - distance(b.pos, mine));
+}
+
 function spawned(session: Session, player: Player, initial: boolean): void {
   session.dispatch({
     type: 'playerSpawned',
@@ -92,6 +106,7 @@ function spawned(session: Session, player: Player, initial: boolean): void {
     name: player.name,
     initial,
     hasPassport: hasItem(player, 'passport'),
+    mates: matesOf(session, player),
   });
 }
 

@@ -12,11 +12,17 @@ import {
 } from '../host.js';
 import { canEnter } from '../phase.js';
 import { chain } from './chain.js';
-import { blockPlaced } from './protect.js';
+import { endRace } from './endRace.js';
+import { teamFix } from './fixes.js';
+import { respawned } from './respawn.js';
 import { enforceRules, spawnedRacer } from './rules.js';
 import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
+import {
+  dayTimeSaved, endDay, pauseRace, resumeDay, unpauseRace,
+} from './lifecycle.js';
 import { racerPositions } from './pitstop.js';
+import { blockPlaced } from './protect.js';
 import { startRace } from './start.js';
 import {
   submitAnswer, targetDied, taskEvent, taskStanding, zoneBuildFailed,
@@ -59,6 +65,7 @@ export function reduce(state: State, action: Action): Result {
       return chain(state, [
         (s) => playerSpawned(s, action),
         (s) => spawnedRacer(s, action),
+        (s) => respawned(s, action),
       ]);
     case 'blockPlaced':
       return blockPlaced(state, action);
@@ -115,6 +122,20 @@ export function reduce(state: State, action: Action): Result {
       return taskChoice(state, action);
     case 'endLeg':
       return endLeg(state, action);
+    case 'pauseRace':
+      return pauseRace(state, action);
+    case 'unpauseRace':
+      return unpauseRace(state, action);
+    case 'endDay':
+      return endDay(state, action);
+    case 'dayTimeSaved':
+      return dayTimeSaved(state, action);
+    case 'resumeDay':
+      return resumeDay(state, action);
+    case 'endRace':
+      return endRace(state, action);
+    case 'teamFix':
+      return teamFix(state, action);
     default: {
       const unknown: never = action;
       throw new Error(`unknown action ${JSON.stringify(unknown)}`);

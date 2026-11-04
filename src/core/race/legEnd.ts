@@ -8,6 +8,7 @@ import { RACE, TICKS_PER_SECOND } from '../config.js';
 import { refuse, refuseUnlessHost } from '../host.js';
 import { chain } from './chain.js';
 import { completeCheckIn, isFinalLeg, teamLabel } from './pitstop.js';
+import { playing } from './task.js';
 
 import type {
   Action, Effect, LogLine, PlayerId, Result, State, Team,
@@ -16,6 +17,9 @@ import type {
 type Of<T extends Action['type']> = Extract<Action, { type: T }>;
 
 const same = (state: State): Result => ({ state, effects: [] });
+/** What a leg's phase change keeps: the host's elimination in this leg. */
+const kept = (state: State): { eliminated?: true } => (
+  state.leg.eliminated ? { eliminated: true } : {});
 const alive = (state: State): Team[] => state.teams.filter((t) => t.status !== 'eliminated');
 const membersOf = (teams: readonly Team[]): PlayerId[] => teams.flatMap((t) => t.members);
 const merge = (acc: Result, out: Result): Result => ({
@@ -63,6 +67,9 @@ function checkInRemaining(start: State): Result {
 function closeAdvantages(state: State): Result {
   const leg = state.leg.n;
   const expired: LogLine[] = [];
+  // A Hunt left half way: its husks go with the leg (#53).
+  const husks = state.teams.filter((t) => playing(state, t)?.offer.kind.name === 'hunt')
+    .map((t): Effect => ({ kind: 'clearHusks', team: t.id }));
   const teams = state.teams.map((t): Team => {
     const {
       task, performer, lockoutUntil, uTurnedAt, expressPassed, expressPass, ...rest
@@ -71,7 +78,7 @@ function closeAdvantages(state: State): Result {
     if (lapsed) expired.push({ event: 'expressExpired', fields: { team: t.id, leg } });
     return { ...rest, speedBump: false, ...(expressPass && !lapsed ? { expressPass } : {}) };
   });
-  return { state: { ...state, teams }, effects: [], logs: expired };
+  return { state: { ...state, teams }, effects: husks, logs: expired };
 }
 
 /** The team that checked in last gets the Speed Bump, or is out if this leg eliminates. */
@@ -82,7 +89,7 @@ function lastPlace(state: State): Result {
     (worst, t) => (worst === undefined || place(t, leg) > place(worst, leg) ? t : worst),
     undefined,
   );
-  if (!last || placed.length < 2) return same(state);
+  if (!last || placed.length < 2 || state.leg.eliminated) return same(state);
   const swap = (t: Team): State => ({
     ...state, teams: state.teams.map((x) => (x.id === t.id ? t : x)),
   });
@@ -92,6 +99,7 @@ function lastPlace(state: State): Result {
       state: out,
       effects: [
         { kind: 'spectate', players: last.members },
+        { kind: 'clearHusks', team: last.id },
         ...last.members.map((id): Effect => ({ kind: 'takeItem', from: id, item: 'passport' })),
         { kind: 'broadcast', text: `${teamLabel(last)} has been eliminated!` },
       ],
@@ -159,7 +167,7 @@ function endRest(state: State): Result {
   if (state.leg.phase !== 'rest' || state.clock < (state.leg.restEnd ?? 0)) return same(state);
   const { n } = state.leg;
   const first = legStops(state, n)[0];
-  const next: State = { ...state, leg: { n, phase: 'departing' } };
+  const next: State = { ...state, leg: { n, phase: 'departing', ...kept(state) } };
   return {
     state: next,
     effects: [
@@ -174,12 +182,13 @@ function endRest(state: State): Result {
 
 /** Teams whose departure time has come are let go, each on its own; the last ends the countdown. */
 function release(state: State): Result {
-  const due = state.teams.filter((t) => t.departAt !== undefined && state.clock >= t.departAt);
+  const due = state.teams.filter((t) => t.status !== 'eliminated'
+    && t.departAt !== undefined && state.clock >= t.departAt);
   if (due.length === 0) return same(state);
   const dueIds = new Set(due.map((t) => t.id));
   const teams = state.teams.map((t): Team => {
     if (!dueIds.has(t.id)) return t;
-    const { departAt, ...rest } = t;
+    const { departAt, hold, ...rest } = t;
     return rest;
   });
   const still = teams.some((t) => t.departAt !== undefined);
@@ -225,12 +234,17 @@ function settleGrace(state: State): Result {
   const held = last?.arrivedAt !== undefined || last?.departAt !== undefined;
   if (left.length !== 1 || alive(state).length < 2 || held || !last) {
     return state.leg.phase === 'grace'
-      ? same({ ...state, leg: { n: state.leg.n, phase: 'racing' } }) : same(state);
+      ? same({ ...state, leg: { n: state.leg.n, phase: 'racing', ...kept(state) } }) : same(state);
   }
   if (state.leg.phase !== 'grace') {
     const graceEnd = state.clock + RACE.graceTicks;
     return {
-      state: { ...state, leg: { n: state.leg.n, phase: 'grace', graceEnd } },
+      state: {
+        ...state,
+        leg: {
+          n: state.leg.n, phase: 'grace', graceEnd, ...kept(state),
+        },
+      },
       effects: [{
         kind: 'broadcast',
         text: `${teamLabel(last)} has ${RACE.graceTicks / TICKS_PER_SECOND} seconds `

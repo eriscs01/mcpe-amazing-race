@@ -1,12 +1,15 @@
 // Effect executor: applies the core's effects to the world. Holds no race rules.
 import { giveItem, takeItem } from './items.js';
+import {
+  clearHusks, clearSidebar, resetPlayers, restoreWorld, setDaylight,
+} from './lifecycle.js';
 import { online } from './online.js';
 import {
   restorePlayers, rewardWinners, spectate, teleportPlayers,
 } from './pitstop.js';
 import { undoPlace } from './protect.js';
 import {
-  broadcast, lockMovement, showSidebar, showTitle, startRacers,
+  broadcast, kitRacer, lockMovement, showSidebar, showTitle, startRacers,
 } from './race.js';
 import {
   buildZone, giveVanilla, spawnTargets, takeVanilla,
@@ -26,6 +29,8 @@ export interface EffectHost {
   taskMenu: (effect: Extract<Effect, { kind: 'taskMenu' }>) => void;
   /** A task zone could not be built (the core forgets it so the next box use retries). */
   zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
+  /** The time of day, read after the daylight stopped for a day's end (`dayTimeSaved`). */
+  dayTime: (time: number) => void;
 }
 
 function apply(effect: Effect, log: Logger, host: EffectHost): void {
@@ -111,6 +116,24 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'spectate':
       spectate(effect, log);
+      break;
+    case 'daylight':
+      setDaylight(effect, log, host.dayTime);
+      break;
+    case 'clearHusks':
+      clearHusks(effect, log);
+      break;
+    case 'restoreWorld':
+      restoreWorld(effect, log);
+      break;
+    case 'clearSidebar':
+      clearSidebar(log);
+      break;
+    case 'resetPlayers':
+      resetPlayers(effect, log);
+      break;
+    case 'kitRacer':
+      kitRacer(effect, log);
       break;
     default: {
       const unknown: never = effect;

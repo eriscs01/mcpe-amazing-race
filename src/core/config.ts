@@ -583,6 +583,8 @@ export const TASK = {
 export const RACE = {
   /** Movement stays locked this long after the start (10 s). */
   countdownTicks: 10 * TICKS_PER_SECOND,
+  /** A day resumed mid-leg: racers stay locked this long at their saved positions (spec §11). */
+  resumeTicks: 10 * TICKS_PER_SECOND,
   /** Morning when the day-night cycle runs; noon, held, when it is off (spec §8.1). */
   dayTime: 1000,
   fixedTime: 6000,

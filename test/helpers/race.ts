@@ -64,6 +64,7 @@ export function racing(): State {
   const state = readyRace('running');
   return {
     ...state,
+    day: 1,
     leg: { n: 1, phase: 'racing' },
     teams: state.teams.map((t) => ({ ...t, leg: 1 })),
   };

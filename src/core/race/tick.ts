@@ -3,11 +3,12 @@
 import { advanceClock } from '../clock.js';
 import { chain } from './chain.js';
 import { settleLeg } from './legEnd.js';
+import { autoEndDay, remind } from './lifecycle.js';
 import { settlePenalties } from './pitstop.js';
 
 import type { Result, State } from '../types.js';
 
 export function tick(state: State): Result {
   const next = advanceClock(state);
-  return chain(next, [settlePenalties, settleLeg]);
+  return chain(next, [settlePenalties, settleLeg, autoEndDay, remind]);
 }

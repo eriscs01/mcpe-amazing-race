@@ -34,7 +34,7 @@ export function completeCheckIn(
   const found = state.teams.find((t) => t.id === id);
   const stop = found ? targetStop(state, found) : undefined;
   if (!found || !stop) return { state, effects: [] };
-  const { arrivedAt, ...team } = found;
+  const { arrivedAt, hold, ...team } = found;
   const place = state.teams.filter((t) => t.checkIns.some((c) => c.leg === found.leg)).length + 1;
   // The leg 1 winner earns an Express Pass (spec §8.7); a forced end earns nothing. With only two
   // legs it would end with leg 1, before it could be used, so none is given.

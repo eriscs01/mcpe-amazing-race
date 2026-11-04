@@ -19,7 +19,7 @@ import type { Vec3 } from '../core/vec.js';
 type Of<K extends Effect['kind']> = Extract<Effect, { kind: K }>;
 
 export const OVERWORLD = 'minecraft:overworld';
-const OBJECTIVE = 'race';
+export const OBJECTIVE = 'race';
 const WORN = [
   EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet,
   EquipmentSlot.Offhand,
@@ -76,6 +76,25 @@ export function startRacers(effect: Of<'startRacers'>, log: Logger): void {
         log.error('racerSetupFailed', error, { player: racer.id });
       }
     }
+  }
+}
+
+/** A racer who joined after the start: the kit, Survival and the coloured name tag. */
+export function kitRacer(effect: Of<'kitRacer'>, log: Logger): void {
+  const player = online(effect.player);
+  if (!player) {
+    log.warn('kitSkipped', { player: effect.player, reason: 'offline' });
+    return;
+  }
+  try {
+    if (effect.tagOnly !== true) {
+      clearAndKit(player);
+      player.setGameMode(GameMode.Survival);
+    }
+    player.nameTag = `${effect.color}${effect.name}`;
+    log.info('racerKitted', { player: effect.player });
+  } catch (error) {
+    log.error('kitRacerFailed', error, { player: effect.player });
   }
 }
 

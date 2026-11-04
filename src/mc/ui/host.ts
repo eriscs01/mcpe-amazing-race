@@ -7,6 +7,9 @@ import {
 } from './course.js';
 import { showForm, showMenu } from './forms.js';
 import { endLeg, startRace } from './race.js';
+import {
+  endDay, endRace, pause, resumeDay, status, teamFixes, unpause,
+} from './session.js';
 import { hostMenu, teamsMenu } from '../../core/menu.js';
 import { COPY_WORLD_REMINDER, settingsFromValues, setupFields } from '../../core/setup.js';
 import { swapCandidates } from '../../core/teams.js';
@@ -149,6 +152,13 @@ const COMMANDS: Record<HostCommand, Handler> = {
   buildArenas: once(buildArenas),
   startRace: once(startRace),
   endLeg: once(endLeg),
+  pause: once(pause),
+  unpause: once(unpause),
+  endDay: once(endDay),
+  resumeDay: once(resumeDay),
+  teamFixes: once(teamFixes),
+  status: once(status),
+  endRace: once(endRace),
   discardCourse: once(discardCourse),
   transferHost,
 };

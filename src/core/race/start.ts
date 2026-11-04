@@ -76,6 +76,9 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
   const racers = teams.flatMap((t) => t.members
     .filter((id) => a.online.includes(id))
     .map((id) => ({ id, name: state.players[id]?.name ?? id, color: t.color })));
+  const kitted = Object.fromEntries(racers.map((r) => [
+    r.id, { ...next.players[r.id], name: r.name, kitted: true },
+  ]));
   const spots = ringSpots(home?.pos ?? state.start ?? { x: 0, y: 64, z: 0 }, racers.length);
   const hostRaces = racers.some((r) => r.id === state.hostId);
   const effects: Effect[] = [
@@ -96,7 +99,7 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
     ...firstClues(next),
   ];
   return {
-    state: next,
+    state: { ...next, players: { ...next.players, ...kitted } },
     effects,
     logs: [{
       event: 'raceStarted',
@@ -110,8 +113,12 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
 /** What a reloaded world redoes: the movement lock of a countdown still running, the sidebar. */
 export function raceResumeEffects(state: State): Effect[] {
   if (!RUN_PHASES.includes(state.phase)) return [];
-  const locked = lockedPlayers(state);
+  // A paused race holds everyone; otherwise only a countdown or the mat does.
+  const locked = state.phase === 'paused'
+    ? state.teams.filter((t) => t.status !== 'eliminated').flatMap((t) => t.members)
+    : lockedPlayers(state);
   return [
+    ...(state.phase === 'paused' ? [{ kind: 'daylight' as const, running: false }] : []),
     ...(locked.length > 0
       ? [{ kind: 'lockMovement' as const, players: locked, locked: true }] : []),
     { kind: 'sidebar', rows: sidebarRows(state) },

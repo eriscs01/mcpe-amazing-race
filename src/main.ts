@@ -39,6 +39,9 @@ const session: Session = new Session({
     light: guard(session.log, 'lightStops', (effect) => lightStops(session, effect)),
     ask: guard(session.log, 'askQuestion', async (effect) => askQuestion(session, effect)),
     taskMenu: guard(session.log, 'taskMenu', async (effect) => showTaskMenu(session, effect)),
+    dayTime: (time) => system.run(guard(session.log, 'dayTimeSaved', () => {
+      session.dispatch({ type: 'dayTimeSaved', time });
+    })),
     // Next tick: the failure arrives while the effect that failed is still being applied.
     zoneFailed: (stop, zone) => system.run(guard(session.log, 'zoneBuildFailed', () => {
       session.dispatch({ type: 'zoneBuildFailed', stop, zone });

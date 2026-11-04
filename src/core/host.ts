@@ -77,7 +77,9 @@ export function playerSpawned(state: State, a: Of<'playerSpawned'>): Result {
   const known = state.players[a.player];
   if (state.hostId === undefined) return handOver(state, a.player, a.name, CLAIMED);
   const effects: Effect[] = [];
-  if (a.initial && !a.hasPassport && known?.teamId && PASSPORT_PHASES.includes(state.phase)) {
+  const out = state.teams.find((t) => t.id === known?.teamId)?.status === 'eliminated';
+  const wanted = a.initial && !a.hasPassport && known?.teamId && !out;
+  if (wanted && PASSPORT_PHASES.includes(state.phase)) {
     effects.push({ kind: 'giveItem', to: a.player, item: 'passport' });
   }
   return { state: withName(state, a.player, a.name), effects };
