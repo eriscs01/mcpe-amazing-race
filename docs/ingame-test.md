@@ -201,7 +201,7 @@ racers can break course blocks; do not, except hay and wool where noted.
       rebuilt when the last wool is gone.
 - [ ] Roadblock: the player who clicked the box is the performer; a teammate's shots or breaks
       do not count, and only the performer must be within 10 blocks on later clicks.
-- [ ] A Quiz or Recall stop still says it comes in a later update.
+- [ ] A Quiz or Recall stop asks questions in a form (see G13).
 
 ### G12 — Combat and inventory tasks ✱
 
@@ -232,6 +232,28 @@ option, a Roadblock makes the clicker the performer).
       wood type counts in a forest; a short pile says "you hold n of m" and removes nothing.
 - [ ] Inventory tally: items in the hotbar, main inventory and stacks over several slots all
       count; a partial stack is reduced, not removed.
+
+### G13 — Quiz and Recall ✱
+
+Run with 2 players on 1.21.90+, a generated course with a Brains/Brawn or quiz Roadblock stop
+and a final leg (Recall). Use `/scriptevent race:dump` to find them.
+
+- [ ] Brains (quiz Detour) or a quiz Roadblock: the box opens a form titled "…: Question 1 of 4"
+      (3 on a Roadblock) with one text field; the form opens the tick after the click.
+- [ ] A right answer in any case, with punctuation, or by an alias ("The Nether") is accepted
+      and the next question opens at once; the last one sends the next clue.
+- [ ] A wrong answer: chat says "Locked out for 10s." and the HUD task line counts the lockout
+      down; the box then says how long is left and opens no form; after it, a different
+      question opens.
+- [ ] Two teammates click the box together: the slower submission is not punished (no
+      lockout) and the current question opens again.
+- [ ] Roadblock: a teammate who is not the performer cannot answer.
+- [ ] Closing the form with Escape asks nothing and costs nothing; the box asks again.
+- [ ] Spot-check the bank: 5 trivia answers, 3 anagrams and 3 sums are right and sensible.
+- [ ] Recall (final leg Roadblock): one dropdown per earlier leg, each listing every Pit Stop
+      name (shuffled differently after a wrong submission); matching all of them finishes the
+      race task, any wrong one locks the team out for 20 s. Note whether the dropdown labels and
+      a text field give the expected `formValues` (no extra slots).
 
 ### M2–M4
 

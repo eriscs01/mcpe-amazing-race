@@ -25,6 +25,10 @@ export interface TaskContext {
   label: string;
   /** The team playing, for the kinds that act on it (Hunt names and tags its husks). */
   team?: { id: string; name: string; color: string };
+  /** The seed of the team's question deck at this stop option (Quiz, Recall). */
+  deck: number;
+  /** Names of the Pit Stops of the legs before this one, in leg order (Recall). */
+  pits: string[];
 }
 
 /** The blocks of a zone, built once for every team; `hidden` is what the kind keeps hidden. */
@@ -47,6 +51,10 @@ export interface TaskKind {
    * husk, take handed-in items, say what is missing. Optional; most kinds have no response.
    */
   respond?: (event: TaskEvent, progress: TaskProgress, ctx: TaskContext) => Effect[];
+  /** The question form `to` should be shown for `progress` (Quiz, Recall); none for the rest. */
+  prompt?: (progress: TaskProgress, ctx: TaskContext, to: PlayerId) => Effect[];
+  /** Ticks the team is locked out for after the change from `before` to `after`; 0 for none. */
+  lockoutTicks?: (before: TaskProgress, after: TaskProgress, ctx: TaskContext) => number;
   done: (progress: TaskProgress, ctx: TaskContext) => boolean;
   progressText: (progress: TaskProgress, ctx: TaskContext) => string;
 }

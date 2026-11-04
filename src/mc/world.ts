@@ -19,6 +19,8 @@ export interface EffectHost {
   generate: (effect: Extract<Effect, { kind: 'generateCourse' }>) => void;
   build: (effect: Extract<Effect, { kind: 'buildArenas' }>) => void;
   light: (effect: Extract<Effect, { kind: 'lightStops' }>) => void;
+  /** Shows a question form (Quiz, Recall); its answer returns as a `submitAnswer` action. */
+  ask: (effect: Extract<Effect, { kind: 'askQuestion' }>) => void;
   /** A task zone could not be built (the core forgets it so the next box use retries). */
   zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
 }
@@ -46,6 +48,9 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'zoneBlocks':
       buildZone(effect, log, host.zoneFailed);
+      break;
+    case 'askQuestion':
+      host.ask(effect);
       break;
     case 'spawnTargets':
       spawnTargets(effect, log);

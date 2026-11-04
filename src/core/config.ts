@@ -519,6 +519,11 @@ export const ROADBLOCK_HINTS: Record<RoadblockKind, string> = {
 /** The physical tasks (spec §7.1). Legs up to `earlyLegs` use the easier numbers. */
 export const TASK = {
   earlyLegs: 2,
+  /** Questions to answer (spec §7.1); a wrong answer locks the whole team out. */
+  quiz: {
+    detour: 4, roadblock: 3, speedBump: 2, lockoutSeconds: 10,
+  },
+  recall: { lockoutSeconds: 20 },
   archery: {
     /** z offsets from the arena centre, and heights above the floor, of the six targets. */
     zOffsets: [-6, -4, -1, 1, 4, 6],

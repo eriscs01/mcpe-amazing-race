@@ -11,6 +11,8 @@ import { gather, handIn } from '../src/core/tasks/gather.js';
 import { haystack } from '../src/core/tasks/haystack.js';
 import { hunt, huntTag, parseHuntTag } from '../src/core/tasks/hunt.js';
 import { parkour, parkourCourse } from '../src/core/tasks/parkour.js';
+import { quiz, quizCount } from '../src/core/tasks/quiz.js';
+import { recall, recallOptions } from '../src/core/tasks/recall.js';
 
 import type { TaskContext } from '../src/core/tasks/kind.js';
 import type { Op } from '../src/core/types.js';
@@ -35,6 +37,8 @@ const ctxOf = (over: Partial<TaskContext> = {}): TaskContext => ({
   teams: 3,
   hidden: [],
   label: 'Aim',
+  deck: 0,
+  pits: [],
   ...over,
 });
 const inArena = (p: { x: number; z: number }): boolean => Math.abs(p.x - stop.pos.x) <= ARENA.half
@@ -279,4 +283,53 @@ test('gather: onEvent and respond agree; a short hand-in says what is held', () 
     kind: 'notify', to: 'h', code: 'handIn', text: 'Muscle: you hold 9 of 16 snowballs.',
   }]);
   assert.deepEqual(gather.respond?.({ type: 'targetLost' }, gather.initial, ctx), []);
+});
+
+const ask = (over: Partial<TaskContext> = {}): TaskContext => ctxOf({ deck: 99, ...over });
+
+test('quiz: a non-text value is a wrong answer, a stale seq changes nothing', () => {
+  const ctx = ask();
+  const start = quiz.initial;
+  assert.deepEqual(
+    quiz.onEvent(start, {
+      type: 'answered', by: 'h', seq: 0, values: [3],
+    }, ctx),
+    { answered: 0, wrong: 1 },
+  );
+  assert.equal(quiz.onEvent(start, {
+    type: 'answered', by: 'h', seq: 4, values: ['x'],
+  }, ctx), start);
+  assert.equal(quiz.lockoutTicks?.(start, { answered: 0, wrong: 1 }, ctx), 200);
+  assert.equal(quiz.lockoutTicks?.(start, { answered: 1, wrong: 0 }, ctx), 0);
+});
+
+test('quiz: a Detour asks four questions, a Roadblock three', () => {
+  assert.equal(quizCount(ask()), 4);
+  const block = { ...stop, type: 'roadblock' as const };
+  assert.equal(quizCount(ask({ stop: block })), 3);
+  assert.equal(quiz.done({ answered: 3, wrong: 5 }, ask({ stop: block })), true);
+  assert.equal(quiz.done({ answered: 3, wrong: 0 }, ask()), false);
+});
+
+test('recall: wrong submissions reshuffle the lists and lock out for 20 s', () => {
+  const pits = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const ctx = ask({ pits });
+  assert.notDeepEqual(recallOptions(ctx, 0), recallOptions(ctx, 1));
+  assert.deepEqual([...recallOptions(ctx, 0)].sort(), pits);
+  const wrongOnce = { answered: 0, wrong: 1 };
+  assert.equal(recall.lockoutTicks?.(recall.initial, wrongOnce, ctx), 400);
+});
+
+test('recall: a missing or out-of-range choice is wrong', () => {
+  const ctx = ask({ pits: ['A', 'B'] });
+  const bad = (values: (string | number)[]) => recall.onEvent(
+    recall.initial,
+    {
+      type: 'answered', by: 'h', seq: 0, values,
+    },
+    ctx,
+  );
+  assert.deepEqual(bad([0]), { answered: 0, wrong: 1 });
+  assert.deepEqual(bad([7, 9]), { answered: 0, wrong: 1 });
+  assert.deepEqual(bad(['A', 'B']), { answered: 0, wrong: 1 });
 });
