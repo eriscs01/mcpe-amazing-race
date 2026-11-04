@@ -76,6 +76,9 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
   const racers = teams.flatMap((t) => t.members
     .filter((id) => a.online.includes(id))
     .map((id) => ({ id, name: state.players[id]?.name ?? id, color: t.color })));
+  const kitted = Object.fromEntries(racers.map((r) => [
+    r.id, { ...next.players[r.id], name: r.name, kitted: true },
+  ]));
   const spots = ringSpots(home?.pos ?? state.start ?? { x: 0, y: 64, z: 0 }, racers.length);
   const hostRaces = racers.some((r) => r.id === state.hostId);
   const effects: Effect[] = [
@@ -96,7 +99,7 @@ export function startRace(state: State, a: Of<'startRace'>): Result {
     ...firstClues(next),
   ];
   return {
-    state: next,
+    state: { ...next, players: { ...next.players, ...kitted } },
     effects,
     logs: [{
       event: 'raceStarted',

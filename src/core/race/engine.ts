@@ -13,6 +13,7 @@ import {
 import { canEnter } from '../phase.js';
 import { chain } from './chain.js';
 import { blockPlaced } from './protect.js';
+import { respawned } from './respawn.js';
 import { enforceRules, spawnedRacer } from './rules.js';
 import { saveSettings } from '../setup.js';
 import { endLeg } from './legEnd.js';
@@ -62,6 +63,7 @@ export function reduce(state: State, action: Action): Result {
       return chain(state, [
         (s) => playerSpawned(s, action),
         (s) => spawnedRacer(s, action),
+        (s) => respawned(s, action),
       ]);
     case 'blockPlaced':
       return blockPlaced(state, action);
