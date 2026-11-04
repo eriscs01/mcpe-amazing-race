@@ -219,3 +219,19 @@ test('through the session: the day ends by itself, its time is saved and the day
   assert.ok(seen.some((e) => e.kind === 'daylight' && e.time === 15000));
   assert.equal(session.state?.dayTime, undefined);
 });
+
+test('a checked-in team waits at its mat on resume; End leg in a hold leaves no stale hold', () => {
+  const state = pitRace(false);
+  const mat = reduce(state, onMat(state, 4, ['h', 'b'])).state;
+  const positions = [{ id: 'h', pos: { x: 1, y: 2, z: 3 } }];
+  const ended = go(mat, { type: 'endDay', by: 'h', positions }).state;
+  const out = go(ended, { type: 'resumeDay', by: 'h' });
+  const tp = of(out.effects, 'teleport').find((e) => e.players.includes('h'));
+  assert.deepEqual(tp?.pos, matOf(out.state, 4));
+  assert.equal(teamOf(out.state, 'red').hold, undefined);
+  const dayEnd = go(state, { type: 'endDay', by: 'h', positions: [] }).state;
+  const held = go(dayEnd, { type: 'resumeDay', by: 'h' }).state;
+  assert.equal(teamOf(held, 'blue').hold, 'resume');
+  const left = reduce(held, { type: 'endLeg', by: 'h' }).state;
+  assert.ok(left.teams.every((t) => t.hold === undefined || t.status === 'eliminated'));
+});

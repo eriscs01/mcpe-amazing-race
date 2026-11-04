@@ -68,9 +68,13 @@ function rejoined(state: State, team: Team, a: Extract<Action, { type: 'playerSp
   return {
     state: next,
     effects: [
-      ...(kit ? [{
-        kind: 'kitRacer' as const, player: a.player, name: a.name, color: team.color,
-      }] : []),
+      // The kit clears the pack, so the Passport the host rule gave comes again after it.
+      ...(kit ? [
+        {
+          kind: 'kitRacer' as const, player: a.player, name: a.name, color: team.color,
+        },
+        { kind: 'giveItem' as const, to: a.player, item: 'passport' as const },
+      ] : []),
       ...(pos && state.phase !== 'dayEnded'
         ? [{ kind: 'teleport' as const, players: [a.player], pos }] : []),
       ...(held(state, a.player)
@@ -95,7 +99,11 @@ export function respawned(state: State, a: Extract<Action, { type: 'playerSpawne
   if (state.ended) {
     return a.initial ? {
       state,
-      effects: [{ kind: 'resetPlayers', players: [a.player] }, ...leave(a.player)],
+      effects: [
+        { kind: 'resetPlayers', players: [a.player] },
+        { kind: 'lockMovement', players: [a.player], locked: false },
+        ...leave(a.player),
+      ],
       logs: [{ event: 'racerReleased', fields: { player: a.player } }],
     } : same(state);
   }

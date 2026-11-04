@@ -17,6 +17,9 @@ import type {
 type Of<T extends Action['type']> = Extract<Action, { type: T }>;
 
 const same = (state: State): Result => ({ state, effects: [] });
+/** What a leg's phase change keeps: the host's elimination in this leg. */
+const kept = (state: State): { eliminated?: true } => (
+  state.leg.eliminated ? { eliminated: true } : {});
 const alive = (state: State): Team[] => state.teams.filter((t) => t.status !== 'eliminated');
 const membersOf = (teams: readonly Team[]): PlayerId[] => teams.flatMap((t) => t.members);
 const merge = (acc: Result, out: Result): Result => ({
@@ -164,7 +167,7 @@ function endRest(state: State): Result {
   if (state.leg.phase !== 'rest' || state.clock < (state.leg.restEnd ?? 0)) return same(state);
   const { n } = state.leg;
   const first = legStops(state, n)[0];
-  const next: State = { ...state, leg: { n, phase: 'departing' } };
+  const next: State = { ...state, leg: { n, phase: 'departing', ...kept(state) } };
   return {
     state: next,
     effects: [
@@ -231,12 +234,17 @@ function settleGrace(state: State): Result {
   const held = last?.arrivedAt !== undefined || last?.departAt !== undefined;
   if (left.length !== 1 || alive(state).length < 2 || held || !last) {
     return state.leg.phase === 'grace'
-      ? same({ ...state, leg: { n: state.leg.n, phase: 'racing' } }) : same(state);
+      ? same({ ...state, leg: { n: state.leg.n, phase: 'racing', ...kept(state) } }) : same(state);
   }
   if (state.leg.phase !== 'grace') {
     const graceEnd = state.clock + RACE.graceTicks;
     return {
-      state: { ...state, leg: { n: state.leg.n, phase: 'grace', graceEnd } },
+      state: {
+        ...state,
+        leg: {
+          n: state.leg.n, phase: 'grace', graceEnd, ...kept(state),
+        },
+      },
       effects: [{
         kind: 'broadcast',
         text: `${teamLabel(last)} has ${RACE.graceTicks / TICKS_PER_SECOND} seconds `

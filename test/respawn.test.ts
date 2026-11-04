@@ -129,3 +129,19 @@ test('a rejoin after End race releases the player', () => {
   assert.deepEqual(of(res.effects, 'takeItem').map((e) => e.item), ['passport']);
   assert.equal(of(res.effects, 'teleport').length, 0);
 });
+
+test('a late racer gets the Passport after the kit that clears the pack', () => {
+  const state = race();
+  const late: State = {
+    ...state, players: { ...state.players, b: { name: 'Ben', teamId: 'red' } },
+  };
+  const kinds = reduce(late, spawn('b', true, { hasPassport: false })).effects.map((e) => e.kind);
+  const lastGive = kinds.lastIndexOf('giveItem');
+  assert.ok(kinds.includes('kitRacer') && lastGive > kinds.indexOf('kitRacer'));
+});
+
+test('a player released after End race is unlocked as well', () => {
+  const ended: State = { ...race(), phase: 'finished', ended: true };
+  const { effects } = reduce(ended, spawn('b', true));
+  assert.ok(of(effects, 'lockMovement').some((e) => !e.locked && e.players.includes('b')));
+});

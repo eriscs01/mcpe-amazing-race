@@ -135,3 +135,13 @@ test('End race works on a final leg nobody finished, and from a finished race', 
   const done: State = { ...state, phase: 'finished' };
   assert.equal(reduce(done, { type: 'endRace', by: 'e' }).state.ended, true);
 });
+
+test('the host\'s elimination still counts for the leg after the grace period', () => {
+  const state = pitRace(true);
+  const red = reduce(state, onMat(state, 4, ['h', 'b'])).state;
+  const out = fix(red, 'green', { kind: 'eliminate' }).state;
+  let now = out;
+  for (let i = 0; i < 1300; i += 1) now = reduce(now, { type: 'tick' }).state;
+  assert.equal(now.teams.filter((t) => t.status === 'eliminated').length, 1);
+  assert.equal(now.leg.n, 2);
+});

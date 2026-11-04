@@ -96,7 +96,7 @@ export function dayTimeSaved(state: State, a: Of<'dayTimeSaved'>): Result {
 }
 
 /**
- * After a Pit Stop's rest, once the day's planned legs are done, the day ends on its own (spec
+ * When a Pit Stop's rest begins and the day's planned legs are done, the day ends on its own (spec
  * §11); it never ends mid-leg and the last day has no end but the race's.
  */
 export function autoEndDay(state: State): Result {
@@ -151,7 +151,7 @@ export function resumeDay(state: State, a: Of<'resumeDay'>): Result {
   const teams = state.teams.map((t): Team => {
     if (t.status === 'eliminated') return t;
     const mat = matOf(state, t);
-    if (atPit(t)) {
+    if (atPit(t) || t.status === 'checkedIn') {
       if (mat) moves.push({ kind: 'teleport', players: t.members, pos: mat });
       return t;
     }
