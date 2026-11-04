@@ -17,6 +17,7 @@ import { passportMenu } from '../src/core/menu.js';
 import { deckSeed, questionAt } from '../src/core/quiz/bank.js';
 import { reduce } from '../src/core/race/engine.js';
 import { completeCheckIn } from '../src/core/race/pitstop.js';
+import { taskProgressText } from '../src/core/race/task.js';
 
 import type {
   Action, Effect, State, TaskChoice,
@@ -422,4 +423,49 @@ test('the Passport lists the team\'s advantages', () => {
   assert.match(after, /U-Turn: used/);
   assert.doesNotMatch(after, /Express Pass|Speed Bump/);
   assert.match(passportMenu(patch(base, 'red', { uTurnedAt: 6 }), 'h').body, /U-Turned/);
+});
+
+test('a forged Express Pass choice at a Pit Stop is ignored', () => {
+  const state = legTwo(3, 4, withPass(2));
+  const forged = choose(alone(state), 'h', 8, express);
+  assert.equal(logs(forged, 'taskChoiceIgnored')[0]?.fields.reason, 'noPassHere');
+  assert.equal(team(forged.state, 'red').step, 3);
+});
+
+test('stale start and noUturn choices change nothing', () => {
+  const none = choose(legTwo(0), 'h', 5, { type: 'start' });
+  assert.equal(logs(none, 'taskChoiceIgnored')[0]?.fields.reason, 'noSpeedBump');
+  const begun = choose(board(), 'h', 6, aim).state;
+  const late = choose(begun, 'h', 6, { type: 'noUturn' });
+  assert.equal(logs(late, 'taskChoiceIgnored')[0]?.fields.reason, 'noBoard');
+  const twice = choose(click(bumped(), 'h', 5).state, 'h', 5, { type: 'start' });
+  assert.equal(logs(twice, 'taskChoiceIgnored')[0]?.fields.reason, 'noSpeedBump');
+});
+
+test('a leg that ends mid-task leaves no task, performer, lockout or U-Turn behind', () => {
+  const state = patch(pitRace(false), 'green', {
+    task: { stopId: 2, option: 'A' },
+    performer: 'f',
+    lockoutUntil: 99999,
+    uTurnedAt: 2,
+    step: 1,
+  });
+  const out = reduce(state, onMat(state, 4, ['h', 'b', 'c', 'd']));
+  const ended = reduce({ ...out.state, leg: { n: 1, phase: 'grace', graceEnd: 0 } }, {
+    type: 'endLeg', by: 'h',
+  }).state;
+  const green = team(ended, 'green');
+  assert.equal(green.task, undefined);
+  assert.equal(green.performer, undefined);
+  assert.equal(green.lockoutUntil, undefined);
+  assert.equal(green.uTurnedAt, undefined);
+});
+
+test('the HUD and standing reports cope with a task on a Route Info stop', () => {
+  const { state } = click(bumped(), 'h', 5);
+  const standing = reduce(state, {
+    type: 'racerPositions', players: [{ id: 'h', pos: boxOf(state, 5) }],
+  });
+  assert.deepEqual(team(standing.state, 'red').task, { stopId: 5, option: 'A' });
+  assert.equal(taskProgressText(state, team(state, 'red')), 'Speed Bump: question 1/2');
 });

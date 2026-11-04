@@ -71,6 +71,8 @@ export function useExpressPass(
   const { choice } = a;
   if (choice.type !== 'expressPass') return ignored(state, a, 'notExpress');
   if (!expressUsable(state, team)) return ignored(state, a, 'noPass');
+  // Only a Detour, a Roadblock or a Speed Bump can be skipped, never a Pit Stop or the Finish.
+  if (!['detour', 'roadblock', 'route'].includes(stop.type)) return ignored(state, a, 'noPassHere');
   if (stop.type === 'route' && !team.speedBump) return ignored(state, a, 'noSpeedBump');
   if (stop.type === 'roadblock' && hasTaskHere(team, stop) && !eligible(team, stop, a.player)) {
     return ignored(state, a, 'notEligible');
