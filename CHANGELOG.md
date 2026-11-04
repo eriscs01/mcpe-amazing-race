@@ -47,6 +47,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   eligible racer counts, any other death respawns it, using the box again tops up missing
   husks) and Gather (the terrain's item list, handed in at the clue box from the team's pooled
   inventory, exactly the required count removed) (G12).
+- Quiz and Recall: a question bank (35 trivia questions with sources, arithmetic, mob and item
+  anagrams), answers matched after normalising with aliases, one question per clue-box form,
+  a 10-second lockout for a wrong Quiz answer and 20 seconds for a wrong Recall submission,
+  and Recall's one dropdown per earlier leg listing the Pit Stops shuffled (G13).
 
 ## [0.1.0]
 

@@ -77,7 +77,13 @@ export type TaskEvent = { type: 'projectileHit'; block: Vec3; shooter: Vec3 }
   /** Hunt: a husk of the team died to anyone else (or to nothing); it is respawned. */
   | { type: 'targetLost' }
   /** An eligible racer used the clue box again; `held` is each eligible member's inventory. */
-  | { type: 'boxUsed'; by: PlayerId; held: Record<PlayerId, Record<string, number>> };
+  | { type: 'boxUsed'; by: PlayerId; held: Record<PlayerId, Record<string, number>> }
+  /** Quiz and Recall: a form was answered; `seq` says which question it was (answered + wrong). */
+  | { type: 'answered'; by: PlayerId; seq: number; values: (string | number)[] };
+
+/** One input of a question form (technical design §2.8): typed text or a dropdown choice. */
+export type FormField = { type: 'text'; label: string; placeholder: string }
+  | { type: 'dropdown'; label: string; options: string[] };
 
 export interface Stop {
   id: number;
@@ -256,7 +262,16 @@ export type Action = { type: 'tick' }
    * A Hunt husk died. `tag` is the one the team's husks carry (`huntTag`); `killer` is the player
    * who dealt the damage, if any. The core decides whether the kill counts.
    */
-  | { type: 'targetDied'; tag: string; killer?: PlayerId };
+  | { type: 'targetDied'; tag: string; killer?: PlayerId }
+  /** A question form came back: raw values (the text, or the chosen dropdown index). */
+  | {
+    type: 'submitAnswer';
+    player: PlayerId;
+    stopId: number;
+    option: ZoneName;
+    seq: number;
+    values: (string | number)[];
+  };
 
 /** The world's settings before the race changed them (restored when it ends, spec §12). */
 export interface RaceSnapshot {
@@ -282,6 +297,17 @@ export type GenerationFailure = {
 
 /** What the adapter must do in the world. */
 export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string }
+  /** Shows a question form to `to`; its answer returns as `submitAnswer` with the same ids. */
+  | {
+    kind: 'askQuestion';
+    to: PlayerId;
+    stopId: number;
+    option: ZoneName;
+    seq: number;
+    title: string;
+    body: string;
+    fields: FormField[];
+  }
   | { kind: 'giveItem'; to: PlayerId; item: MenuItemRole }
   /** Gives a plain vanilla item (a task's bow and arrows). */
   | { kind: 'giveVanilla'; to: PlayerId; item: string; count: number }

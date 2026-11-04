@@ -16,7 +16,7 @@ import { endLeg } from './legEnd.js';
 import { racerPositions } from './pitstop.js';
 import { startRace } from './start.js';
 import {
-  targetDied, taskEvent, taskStanding, zoneBuildFailed,
+  submitAnswer, targetDied, taskEvent, taskStanding, zoneBuildFailed,
 } from './task.js';
 import { tick } from './tick.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
@@ -102,6 +102,8 @@ export function reduce(state: State, action: Action): Result {
       return zoneBuildFailed(state, action);
     case 'targetDied':
       return targetDied(state, action);
+    case 'submitAnswer':
+      return submitAnswer(state, action);
     case 'endLeg':
       return endLeg(state, action);
     default: {

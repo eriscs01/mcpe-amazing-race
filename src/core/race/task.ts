@@ -6,7 +6,8 @@
 import { advanceStep } from './advance.js';
 import { zonesFor } from '../arena/layout.js';
 import { targetStop } from '../clue.js';
-import { BLOCK } from '../config.js';
+import { BLOCK, TICKS_PER_SECOND } from '../config.js';
+import { deckSeed } from '../quiz/bank.js';
 import { Rng } from '../rng.js';
 import { parseHuntTag } from '../tasks/hunt.js';
 import { kindOf } from '../tasks/index.js';
@@ -41,7 +42,7 @@ const offersOf = (stop: Stop): Offer[] => {
   return task?.type === 'roadblock' ? make('A', titled(task.kind), task.kind) : [];
 };
 
-/** Whether a stop has a task that can be played now (Quiz and Recall come later). */
+/** Whether a stop has a task that can be played now (its kind is in the registry). */
 export const playable = (stop: Stop): boolean => offersOf(stop).length > 0;
 
 const teamOf = (state: State, id: PlayerId): Team | undefined => {
@@ -77,6 +78,9 @@ const contextOf = (
     teams: state.teams.length,
     hidden: stop.zones?.[offer.option]?.hidden ?? [],
     label: offer.label,
+    deck: deckSeed(state.seed, team?.id ?? '', stop.id, offer.option),
+    pits: state.stops.filter((s) => s.type === 'pit' && s.leg < stop.leg)
+      .sort((a, b) => a.leg - b.leg || a.id - b.id).map((s) => s.name),
     ...(team ? { team: { id: team.id, name: team.name, color: team.color } } : {}),
   };
 };
@@ -183,6 +187,7 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
       text: offer.kind.progressText(started.progress[key] ?? offer.kind.initial, ctx),
       chat: true,
     },
+    ...(offer.kind.prompt?.(started.progress[key] ?? offer.kind.initial, ctx, performer) ?? []),
   ];
   const logs: LogLine[] = [...(zone.logs ?? []), {
     event: 'taskStarted',
@@ -193,6 +198,16 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
   return { state: replaceTeam(zone.state, started), effects, logs };
 }
 
+const seconds = (ticks: number): number => Math.ceil(ticks / TICKS_PER_SECOND);
+const lockoutNotice = (to: PlayerId, ticks: number): Effect => ({
+  kind: 'notify', to, code: 'lockedOut', text: `Locked out for ${seconds(ticks)}s.`,
+});
+/** Ticks of lockout the team still serves (the race clock stops while paused). */
+const lockedFor = (state: State, team: Team): number => Math.max(
+  0,
+  (team.lockoutUntil ?? 0) - state.clock,
+);
+
 /** Applies an event to the team's task: its progress, the kind's response, and completion. */
 function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): Result {
   const { kind } = now.offer;
@@ -200,17 +215,39 @@ function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): R
   const after = kind.onEvent(before, event, now.ctx);
   // The response comes first: a hand-in's items are taken before the next clue is sent.
   const response = kind.respond?.(event, before, now.ctx) ?? [];
-  if (after === before) return { state, effects: response };
-  const progress = { ...team.progress, [now.key]: after };
   const fields = {
     team: team.id, leg: team.leg, stop: now.stop.id, task: kind.name,
   };
+  // A form answers a question; unless it locked the team out, the next one (or the same one,
+  // when the form was stale) is asked at once.
+  const ticks = kind.lockoutTicks?.(before, after, now.ctx) ?? 0;
+  const asking = event.type === 'answered' && ticks === 0 && !kind.done(after, now.ctx)
+    ? kind.prompt?.(after, now.ctx, event.by) ?? [] : [];
+  if (after === before) {
+    return {
+      state,
+      effects: [...response, ...asking],
+      ...(event.type === 'answered' ? { logs: [{ event: 'answerStale', fields }] } : {}),
+    };
+  }
+  const progress = { ...team.progress, [now.key]: after };
   if (!kind.done(after, now.ctx)) {
     const text = kind.progressText(after, now.ctx);
+    const locked = ticks > 0 && event.type === 'answered';
     return {
-      state: replaceTeam(state, { ...team, progress }),
-      effects: response,
-      logs: [{ event: 'taskProgress', fields: { ...fields, text } }],
+      state: replaceTeam(state, {
+        ...team, progress, ...(locked ? { lockoutUntil: state.clock + ticks } : {}),
+      }),
+      effects: [...response, ...(locked ? [lockoutNotice(event.by, ticks)] : []), ...asking],
+      logs: [
+        { event: 'taskProgress', fields: { ...fields, text } },
+        ...(locked ? [{
+          event: 'lockout',
+          fields: {
+            ...fields, seconds: seconds(ticks), seq: event.seq, given: JSON.stringify(event.values),
+          },
+        }] : []),
+      ],
     };
   }
   const { task, ...rest } = team;
@@ -233,6 +270,27 @@ function advanceTask(state: State, teamId: string, player: PlayerId, event: Task
 }
 
 /**
+ * An eligible racer used the box mid-task. A question task shows its current question, or the
+ * lockout still to serve; any other kind answers the event.
+ */
+function boxUsed(
+  state: State,
+  team: Team,
+  now: Playing,
+  player: PlayerId,
+  held: Record<PlayerId, Record<string, number>>,
+): Result {
+  const { kind } = now.offer;
+  if (!kind.prompt) return applyEvent(state, team, now, { type: 'boxUsed', by: player, held });
+  const wait = lockedFor(state, team);
+  const progress = team.progress[now.key] ?? kind.initial;
+  return {
+    state,
+    effects: wait > 0 ? [lockoutNotice(player, wait)] : kind.prompt(progress, now.ctx, player),
+  };
+}
+
+/**
  * A racer used the clue box of a Detour or Roadblock whose task is playable and the team is
  * together: start the task, or, when it is under way, let the task answer (a Gather hand-in, a
  * Hunt top-up) and show its progress.
@@ -252,12 +310,13 @@ export function useTaskBox(
   const held = Object.fromEntries(members.filter((m) => eligible(team, stop, m.id))
     .map((m) => [m.id, m.items ?? {}]));
   const used = now && eligible(team, stop, player)
-    ? applyEvent(zone.state, team, now, { type: 'boxUsed', by: player, held })
+    ? boxUsed(zone.state, team, now, player, held)
     : { state: zone.state, effects: [] };
   const merged = merge(zone, used);
   const after = merged.state.teams.find((t) => t.id === team.id);
   // A finished task has sent the next clue; a kind that spoke (what is still missing) has said it.
-  const said = !after?.task || used.effects.some((e) => e.kind === 'notify');
+  const said = !after?.task
+    || used.effects.some((e) => e.kind === 'notify' || e.kind === 'askQuestion');
   const text = after ? taskProgressText(merged.state, after) ?? 'Task in progress.' : '';
   return said ? merged : {
     ...merged,
@@ -352,4 +411,33 @@ export function zoneBuildFailed(state: State, a: Of<'zoneBuildFailed'>): Result 
     })),
     logs: [{ event: 'zoneForgotten', fields: { stop: stop.id, zone: a.zone, task: lost?.kind } }],
   };
+}
+
+/** A question form came back (Quiz, Recall): checked against the team's current question. */
+export function submitAnswer(state: State, a: Of<'submitAnswer'>): Result {
+  const ignored = (reason: string): Result => ({
+    state,
+    effects: [],
+    logs: [{ event: 'answerIgnored', fields: { player: a.player, stop: a.stopId, reason } }],
+  });
+  const team = teamOf(state, a.player);
+  const now = team ? playing(state, team) : undefined;
+  if (state.phase !== 'running') return ignored('notRunning');
+  if (!team || !now || team.task?.stopId !== a.stopId || team.task.option !== a.option) {
+    return ignored('noSuchTask');
+  }
+  if (!eligible(team, now.stop, a.player)) return ignored('notEligible');
+  const wait = lockedFor(state, team);
+  if (wait > 0) {
+    return {
+      state,
+      effects: [lockoutNotice(a.player, wait)],
+      logs: [{
+        event: 'answerRefused', fields: { player: a.player, stop: a.stopId, reason: 'lockedOut' },
+      }],
+    };
+  }
+  return applyEvent(state, team, now, {
+    type: 'answered', by: a.player, seq: a.seq, values: a.values,
+  });
 }

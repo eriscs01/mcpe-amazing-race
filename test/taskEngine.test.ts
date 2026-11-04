@@ -85,6 +85,8 @@ const ctxFor = (state: State, stopId: number, zone: 'A' | 'B', leg = 1): TaskCon
     teams: state.teams.length,
     hidden: stop.zones?.[zone]?.hidden ?? [],
     label: 'Aim',
+    deck: 0,
+    pits: [],
   };
 };
 
@@ -129,19 +131,19 @@ test('the Detour box starts its first playable option: zone built, bow and arrow
   assert.ok(out.logs?.some((l) => l.event === 'taskStarted'));
 });
 
-test('a Detour whose first option is not playable yet starts the second (Brawn)', () => {
-  const options: [DetourOption, DetourOption] = [brainsBrawn.a, brainsBrawn.b];
+test('a Detour starts its first option; Brawn first spawns the team\'s husks', () => {
+  const options: [DetourOption, DetourOption] = [brainsBrawn.b, brainsBrawn.a];
   const state = withTask(at(course(), 1), 2, { type: 'detour', options });
   const begun = click(state, 'h', 2);
   assert.equal(begun.refusal, undefined);
-  assert.deepEqual(teamOf(begun.state, 'red').task, { stopId: 2, option: 'B' });
-  assert.deepEqual(stopOf(begun.state, 2).zones?.B, { kind: 'hunt' });
+  assert.deepEqual(teamOf(begun.state, 'red').task, { stopId: 2, option: 'A' });
+  assert.deepEqual(stopOf(begun.state, 2).zones?.A, { kind: 'hunt' });
   const spawn = begun.effects.find((e) => e.kind === 'spawnTargets');
   assert.deepEqual(spawn, {
     kind: 'spawnTargets',
-    tag: 'hunt:red:2:B',
+    tag: 'hunt:red:2:A',
     name: '§cRed Target§r',
-    at: { x: 206, y: 71, z: -20 },
+    at: { x: 194, y: 71, z: -20 },
     count: 3,
     topUp: false,
   });
@@ -149,13 +151,6 @@ test('a Detour whose first option is not playable yet starts the second (Brawn)'
   assert.ok(!kinds(begun.effects).includes('giveVanilla'));
   const title = begun.effects.find((e) => e.kind === 'title');
   assert.match(title?.kind === 'title' ? title.text : '', /Brawn: targets 0\/3/);
-});
-
-test('quiz and recall stops still say they come later', () => {
-  const base = at(course(), 2, ['red']);
-  const quiz = withTask(base, 3, { type: 'roadblock', kind: 'quiz' });
-  const out = click(quiz, 'h', 3);
-  assert.equal(out.refusal, 'stopNotReady');
 });
 
 test('everyone must be present before a task starts', () => {
