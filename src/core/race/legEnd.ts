@@ -56,6 +56,24 @@ function checkInRemaining(start: State): Result {
   );
 }
 
+/**
+ * What a leg leaves behind does not carry into the next: a Speed Bump never done, a task left
+ * half way, a U-Turn mark; and an Express Pass ends with leg ceil(L / 2) (spec §8.7).
+ */
+function closeAdvantages(state: State): Result {
+  const leg = state.leg.n;
+  const expired: LogLine[] = [];
+  const teams = state.teams.map((t): Team => {
+    const {
+      task, performer, lockoutUntil, uTurnedAt, expressPassed, expressPass, ...rest
+    } = t;
+    const lapsed = expressPass !== undefined && expressPass.expiresLeg <= leg;
+    if (lapsed) expired.push({ event: 'expressExpired', fields: { team: t.id, leg } });
+    return { ...rest, speedBump: false, ...(expressPass && !lapsed ? { expressPass } : {}) };
+  });
+  return { state: { ...state, teams }, effects: [], logs: expired };
+}
+
 /** The team that checked in last gets the Speed Bump, or is out if this leg eliminates. */
 function lastPlace(state: State): Result {
   const leg = state.leg.n;
@@ -133,7 +151,7 @@ function startRest(state: State): Result {
 
 /** Ends the current (non-final) leg now: everyone is checked in, the last team is dealt with. */
 const endCurrentLeg = (state: State): Result => chain(state, [
-  checkInRemaining, lastPlace, startRest,
+  checkInRemaining, closeAdvantages, lastPlace, startRest,
 ]);
 
 /** After the rest the next leg begins: its clue goes out, and the departures start counting. */

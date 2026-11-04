@@ -124,11 +124,17 @@ export function play(
 }
 
 /** A far, valid arrow into target `slot` of the archery zone A at `stopId`. */
-export function shoot(state: State, stopId: number, slot: number, player = 'h'): State {
+export function shoot(
+  state: State,
+  stopId: number,
+  slot: number,
+  player = 'h',
+  zone: 'A' | 'B' = 'A',
+): State {
   const stop = stopOf(state, stopId);
   const [target] = archeryTargets({
     stop,
-    zone: 'A',
+    zone,
     centre: stop.pos,
     leg: 1,
     teams: 2,

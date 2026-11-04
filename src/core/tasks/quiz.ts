@@ -7,9 +7,11 @@ import { isCorrect, normalise, questionAt } from '../quiz/bank.js';
 import type { TaskContext, TaskKind } from './kind.js';
 import type { TaskProgress } from '../types.js';
 
-/** Questions this stop asks: a Roadblock's three, a Detour's four. */
-export const quizCount = (ctx: TaskContext): number => (
-  ctx.stop.type === 'roadblock' ? TASK.quiz.roadblock : TASK.quiz.detour);
+/** Questions this stop asks: a Roadblock's three, a Detour's four, a Speed Bump's two. */
+export const quizCount = (ctx: TaskContext): number => {
+  if (ctx.stop.type === 'route') return TASK.quiz.speedBump;
+  return ctx.stop.type === 'roadblock' ? TASK.quiz.roadblock : TASK.quiz.detour;
+};
 
 export const answered = (progress: TaskProgress): number => progress.answered ?? 0;
 export const wrong = (progress: TaskProgress): number => progress.wrong ?? 0;

@@ -284,6 +284,25 @@ Run with 2 players on 1.21.90+ at a Detour and a Roadblock (`/scriptevent race:d
 - [ ] A menu left open while a teammate finished the task does nothing when pressed (log
       `taskChoiceIgnored`).
 
+### G15 — Advantages ✱
+
+Run with 3 teams on a plan of 4 legs or more (the Express Pass is not given with 2).
+
+- [ ] The leg 1 winner is told it won an Express Pass; the Passport shows it (until leg 2 of 4).
+- [ ] At a Detour on leg 2, a team with nothing started sees the U-Turn board (targets + "No
+      U-Turn"); No U-Turn shows the options; Escape shows the board again on the next use.
+- [ ] A U-Turn announces itself in chat and tells the target; the target's option menu says it
+      must do both. Finishing one side moves it to the other with a title; then it moves on.
+- [ ] Express Pass on a normal Detour skips it; on a U-Turned Detour it skips one side only.
+- [ ] Express Pass at a Roadblock (pick menu and mid-task); never offered on the final leg;
+      gone after the end of leg 2 of 4.
+- [ ] The last team of a non-elimination leg is told it has a Speed Bump; its next Route Info
+      box asks 2 questions (a wrong answer locks out 10 s); the clue comes after the second.
+- [ ] With an Express Pass the Speed Bump box shows Start / Use Express Pass; Quit asks, costs
+      120 s on the Pit Stop mat, and gives the clue.
+- [ ] A Speed Bump form title (Speed Bump: Question 1 of 2) reads fully; the Passport shows
+      the Speed Bump and U-Turn lines.
+
 ### M2–M4
 
 Add checks as the groups land.
