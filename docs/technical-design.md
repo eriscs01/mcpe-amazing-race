@@ -99,7 +99,11 @@ src/
     race/advance.ts       `advanceStep`: step on, next clue, sidebar (Route Info and finished tasks)
     race/task.ts          playing a task: start at the box, `taskEvent`, `taskStanding`, shared zones, completion (G11)
     clue.ts               clue text, a team's target stop, clue box position, sidebar rows (pure)
-    race/advantages.ts    U-Turn, Express Pass, Speed Bump
+    race/advantages.ts    Express Pass, U-Turn, owed side: pure questions (G15)
+    race/advantageFlow.ts spending a U-Turn / Express Pass at a clue box (G15)
+    race/taskFlow.ts      clue-box menus' routing: option, performer, switch, quit (G14)
+    race/flowMenus.ts     the buttons those menus show (G14, G15)
+    race/penalty.ts       owe(): quit and other time penalties (G14)
     race/rules.ts         separation, boundary, glide penalty (pure decisions)
     hud.ts                racer HUD: compass bar, distance, task line, trail points (G9); a pure query, no Action
     clock.ts              race clock, timers keyed to clock ticks
