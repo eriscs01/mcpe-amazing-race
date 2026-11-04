@@ -130,15 +130,15 @@ export function showSidebar(effect: Of<'sidebar'>, log: Logger): void {
 }
 
 /**
- * A racer used a clue box: tells the core where the team's online members are. A member in
- * another dimension has no position there, so they count as not present.
+ * The team's online members: where each stands (one in another dimension has no position there,
+ * so counts as not present) and what each carries.
  */
-export function useClueBox(session: Session, player: Player, pos: Vec3): void {
-  const { state } = session;
-  if (player.dimension.id !== OVERWORLD) return;
-  const teamId = state?.players[player.id]?.teamId;
-  const team = state?.teams.find((t) => t.id === teamId);
-  const members = (team?.members ?? [player.id]).flatMap((id) => {
+export function teamMembers(session: Session, player: Player): {
+  id: string; pos?: Vec3; items: Record<string, number>;
+}[] {
+  const teamId = session.state?.players[player.id]?.teamId;
+  const team = session.state?.teams.find((t) => t.id === teamId);
+  return (team?.members ?? [player.id]).flatMap((id) => {
     const member = online(id);
     if (!member) return [];
     return [{
@@ -147,7 +147,12 @@ export function useClueBox(session: Session, player: Player, pos: Vec3): void {
       items: inventoryCounts(member),
     }];
   });
+}
+
+/** A racer used a clue box: tells the core where the team's online members are. */
+export function useClueBox(session: Session, player: Player, pos: Vec3): void {
+  if (player.dimension.id !== OVERWORLD) return;
   session.dispatch({
-    type: 'interactClue', player: player.id, pos, members,
+    type: 'interactClue', player: player.id, pos, members: teamMembers(session, player),
   });
 }

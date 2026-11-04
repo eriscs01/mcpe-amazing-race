@@ -18,6 +18,7 @@ export const seqOf = (progress: TaskProgress): number => answered(progress) + wr
 
 export const quiz: TaskKind = {
   name: 'quiz',
+  boxAction: 'Answer questions',
   initial: { answered: 0, wrong: 0 },
   build: () => ({ ops: [] }),
   equip: () => [],

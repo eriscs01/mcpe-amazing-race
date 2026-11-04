@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { boxOf, racing } from './helpers/race.js';
+import { play as click } from './helpers/flow.js';
+import { racing } from './helpers/race.js';
 import { DETOUR_PAIRS, TASK, TICKS_PER_SECOND } from '../src/core/config.js';
 import { deckSeed, questionAt } from '../src/core/quiz/bank.js';
 import { reduce } from '../src/core/race/engine.js';
@@ -48,12 +49,6 @@ const only = (out: Result): Ask => {
 const notices = (out: Result): string[] => out.effects.flatMap((e) => (
   e.kind === 'notify' ? [e.code] : []));
 
-const click = (state: State, player: string, stopId: number, members = ['h', 'b']): Result => {
-  const box = boxOf(state, stopId);
-  return reduce(state, {
-    type: 'interactClue', player, pos: box, members: members.map((id) => ({ id, pos: box })),
-  });
-};
 const submit = (
   state: State,
   player: string,

@@ -21,6 +21,8 @@ export interface EffectHost {
   light: (effect: Extract<Effect, { kind: 'lightStops' }>) => void;
   /** Shows a question form (Quiz, Recall); its answer returns as a `submitAnswer` action. */
   ask: (effect: Extract<Effect, { kind: 'askQuestion' }>) => void;
+  /** Shows the clue-box menu of a Detour or Roadblock; the choice returns as `taskChoice`. */
+  taskMenu: (effect: Extract<Effect, { kind: 'taskMenu' }>) => void;
   /** A task zone could not be built (the core forgets it so the next box use retries). */
   zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
 }
@@ -51,6 +53,9 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'askQuestion':
       host.ask(effect);
+      break;
+    case 'taskMenu':
+      host.taskMenu(effect);
       break;
     case 'spawnTargets':
       spawnTargets(effect, log);

@@ -30,14 +30,19 @@ export const archery: TaskKind = {
   build: (ctx) => ({
     ops: archeryTargets(ctx).map((pos) => ({ kind: 'set', pos, block: BLOCK.target })),
   }),
-  equip: (_ctx, players) => players.flatMap((to) => [
-    {
-      kind: 'giveVanilla' as const, to, item: ITEM.bow, count: 1,
-    },
-    {
-      kind: 'giveVanilla' as const, to, item: ITEM.arrow, count: spec.arrows,
-    },
-  ]),
+  equip: (_ctx, players, held) => players.flatMap((to) => {
+    const have = held?.[to] ?? {};
+    const bow = held ? Math.max(0, 1 - (have[ITEM.bow] ?? 0)) : 1;
+    const arrows = held ? Math.max(0, spec.arrows - (have[ITEM.arrow] ?? 0)) : spec.arrows;
+    return [
+      ...(bow > 0 ? [{
+        kind: 'giveVanilla' as const, to, item: ITEM.bow, count: bow,
+      }] : []),
+      ...(arrows > 0 ? [{
+        kind: 'giveVanilla' as const, to, item: ITEM.arrow, count: arrows,
+      }] : []),
+    ];
+  }),
   onEvent: (progress, event, ctx) => {
     if (event.type !== 'projectileHit') return progress;
     const slot = archeryTargets(ctx).findIndex((t) => sameBlock(event.block, t));

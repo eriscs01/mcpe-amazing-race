@@ -18,6 +18,7 @@ import { startRace } from './start.js';
 import {
   submitAnswer, targetDied, taskEvent, taskStanding, zoneBuildFailed,
 } from './task.js';
+import { taskChoice } from './taskFlow.js';
 import { tick } from './tick.js';
 import { autoAssignTeams, swapPlayers } from '../teams.js';
 
@@ -104,6 +105,8 @@ export function reduce(state: State, action: Action): Result {
       return targetDied(state, action);
     case 'submitAnswer':
       return submitAnswer(state, action);
+    case 'taskChoice':
+      return taskChoice(state, action);
     case 'endLeg':
       return endLeg(state, action);
     default: {
