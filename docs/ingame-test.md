@@ -301,7 +301,8 @@ Run with 3 teams on a plan of 4 legs or more (the Express Pass is not given with
 - [ ] With an Express Pass the Speed Bump box shows Start / Use Express Pass; Quit asks, costs
       120 s on the Pit Stop mat, and gives the clue.
 - [ ] A Speed Bump form title (Speed Bump: Question 1 of 2) reads fully; the Passport shows
-      the Speed Bump and U-Turn lines.
+      the Speed Bump and U-Turn lines with real leg numbers.
+- [ ] A U-Turned team sees the board at the Detour and can use its own U-Turn.
 
 ### M2–M4
 

@@ -469,3 +469,35 @@ test('the HUD and standing reports cope with a task on a Route Info stop', () =>
   assert.deepEqual(team(standing.state, 'red').task, { stopId: 5, option: 'A' });
   assert.equal(taskProgressText(state, team(state, 'red')), 'Speed Bump: question 1/2');
 });
+
+test('a U-Turned team may use its own U-Turn at the same Detour', () => {
+  const menu = menuTo(click(turned(), 'c', 6, ['c', 'd']), 'c');
+  assert.ok(labels(menu).includes('U-Turn Team Red'));
+  const out = blueChoose(turned(), { type: 'uturn', team: 'red' });
+  assert.equal(team(out.state, 'blue').uTurnUsed, true);
+  assert.equal(team(out.state, 'blue').uTurnedAt, 6, 'its own mark is kept');
+  assert.equal(team(out.state, 'red').uTurnedAt, 6);
+});
+
+test('an Express Pass spent mid-Speed Bump skips it', () => {
+  const started = choose(bumped(true), 'h', 5, { type: 'start' }).state;
+  assert.ok(labels(menuTo(click(started, 'h', 5), 'h')).includes('Use Express Pass'));
+  const used = choose(started, 'h', 5, express);
+  assert.equal(team(used.state, 'red').speedBump, false);
+  assert.equal(team(used.state, 'red').task, undefined);
+  assert.equal(team(used.state, 'red').step, 1);
+});
+
+test('a teammate cannot spend the pass on a Roadblock the performer is playing', () => {
+  const begun = choose(legTwo(2, 4, withPass(2)), 'h', 7, { type: 'perform', who: 'h' }).state;
+  const refused = choose(begun, 'b', 7, express);
+  assert.equal(refused.state, begun);
+  assert.equal(logs(refused, 'taskChoiceIgnored')[0]?.fields.reason, 'notEligible');
+});
+
+test('the Passport shows real leg numbers and stops offering a U-Turn after leg L-1', () => {
+  const { body } = passportMenu(legTwo(1, 4), 'h');
+  assert.match(body, /legs 2 to 3/);
+  const last = patch(legTwo(1, 4), 'red', { leg: 4 });
+  assert.doesNotMatch(passportMenu(last, 'h').body, /U-Turn: available/);
+});

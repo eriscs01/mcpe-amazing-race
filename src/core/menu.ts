@@ -129,10 +129,12 @@ export function teamsMenu(state: State, online: readonly PlayerId[]): Menu<Teams
 function advantageLines(state: State, team: Team): string[] {
   const pass = team.expressPass && expressUsable(state, team)
     ? [`Express Pass: yes (until leg ${team.expressPass.expiresLeg})`] : [];
-  const offered = (state.plan?.legs ?? 0) >= 3;
+  const legs = state.plan?.legs ?? 0;
+  const offered = legs >= 3 && team.leg <= legs - 1;
   const uTurn = [
     ...(team.uTurnUsed ? ['U-Turn: used'] : []),
-    ...(!team.uTurnUsed && offered ? ['U-Turn: available on the Detours of legs 2 to L-1'] : []),
+    ...(!team.uTurnUsed && offered
+      ? [`U-Turn: available on the Detours of legs 2 to ${legs - 1}`] : []),
   ];
   const hit = team.uTurnedAt !== undefined ? ['You were U-Turned: do both Detour options.'] : [];
   return [
