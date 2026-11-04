@@ -75,10 +75,12 @@ export function sweepMobs(session: Session): void {
   if (!state) return;
   const areas = sweepAreas(state);
   if (areas.length === 0) return;
-  const excludeTags = sweepKeep(state);
+  const keep = sweepKeep(state);
   const dimension = world.getDimension(OVERWORLD);
   const removed = areas.reduce((count, area) => {
     try {
+      // Kept husks are filtered here, not with `excludeTags`: whether that skips an entity with
+      // any or with all of the tags is not something to bet two teams' husks on.
       const mobs = dimension.getEntities({
         location: area.min,
         volume: {
@@ -87,8 +89,7 @@ export function sweepMobs(session: Session): void {
           z: area.max.z - area.min.z + 1,
         },
         families: ['monster'],
-        ...(excludeTags.length > 0 ? { excludeTags } : {}),
-      });
+      }).filter((mob) => !mob.getTags().some((t) => keep.includes(t)));
       mobs.forEach((mob) => mob.remove());
       return count + mobs.length;
     } catch (error) {

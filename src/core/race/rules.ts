@@ -2,15 +2,16 @@
 // the course area or the Overworld, drifting away from the team, and gliding. All timers run on
 // the race clock and live in the state, so a pause or a reload does not lose or stretch them.
 // Arena protection and the sweeps are protect.ts.
+import { chain } from './chain.js';
 import { lockedPlayers } from './locks.js';
 import { owe } from './penalty.js';
 import { replaceTeam, teamOf } from './task.js';
-import { PENALTY_HOURS, RULES } from '../config.js';
+import { PENALTY_HOURS, RULES, TICKS_PER_SECOND } from '../config.js';
 import { boundary } from '../plan.js';
 import { distance, horizontalDistance } from '../vec.js';
 
 import type {
-  Action, Effect, LogLine, PlayerId, PlayerRecord, Result, State, Team,
+  Action, Effect, PlayerId, PlayerRecord, Result, State, Team,
 } from '../types.js';
 import type { Vec3 } from '../vec.js';
 
@@ -27,12 +28,6 @@ const withPlayer = (state: State, id: PlayerId, patch: Partial<PlayerRecord>): S
 
 const tell = (to: PlayerId[], text: string, chat = false): Effect => ({
   kind: 'title', to, text, ...(chat ? { chat } : {}),
-});
-
-const merge = (acc: Result, out: Result): Result => ({
-  state: out.state,
-  effects: [...acc.effects, ...out.effects],
-  logs: [...(acc.logs ?? []), ...(out.logs ?? [])],
 });
 
 const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north',
@@ -57,7 +52,12 @@ function sendBack(state: State, id: PlayerId, to: Vec3, event: string, extra: ob
   return {
     state: out,
     effects: [{ kind: 'teleport', players: [id], pos: to }, tell([id], 'Back to the course!')],
-    logs: [{ event, fields: { player: id, clock: state.clock, ...extra } }],
+    logs: [{
+      event,
+      fields: {
+        player: id, team: teamOf(state, id)?.id, leg: teamOf(state, id)?.leg, ...extra,
+      },
+    }],
   };
 }
 
@@ -99,8 +99,13 @@ function checkBoundary(state: State, p: Report): Result {
   return {
     state: withPlayer(state, p.id, { outsideSince: state.clock }),
     effects: [tell([p.id], `You are leaving the course area: head ${way}. `
-      + `You will be sent back in ${bounds.graceTicks / 20} s.`, true)],
-    logs: [{ event: 'boundaryWarning', fields: { player: p.id, away: Math.round(away) } }],
+      + `You will be sent back in ${bounds.graceTicks / TICKS_PER_SECOND} s.`, true)],
+    logs: [{
+      event: 'boundaryWarning',
+      fields: {
+        player: p.id, team: racerOf(state, p.id)?.id, away: Math.round(away),
+      },
+    }],
   };
 }
 
@@ -161,13 +166,14 @@ function checkTeam(state: State, team: Team, a: Report[]): Result {
     };
   }
   const warn = elapsed >= apart.warnTicks && !team.warnedApart;
+  const left = Math.ceil((apart.penaltyTicks - elapsed) / TICKS_PER_SECOND);
   const next: Team = { ...team, apartSince: since, ...(warn ? { warnedApart: true } : {}) };
   if (next.apartSince === team.apartSince && !warn) return same(state);
   return {
     state: replaceTeam(state, next),
     effects: warn ? [tell(
       team.members,
-      `Regroup within ${(apart.penaltyTicks - elapsed) / 20} s or take a penalty.`,
+      `Regroup within ${left} s or take a penalty.`,
     )] : [],
     logs: warn ? [{ event: 'separationWarning', fields: { team: team.id, leg: team.leg } }] : [],
   };
@@ -201,13 +207,12 @@ function checkGlide(state: State, p: Report): Result {
 /** The rules of spec §9 for one position report. Returns the same state when nothing changed. */
 export function enforceRules(state: State, a: Extract<Action, { type: 'racerPositions' }>): Result {
   if (state.phase !== 'running') return same(state);
-  const start = same(state);
-  const boundaries = a.players.reduce((acc, p) => merge(acc, checkBoundary(acc.state, p)), start);
-  const together = state.teams.reduce((acc, t) => {
-    const team = acc.state.teams.find((x) => x.id === t.id);
-    return team ? merge(acc, checkTeam(acc.state, team, a.players)) : acc;
-  }, boundaries);
-  return a.players.reduce((acc, p) => merge(acc, checkGlide(acc.state, p)), together);
+  return chain(state, [
+    ...a.players.map((p) => (s: State) => checkBoundary(s, p)),
+    ...state.teams.map((t) => (s: State) => {
+      const team = s.teams.find((x) => x.id === t.id);
+      return team ? checkTeam(s, team, a.players) : same(s);
+    }),
+    ...a.players.map((p) => (s: State) => checkGlide(s, p)),
+  ]);
 }
-
-export type { LogLine };

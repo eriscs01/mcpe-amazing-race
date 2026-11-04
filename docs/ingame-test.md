@@ -331,7 +331,10 @@ limits while testing (use a second account for a non-racer).
       left behind, is the replaced grass lost? note which fail); the same in
       an unlit arena or outside works normally.
 - [ ] Hostile mobs in a lit arena vanish within 5 s; a Hunt's husks stay while the team plays
-      that Hunt, and disappear after Quit or a Switch away (a switch back tops them up).
+      that Hunt, and disappear after Quit or a Switch away (a switch back tops them up). With
+      two teams on two Hunts at once, both keep their husks.
+- [ ] Pause the race: arena protection still holds, while the boundary and separation timers
+      stop. A cancelled break at a pile counts nothing for any task.
 
 ### M2–M4
 
