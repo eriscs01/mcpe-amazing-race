@@ -31,6 +31,6 @@ docs/            spec, technical design, in-game test checklist
 
 Every implementation group follows the `group-workflow` skill (`/group-workflow G<n>`): branch, explore (Haiku), plan + advisor review (Opus), TDD (Sonnet), local checks, isolated review, completeness check, PR and CI, cleanup after merge, then log follow-ups and **stop**. Never start the next group until told to.
 
-When a group is finished the workflow sends a Pushover notification with `scripts/notify.sh`; its credentials (`PUSHOVER_USER_KEY`, `PUSHOVER_APP_KEY`) live in the cloud environment's settings, never in the repository.
+When a group is finished the workflow sends a Pushover notification with `scripts/notify.sh`; its credentials (`PUSHOVER_USER_KEY`, `PUSHOVER_APP_TOKEN`) live in the cloud environment's settings, never in the repository.
 
 Follow-ups are GitHub issues labelled `follow-up` (template in `.github/ISSUE_TEMPLATE/follow-up.md`), never only chat. Each group reads the open ones first and takes in those that fit; its PR closes them with `Closes #n`.
