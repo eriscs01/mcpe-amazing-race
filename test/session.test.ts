@@ -238,3 +238,40 @@ test('outcome lines an accepted action returns are logged with the race clock', 
   assert.equal(session.dispatch({ type: 'saveSettings', by: 'x', settings }), false);
   assert.equal(cap.find('settingsSaved').length, 1);
 });
+
+test('a position report that only moves a timer waits for the periodic save', () => {
+  const state: State = {
+    ...createState(1),
+    phase: 'running',
+    start: { x: 0, y: 70, z: 0 },
+    plan: {
+      legs: 2, legsPerDay: 2, radius: 400, eliminationLegs: [],
+    },
+    players: { p1: { name: 'Pat', teamId: 'red' } },
+    teams: [{
+      id: 'red',
+      name: 'Red',
+      color: '§c',
+      members: ['p1'],
+      status: 'racing',
+      leg: 1,
+      step: 1,
+      penaltyOwed: 0,
+      checkIns: [],
+      roadblockCounts: {},
+      uTurnUsed: false,
+      speedBump: false,
+      progress: {},
+      lastClearedStop: 0,
+    }],
+  };
+  const { bag, session } = setup(state);
+  session.load();
+  session.dispatch({ type: 'setPhase', to: 'running' });
+  bag.writes = 0;
+  session.dispatch({ type: 'racerPositions', players: [{ id: 'p1', pos: { x: 5, y: 70, z: 5 } }] });
+  assert.deepEqual(session.state?.players.p1?.inBoundsPos, { x: 5, y: 70, z: 5 });
+  assert.equal(bag.writes, 0);
+  session.onTick(SAVE_EVERY_TICKS);
+  assert.deepEqual(saved(bag).players.p1?.inBoundsPos, { x: 5, y: 70, z: 5 });
+});

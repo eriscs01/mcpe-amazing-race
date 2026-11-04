@@ -124,7 +124,11 @@ export class Session {
     for (const line of out.logs ?? []) this.log.info(line.event, line.fields);
     this.state = out.state;
     if (out.state !== state) {
-      if (action.type === 'tick' && out.effects.length === 0) this.clockMoved = true;
+      // A tick, or a position report that only moved a timer or a last position (nothing to
+      // log or do): saved with the periodic save, as a crash loses at most 5 s of it.
+      const quiet = action.type === 'tick'
+        || (action.type === 'racerPositions' && (out.logs ?? []).length === 0);
+      if (quiet && out.effects.length === 0) this.clockMoved = true;
       else this.dirty = true;
     }
     this.deps.execute(out.effects);

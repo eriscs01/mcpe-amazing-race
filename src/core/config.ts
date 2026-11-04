@@ -120,6 +120,9 @@ export const ITEM = {
   // archery
   bow: 'minecraft:bow',
   arrow: 'minecraft:arrow',
+  // banned transport (spec §9.4)
+  elytra: 'minecraft:elytra',
+  enderPearl: 'minecraft:ender_pearl',
 } as const;
 
 export const ENTITY = {
@@ -157,6 +160,38 @@ export const PENALTY_HOURS = {
   quitSpeedBump: 4,
   separation: 0.5,
   gliding: 0.5,
+} as const;
+
+/** Rules enforcement (spec §7.4, §9.2–9.4). */
+export const RULES = {
+  boundary: {
+    /** The last in-bounds position is recorded this often (2 s). */
+    recordTicks: 2 * TICKS_PER_SECOND,
+    /** Past the warning line this long (10 s) the racer is sent back. */
+    graceTicks: 10 * TICKS_PER_SECOND,
+    /** A racer in another dimension is sent back at most this often. */
+    returnTicks: 2 * TICKS_PER_SECOND,
+  },
+  separation: {
+    /** A member this far (blocks) from the nearest teammate is apart. */
+    distance: 24,
+    warnTicks: 10 * TICKS_PER_SECOND,
+    penaltyTicks: 15 * TICKS_PER_SECOND,
+    /** No timer runs for this long after a penalty (60 s)... */
+    cooldownTicks: 60 * TICKS_PER_SECOND,
+    /** ...or after a teammate's death or rejoin (30 s). */
+    exemptTicks: 30 * TICKS_PER_SECOND,
+    /** During a Roadblock, non-performers within this many blocks of the stop are fine. */
+    roadblockRadius: 40,
+  },
+  sweep: {
+    /** Hostile mobs in lit arenas, and elytra and ender pearls in racers' inventories. */
+    mobTicks: 5 * TICKS_PER_SECOND,
+    itemTicks: 10 * TICKS_PER_SECOND,
+    items: [ITEM.elytra, ITEM.enderPearl],
+  },
+  /** Blocks a racer may break inside a lit arena, and only in a haystack pile (spec §7.4). */
+  pileBlocks: [BLOCK.hayBlock, BLOCK.yellowWool],
 } as const;
 
 // ── Host setup (spec §4) ────────────────────────────────────────────────────

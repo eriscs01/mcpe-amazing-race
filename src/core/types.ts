@@ -160,6 +160,13 @@ export interface Team {
   departAt?: number;
   lastClearedStop: number;
   lockoutUntil?: number;
+  /** Separation (spec §9.3): when a member was first seen too far from the rest, and if warned. */
+  apartSince?: number;
+  warnedApart?: boolean;
+  /** No separation timer runs before this race clock (a penalty cooldown, a death or rejoin). */
+  separationResumeAt?: number;
+  /** The leg whose gliding penalty was charged (once per leg, spec §9.4). */
+  glidedLeg?: number;
 }
 
 export interface PlayerRecord {
@@ -168,6 +175,12 @@ export interface PlayerRecord {
   lastPos?: Vec3;
   inBoundsPos?: Vec3;
   savedPos?: Vec3;
+  /** Race clock when the racer crossed the boundary warning line (spec §9.2); cleared on return. */
+  outsideSince?: number;
+  /** Race clock of the last `inBoundsPos` record (every 2 s). */
+  inBoundsAt?: number;
+  /** Race clock of the last teleport back from another dimension. */
+  returnedAt?: number;
 }
 
 export interface LegState {
@@ -273,9 +286,11 @@ export type Action = { type: 'tick' }
   }
   /**
    * Where the online racers are, sent by the adapter on an interval. One without `pos` is in
-   * another dimension. The core decides what it means (Pit Stop arrival; later, the rules).
+   * another dimension. The core decides what it means (Pit Stop arrival, the rules of spec §9).
    */
-  | { type: 'racerPositions'; players: { id: PlayerId; pos?: Vec3 }[] }
+  | { type: 'racerPositions'; players: { id: PlayerId; pos?: Vec3; gliding?: boolean }[] }
+  /** A racer placed a block (already in the world); inside a lit arena it is taken back. */
+  | { type: 'blockPlaced'; player: PlayerId; pos: Vec3; item: string }
   /** Host: ends the leg now (spec §8.5). */
   | { type: 'endLeg'; by: PlayerId }
   /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
@@ -400,6 +415,8 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   | { kind: 'title'; to: PlayerId[]; text: string; chat?: boolean }
   /** Replaces the public sidebar scoreboard (spec §10). */
   | { kind: 'sidebar'; rows: SidebarRow[] }
+  /** Removes a block a racer placed inside an arena and gives the item back (spec §7.4). */
+  | { kind: 'undoPlace'; player: PlayerId; pos: Vec3; item: string }
   /** Moves the players to `pos` (the Overworld). */
   | { kind: 'teleport'; players: PlayerId[]; pos: Vec3 }
   /** The leg winner's reward (spec §8.4): experience levels and a firework at `at`. */

@@ -4,6 +4,7 @@ import { online } from './online.js';
 import {
   restorePlayers, rewardWinners, spectate, teleportPlayers,
 } from './pitstop.js';
+import { undoPlace } from './protect.js';
 import {
   broadcast, lockMovement, showSidebar, showTitle, startRacers,
 } from './race.js';
@@ -95,6 +96,9 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'sidebar':
       showSidebar(effect, log);
+      break;
+    case 'undoPlace':
+      undoPlace(effect, log);
       break;
     case 'teleport':
       teleportPlayers(effect, log);

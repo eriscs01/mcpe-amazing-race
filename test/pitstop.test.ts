@@ -9,8 +9,11 @@ import {
 import { matCentre } from '../src/core/clue.js';
 import { RACE } from '../src/core/config.js';
 import { reduce } from '../src/core/race/engine.js';
+import { racerPositions } from '../src/core/race/pitstop.js';
 
 import type { Action, Effect, State } from '../src/core/types.js';
+
+type RacerPositions = Extract<Action, { type: 'racerPositions' }>;
 
 const of = <K extends Effect['kind']>(effects: Effect[], kind: K) => effects.filter(
   (e): e is Extract<Effect, { kind: K }> => e.kind === kind,
@@ -60,9 +63,10 @@ test('a teammate off the mat, or in another dimension, holds the team back', () 
   const state = pitRace();
   const away = { id: 'b', pos: { ...matOf(state, 4), x: matOf(state, 4).x + 3 } };
   const near = { id: 'h', pos: matOf(state, 4) };
-  const partial = reduce(state, { type: 'racerPositions', players: [near, away] });
+  // The Pit Stop rule alone: the rules of spec §9 (rules.test.ts) also read these reports.
+  const partial = racerPositions(state, { type: 'racerPositions', players: [near, away] });
   assert.equal(partial.state, state, 'nothing changed, so the same state');
-  const other = reduce(state, { type: 'racerPositions', players: [near, { id: 'b' }] });
+  const other = racerPositions(state, { type: 'racerPositions', players: [near, { id: 'b' }] });
   assert.equal(other.state, state);
 });
 
@@ -93,13 +97,14 @@ test('only a team heading for a Pit Stop or Finish can check in, and only while 
   const early = {
     ...state, teams: state.teams.map((t) => (t.id === 'red' ? { ...t, step: 2 } : t)),
   };
-  assert.equal(reduce(early, onMat(state, 4, ['h', 'b'])).state, early);
+  assert.equal(racerPositions(early, onMat(state, 4, ['h', 'b']) as RacerPositions).state, early);
   const paused = { ...state, phase: 'paused' as const };
   assert.equal(reduce(paused, onMat(state, 4, ['h', 'b'])).state, paused);
   const leaving = {
     ...state, teams: state.teams.map((t) => (t.id === 'red' ? { ...t, departAt: 99 } : t)),
   };
-  assert.equal(reduce(leaving, onMat(state, 4, ['h', 'b'])).state, leaving);
+  const mat = onMat(state, 4, ['h', 'b']) as RacerPositions;
+  assert.equal(racerPositions(leaving, mat).state, leaving);
 });
 
 test('same-tick arrivals are placed in team order, and a repeated report changes nothing', () => {
