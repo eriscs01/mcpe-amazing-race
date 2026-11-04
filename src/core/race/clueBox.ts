@@ -3,11 +3,9 @@
 // (pitstop.ts); a Detour or Roadblock opens its menu (taskFlow.ts) when it is playable.
 import { advanceStep } from './advance.js';
 import { playable } from './task.js';
-import { useTaskBox } from './taskFlow.js';
-import { clueBoxAt, clueBoxPos, targetStop } from '../clue.js';
-import { RACE } from '../config.js';
+import { together, useTaskBox } from './taskFlow.js';
+import { clueBoxAt, targetStop } from '../clue.js';
 import { refuse } from '../host.js';
-import { distance } from '../vec.js';
 
 import type {
   Action, Result, State, Team,
@@ -41,14 +39,8 @@ export function interactClue(state: State, a: Of<'interactClue'>): Result {
     return refuse(state, a.player, 'stopNotReady', `${stop.name} is a ${stop.type} stop; those `
       + 'come in a later update.');
   }
-  const centre = {
-    x: clueBoxPos(stop).x + 0.5, y: clueBoxPos(stop).y + 0.5, z: clueBoxPos(stop).z + 0.5,
-  };
   // While a Roadblock is under way only its performer needs to be there (spec §8.2).
-  const mustBeHere = stop.type === 'roadblock' && team.task?.stopId === stop.id
-    ? a.members.filter((m) => m.id === team.performer) : a.members;
-  const together = mustBeHere.every((m) => m.pos && distance(m.pos, centre) <= RACE.presenceRadius);
-  if (!together) {
+  if (!together(stop, team, a.members)) {
     return refuse(state, a.player, 'notTogether', 'All teammates must be present.');
   }
   if (stop.type !== 'route') return useTaskBox(state, team, stop, a.player, a.members);

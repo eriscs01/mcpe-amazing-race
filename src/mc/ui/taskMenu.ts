@@ -19,7 +19,10 @@ export async function showTaskMenu(
     return;
   }
   const choice = await showMenu(player, effect.menu, log);
-  if (!choice) return;
+  if (!choice) {
+    log.info('menuClosed', { player: effect.to, stop: effect.stopId });
+    return;
+  }
   session.dispatch({
     type: 'taskChoice',
     player: effect.to,

@@ -255,3 +255,30 @@ test('a team that is not heading for the stop cannot use its menu', () => {
   assert.ok(out.logs?.some((l) => l.event === 'taskChoiceIgnored'));
   assert.equal(boxOf(out.state, 3).x, 300);
 });
+
+test('a menu button pressed after the teammates walked off is ignored', () => {
+  const started = choose(at(1), 'h', 2, aim).state;
+  const box = boxOf(started, 2);
+  const far = { ...box, x: box.x + 40 };
+  const out = reduce(started, {
+    type: 'taskChoice',
+    player: 'h',
+    stopId: 2,
+    choice: { type: 'confirmQuit' },
+    members: [{ id: 'h', pos: box }, { id: 'b', pos: far }],
+  });
+  assert.equal(out.state, started);
+  const line = out.logs?.find((l) => l.event === 'taskChoiceIgnored');
+  assert.equal(line?.fields.reason, 'notTogether');
+  assert.equal(line?.fields.team, 'red');
+  assert.equal(line?.fields.leg, 1);
+});
+
+test('switching to an option already played re-gives only the gear that is missing', () => {
+  const started = choose(at(1), 'h', 2, aim).state;
+  const there = choose(started, 'h', 2, { type: 'switch' }, { h: {}, b: {} }).state;
+  const held = { h: { [ITEM.bow]: 1, [ITEM.arrow]: 24 }, b: { [ITEM.bow]: 1, [ITEM.arrow]: 24 } };
+  const back = choose(there, 'h', 2, { type: 'switch' }, held);
+  assert.deepEqual(red(back.state).task, { stopId: 2, option: 'A' });
+  assert.deepEqual(back.effects.filter((e) => e.kind === 'giveVanilla'), []);
+});

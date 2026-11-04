@@ -8,16 +8,17 @@ import {
   beginTask, boxUsed, eligible, merge, offersOf, playing, prepareZone, replaceTeam,
   taskProgressText, teamOf,
 } from './task.js';
-import { targetStop } from '../clue.js';
+import { clueBoxPos, targetStop } from '../clue.js';
 import {
-  HOUR, PENALTY_HOURS, ROADBLOCK_HINTS, TICKS_PER_SECOND,
+  HOUR, PENALTY_HOURS, RACE, ROADBLOCK_HINTS, TICKS_PER_SECOND,
 } from '../config.js';
 import { mayPerform, roadblockCapFor } from '../teams.js';
+import { distance } from '../vec.js';
 
 import type { Playing } from './task.js';
 import type { Held } from '../tasks/kind.js';
 import type {
-  Action, Effect, PlayerId, Result, State, Stop, TaskChoice, Team,
+  Action, Effect, LogLine, PlayerId, Result, State, Stop, TaskChoice, Team,
 } from '../types.js';
 
 type Of<T extends Action['type']> = Extract<Action, { type: T }>;
@@ -43,19 +44,39 @@ const button = (command: TaskChoice, label: string): Menu['buttons'][number] => 
   command, label,
 });
 
-const ignored = (state: State, a: Of<'taskChoice'>, reason: string): Result => ({
-  state,
-  effects: [],
-  logs: [{
+const ignoredLog = (state: State, a: Of<'taskChoice'>, reason: string): LogLine => {
+  const team = teamOf(state, a.player);
+  return {
     event: 'taskChoiceIgnored',
     fields: {
-      player: a.player, stop: a.stopId, choice: a.choice.type, reason,
+      team: team?.id,
+      leg: team?.leg,
+      player: a.player,
+      stop: a.stopId,
+      choice: a.choice.type,
+      reason,
     },
-  }],
+  };
+};
+const ignored = (state: State, a: Of<'taskChoice'>, reason: string): Result => ({
+  state, effects: [], logs: [ignoredLog(state, a, reason)],
 });
 
 const progressOf = (state: State, team: Team): string => (
   taskProgressText(state, team) ?? 'Task in progress.');
+
+/**
+ * Whether the team is at the box (spec §8.2): every online member within the presence radius, or
+ * only the performer while a Roadblock is under way. Used when the box is used and again when a
+ * menu button comes back, since the others may have walked off meanwhile.
+ */
+export function together(stop: Stop, team: Team, members: Members): boolean {
+  const box = clueBoxPos(stop);
+  const centre = { x: box.x + 0.5, y: box.y + 0.5, z: box.z + 0.5 };
+  const must = stop.type === 'roadblock' && team.task?.stopId === stop.id
+    ? members.filter((m) => m.id === team.performer) : members;
+  return must.every((m) => m.pos && distance(m.pos, centre) <= RACE.presenceRadius);
+}
 
 const hasTaskHere = (team: Team, stop: Stop): boolean => team.task?.stopId === stop.id;
 
@@ -172,12 +193,7 @@ function perform(state: State, a: Of<'taskChoice'>, team: Team, stop: Stop): Res
     return {
       state,
       effects: [say(a.player, 'performing', `${who} is performing this Roadblock.`)],
-      logs: [{
-        event: 'taskChoiceIgnored',
-        fields: {
-          player: a.player, stop: a.stopId, choice: 'perform', reason: 'alreadyChosen',
-        },
-      }],
+      logs: [ignoredLog(state, a, 'alreadyChosen')],
     };
   }
   if (!candidates(state, team, a.members).includes(choice.who)) {
@@ -237,10 +253,16 @@ function quit(state: State, team: Team, now: Playing, to: PlayerId): Result {
   };
 }
 
-function switchOption(state: State, team: Team, now: Playing, to: PlayerId): Result {
+function switchOption(
+  state: State,
+  team: Team,
+  now: Playing,
+  to: PlayerId,
+  held: Held,
+): Result {
   const other = offersOf(now.stop).find((o) => o.option !== now.offer.option);
   if (now.stop.type !== 'detour' || !other) return { state, effects: [] };
-  const out = beginTask(state, team, now.stop, other, to);
+  const out = beginTask(state, team, now.stop, other, to, undefined, held);
   return {
     ...out,
     logs: [...(out.logs ?? []), {
@@ -261,6 +283,7 @@ export function taskChoice(state: State, a: Of<'taskChoice'>): Result {
   }
   const stop = state.stops.find((s) => s.id === a.stopId);
   if (!stop || targetStop(state, team)?.id !== stop.id) return ignored(state, a, 'notYourStop');
+  if (!together(stop, team, a.members)) return ignored(state, a, 'notTogether');
   const { choice } = a;
   if (choice.type === 'option') return chooseOption(state, a, team, stop);
   if (choice.type === 'perform') return perform(state, a, team, stop);
@@ -297,7 +320,7 @@ export function taskChoice(state: State, a: Of<'taskChoice'>): Result {
       };
     }
     case 'switch':
-      return switchOption(state, team, now, a.player);
+      return switchOption(state, team, now, a.player, heldOf(a.members));
     case 'quit': {
       const seconds = (hoursFor(stop) * HOUR) / TICKS_PER_SECOND;
       return {

@@ -12,7 +12,7 @@ import { parseHuntTag } from '../tasks/hunt.js';
 import { kindOf } from '../tasks/index.js';
 
 import type { TaskKindName } from '../config.js';
-import type { TaskContext, TaskKind } from '../tasks/kind.js';
+import type { Held, TaskContext, TaskKind } from '../tasks/kind.js';
 import type {
   Action, Effect, LogLine, PlayerId, Result, State, Stop, TaskEvent, Team, ZoneName,
 } from '../types.js';
@@ -169,7 +169,8 @@ export function prepareZone(state: State, stop: Stop, offer: Offer): Result {
 /**
  * Starts `offer` for `team` at `stop`: the zone, the gear, the team's progress. A Roadblock has
  * a `performer`, who alone gets the gear; on a Detour every member does. `by` is who chose it
- * (a question kind asks them its first question).
+ * (a question kind asks them its first question). With `held`, only gear the players lack is
+ * given (a switch back to an option already played).
  */
 export function beginTask(
   state: State,
@@ -178,6 +179,7 @@ export function beginTask(
   offer: Offer,
   by: PlayerId,
   performer?: PlayerId,
+  held?: Held,
 ): Result {
   const zone = prepareZone(state, stop, offer);
   const current = zone.state.stops.find((s) => s.id === stop.id) ?? stop;
@@ -193,7 +195,7 @@ export function beginTask(
   const progress = started.progress[key] ?? offer.kind.initial;
   const effects: Effect[] = [
     ...zone.effects,
-    ...offer.kind.equip(ctx, players),
+    ...offer.kind.equip(ctx, players, held),
     {
       kind: 'title',
       to: players,
