@@ -282,3 +282,35 @@ test('switching to an option already played re-gives only the gear that is missi
   assert.deepEqual(red(back.state).task, { stopId: 2, option: 'A' });
   assert.deepEqual(back.effects.filter((e) => e.kind === 'giveVanilla'), []);
 });
+
+const muscleMind = DETOUR_PAIRS[2];
+const brainsBrawn = DETOUR_PAIRS[4];
+if (!muscleMind || !brainsBrawn) throw new Error('no pairs');
+
+test('Mind (option B, a quiz) can be played: its first question goes to who chose it', () => {
+  const state = at(1, { 2: { type: 'detour', options: [muscleMind.a, muscleMind.b] } });
+  const out = choose(state, 'b', 2, climb);
+  assert.deepEqual(red(out.state).task, { stopId: 2, option: 'B' });
+  const ask = out.effects.find((e) => e.kind === 'askQuestion');
+  assert.equal(ask?.kind === 'askQuestion' && ask.option, 'B');
+  assert.equal(ask?.kind === 'askQuestion' && ask.to, 'b');
+  assert.deepEqual(red(out.state).progress['2:B'], { answered: 0, wrong: 0 });
+});
+
+test('a Hunt menu has no gear button, and switching back spawns only the missing husks', () => {
+  const state = at(1, { 2: { type: 'detour', options: [brainsBrawn.b, brainsBrawn.a] } });
+  const started = choose(state, 'h', 2, aim).state;
+  assert.ok(!labels(menuTo(click(started, 'h', 2), 'h')).includes('Get gear again'));
+  const killed = reduce(started, { type: 'targetDied', tag: 'hunt:red:2:A', killer: 'h' }).state;
+  const there = choose(killed, 'h', 2, { type: 'switch' }).state;
+  const back = choose(there, 'h', 2, { type: 'switch' });
+  const spawn = back.effects.find((e) => e.kind === 'spawnTargets');
+  assert.deepEqual(spawn?.kind === 'spawnTargets' && [spawn.count, spawn.topUp], [2, true]);
+});
+
+test('a second option pick is told what the team is doing', () => {
+  const started = choose(at(1), 'h', 2, aim).state;
+  const second = choose(started, 'b', 2, climb);
+  assert.equal(second.state, started);
+  assert.match(notes(second).join(' '), /Your team is doing Aim/);
+});

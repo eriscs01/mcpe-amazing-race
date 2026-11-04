@@ -51,6 +51,11 @@ export interface TaskKind {
    */
   equip: (ctx: TaskContext, players: PlayerId[], held?: Held) => Effect[];
   /**
+   * What the team needs on entering the task, first or again after a switch (Hunt: its husks,
+   * the missing ones only). Unlike `equip` it is the team's, not a player's gear.
+   */
+  enter?: (progress: TaskProgress, ctx: TaskContext) => Effect[];
+  /**
    * The clue-box menu button for what the kind does at the box (Gather: "Hand in"; Quiz and
    * Recall: "Answer questions"). A kind without one acts on the box use itself (a Hunt top-up).
    */

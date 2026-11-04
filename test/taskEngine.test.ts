@@ -140,7 +140,7 @@ test('a Detour starts its first option; Brawn first spawns the team\'s husks', (
     name: '§cRed Target§r',
     at: { x: 194, y: 71, z: -20 },
     count: 3,
-    topUp: false,
+    topUp: true,
   });
   assert.ok(!kinds(begun.effects).includes('zoneBlocks'), 'husks need no blocks');
   assert.ok(!kinds(begun.effects).includes('giveVanilla'));

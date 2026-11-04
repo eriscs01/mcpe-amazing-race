@@ -185,8 +185,9 @@ test('hunt: tags round-trip and carry the team, stop and zone', () => {
   assert.equal(parseHuntTag('hunt:red:2:C'), undefined);
 });
 
-test('hunt: starting spawns 3 husks (4 from leg 3) named and tagged for the team', () => {
-  const [spawn, ...rest] = hunt.equip(huntCtx(), ['h', 'b']);
+test('hunt: entering spawns 3 husks (4 from leg 3) named and tagged for the team', () => {
+  assert.deepEqual(hunt.equip(huntCtx(), ['h', 'b']), [], 'husks are the team\'s, not gear');
+  const [spawn, ...rest] = hunt.enter?.(hunt.initial, huntCtx()) ?? [];
   assert.equal(rest.length, 0, 'one spawn for the team, not one per player');
   assert.deepEqual(spawn, {
     kind: 'spawnTargets',
@@ -194,10 +195,12 @@ test('hunt: starting spawns 3 husks (4 from leg 3) named and tagged for the team
     name: '§cRed Target§r',
     at: { x: 94, y: 71, z: -20 },
     count: 3,
-    topUp: false,
+    topUp: true,
   });
-  const late = hunt.equip(huntCtx({ leg: 3 }), ['h'])[0];
+  const late = hunt.enter?.(hunt.initial, huntCtx({ leg: 3 }))[0];
   assert.equal(late?.kind === 'spawnTargets' && late.count, 4);
+  const back = hunt.enter?.({ kills: 2 }, huntCtx())[0];
+  assert.deepEqual(back?.kind === 'spawnTargets' && [back.count, back.topUp], [1, true]);
   assert.deepEqual(hunt.build(huntCtx(), new Rng(1)), { ops: [] });
 });
 

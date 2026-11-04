@@ -196,6 +196,7 @@ export function beginTask(
   const effects: Effect[] = [
     ...zone.effects,
     ...offer.kind.equip(ctx, players, held),
+    ...(offer.kind.enter?.(progress, ctx) ?? []),
     {
       kind: 'title',
       to: players,

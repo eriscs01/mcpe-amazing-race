@@ -213,7 +213,14 @@ function perform(state: State, a: Of<'taskChoice'>, team: Team, stop: Stop): Res
 function chooseOption(state: State, a: Of<'taskChoice'>, team: Team, stop: Stop): Result {
   const { choice } = a;
   if (stop.type !== 'detour' || choice.type !== 'option') return ignored(state, a, 'notDetour');
-  if (hasTaskHere(team, stop)) return ignored(state, a, 'alreadyStarted');
+  if (hasTaskHere(team, stop)) {
+    const label = offersOf(stop).find((o) => o.option === team.task?.option)?.label ?? 'a task';
+    return {
+      state,
+      effects: [say(a.player, 'alreadyStarted', `Your team is doing ${label}.`)],
+      logs: [ignoredLog(state, a, 'alreadyStarted')],
+    };
+  }
   const offer = offersOf(stop).find((o) => o.option === choice.option);
   if (!offer) return ignored(state, a, 'noSuchOption');
   return beginTask(state, team, stop, offer, a.player);

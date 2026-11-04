@@ -277,6 +277,10 @@ Run with 2 players on 1.21.90+ at a Detour and a Roadblock (`/scriptevent race:d
 - [ ] Drop the bow, use the box, Get gear again: a bow and the missing arrows are given, no
       duplicates. Hand in with the items in the inventory when the menu opened but moved away
       before pressing the button: only what is held at the press counts.
+- [ ] Choose Mind (Muscle/Mind) and answer a question. Two players pick different options at
+      once: the second is told what the team is doing.
+- [ ] Hunt: the menu has no Get gear again; switch to the other option and back: no extra
+      husks beyond the kills still missing.
 - [ ] A menu left open while a teammate finished the task does nothing when pressed (log
       `taskChoiceIgnored`).
 
