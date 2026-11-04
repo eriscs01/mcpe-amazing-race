@@ -7,7 +7,9 @@ import {
 import {
   broadcast, lockMovement, showSidebar, showTitle, startRacers,
 } from './race.js';
-import { buildZone, giveVanilla } from './tasks.js';
+import {
+  buildZone, giveVanilla, spawnTargets, takeVanilla,
+} from './tasks.js';
 
 import type { Logger } from '../core/log.js';
 import type { Effect } from '../core/types.js';
@@ -44,6 +46,12 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       break;
     case 'zoneBlocks':
       buildZone(effect, log, host.zoneFailed);
+      break;
+    case 'spawnTargets':
+      spawnTargets(effect, log);
+      break;
+    case 'takeVanilla':
+      takeVanilla(effect, log);
       break;
     case 'takeItem': {
       // An offline player's copy stays, but it is inert: Race Control works only for the host.

@@ -3,10 +3,15 @@
 import { ItemStack, Player, world } from '@minecraft/server';
 
 import { DimensionWorld } from './blockWorld.js';
+import { takeCounted } from './items.js';
 import { online } from './online.js';
 import { OVERWORLD } from './race.js';
 import { applyOps } from '../core/arena/layout.js';
+import { ENTITY } from '../core/config.js';
 import { guard } from '../core/log.js';
+import { parseHuntTag } from '../core/tasks/hunt.js';
+
+import type { Entity } from '@minecraft/server';
 
 import type { Logger } from '../core/log.js';
 import type { Session } from '../core/session.js';
@@ -45,7 +50,43 @@ export function giveVanilla(effect: Of<'giveVanilla'>, log: Logger): void {
   log.info('itemGiven', { player: effect.to, item: effect.item, count: effect.count });
 }
 
-/** Racers' shots and broken blocks, handed to the core as task events. */
+/** Husks that are still fighting: valid, and not on their way out. */
+const alive = (entity: Entity): boolean => entity.isValid
+  && (entity.getComponent('minecraft:health')?.currentValue ?? 1) > 0;
+
+/** Spawns a team's Hunt husks (or, topping up, only the ones missing) at the zone centre. */
+export function spawnTargets(effect: Of<'spawnTargets'>, log: Logger): void {
+  try {
+    const dimension = world.getDimension(OVERWORLD);
+    const living = effect.topUp ? dimension.getEntities({ tags: [effect.tag] }).filter(alive) : [];
+    const have = living.length;
+    const missing = Math.max(0, effect.count - have);
+    const at = { x: effect.at.x + 0.5, y: effect.at.y, z: effect.at.z + 0.5 };
+    for (let i = 0; i < missing; i += 1) {
+      const husk = dimension.spawnEntity(ENTITY.husk, at);
+      husk.nameTag = effect.name;
+      husk.addTag(effect.tag);
+    }
+    log.info('targetsSpawned', {
+      tag: effect.tag, spawned: missing, alive: have, topUp: effect.topUp,
+    });
+  } catch (error) {
+    log.error('spawnTargetsFailed', error, { tag: effect.tag, count: effect.count });
+  }
+}
+
+/** Removes handed-in items from a player's inventory; the core decided how many. */
+export function takeVanilla(effect: Of<'takeVanilla'>, log: Logger): void {
+  const player = online(effect.from);
+  const removed = player ? takeCounted(player, effect.item, effect.count) : 0;
+  const fields = {
+    player: effect.from, item: effect.item, wanted: effect.count, removed,
+  };
+  if (removed === effect.count) log.info('itemsTaken', fields);
+  else log.warn('itemsTakenShort', { ...fields, online: player !== undefined });
+}
+
+/** Racers' shots, broken blocks and Hunt kills, handed to the core as task events. */
 export function wireTaskEvents(session: Session): void {
   const racer = (id: string): boolean => session.state?.phase === 'running'
     && session.state.players[id]?.teamId !== undefined;
@@ -70,6 +111,22 @@ export function wireTaskEvents(session: Session): void {
       event: {
         type: 'blockBroken', block: ev.block.location, id: ev.brokenBlockPermutation.type.id,
       },
+    });
+  }));
+
+  // Not filtered by type: a husk that turned into a zombie in water still carries its tag.
+  world.afterEvents.entityDie.subscribe(guard(session.log, 'targetDied', (ev) => {
+    const dead = ev.deadEntity;
+    if (!dead.isValid) {
+      // Nothing can be read from it; a lost kill is recovered by using the clue box again.
+      session.log.warn('targetDieInvalid', { type: dead.typeId });
+      return;
+    }
+    const tag = dead.getTags().find((t) => parseHuntTag(t) !== undefined);
+    if (!tag) return;
+    const killer = ev.damageSource.damagingEntity;
+    session.dispatch({
+      type: 'targetDied', tag, ...(killer instanceof Player ? { killer: killer.id } : {}),
     });
   }));
 }

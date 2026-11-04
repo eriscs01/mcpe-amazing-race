@@ -128,6 +128,7 @@ export const ENTITY = {
   villagerV2: 'minecraft:villager_v2',
   ironGolem: 'minecraft:iron_golem',
   pillager: 'minecraft:pillager',
+  husk: 'minecraft:husk',
 } as const satisfies Record<string, `minecraft:${string}`>;
 
 export type BlockId = (typeof BLOCK)[keyof typeof BLOCK];
@@ -533,6 +534,8 @@ export const TASK = {
     riseEvery: 2,
   },
   haystack: { size: 5, height: 3, maxHidden: 9 },
+  /** Husks to kill: more from leg 3 onward. */
+  hunt: { early: 3, late: 4 },
 } as const;
 
 // ── Race start and clue boxes (spec §8.1, §8.2) ─────────────────────────────

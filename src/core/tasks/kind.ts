@@ -23,6 +23,8 @@ export interface TaskContext {
   hidden: readonly Vec3[];
   /** The option's name ("Aim") or the kind's name for a Roadblock; prefixes the HUD text. */
   label: string;
+  /** The team playing, for the kinds that act on it (Hunt names and tags its husks). */
+  team?: { id: string; name: string; color: string };
 }
 
 /** The blocks of a zone, built once for every team; `hidden` is what the kind keeps hidden. */
@@ -40,6 +42,11 @@ export interface TaskKind {
   equip: (ctx: TaskContext, players: PlayerId[]) => Effect[];
   /** Returns `progress` itself when the event changes nothing. */
   onEvent: (progress: TaskProgress, event: TaskEvent, ctx: TaskContext) => TaskProgress;
+  /**
+   * What the world should do about an event, judged against the progress before it: respawn a
+   * husk, take handed-in items, say what is missing. Optional; most kinds have no response.
+   */
+  respond?: (event: TaskEvent, progress: TaskProgress, ctx: TaskContext) => Effect[];
   done: (progress: TaskProgress, ctx: TaskContext) => boolean;
   progressText: (progress: TaskProgress, ctx: TaskContext) => string;
 }

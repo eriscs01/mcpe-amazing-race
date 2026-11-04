@@ -6,7 +6,9 @@ import { test } from 'node:test';
 import {
   boxOf, racing, stopOf,
 } from './helpers/race.js';
-import { ARENA, BLOCK, DETOUR_PAIRS } from '../src/core/config.js';
+import {
+  ARENA, BLOCK, DETOUR_PAIRS, ITEM,
+} from '../src/core/config.js';
 import { hudFrames } from '../src/core/hud.js';
 import { reduce } from '../src/core/race/engine.js';
 import { archeryTargets } from '../src/core/tasks/archery.js';
@@ -26,15 +28,18 @@ const pair = (n: number): (typeof DETOUR_PAIRS)[number] => {
 };
 const aimClimb = pair(0);
 const fightFind = pair(1);
+const muscleMind = pair(2);
+const brainsBrawn = pair(4);
+const findFirst: [DetourOption, DetourOption] = [fightFind.b, fightFind.a];
 
-/** Stop 2 is Aim/Climb, stop 6 Fight/Find (Find is the only playable one), 3 an archery
+/** Stop 2 is Aim/Climb, stop 6 Find/Fight (Find first), 3 an archery
  * Roadblock, 7 a hunt Roadblock; all teams are heading for stop 2 or 3 as set by `at`. */
 function course(): State {
   const state = racing();
   const task = new Map<number, Stop['task']>([
     [2, { type: 'detour', options: [aimClimb.a, aimClimb.b] }],
     [3, { type: 'roadblock', kind: 'archery' }],
-    [6, { type: 'detour', options: [fightFind.a, fightFind.b] }],
+    [6, { type: 'detour', options: findFirst }],
     [7, { type: 'roadblock', kind: 'hunt' }],
   ]);
   return { ...state, stops: state.stops.map((s) => ({ ...s, task: task.get(s.id) })) };
@@ -44,6 +49,10 @@ type Stop = State['stops'][number];
 const at = (state: State, step: number, teams = ['red', 'blue']): State => ({
   ...state,
   teams: state.teams.map((t) => (teams.includes(t.id) ? { ...t, step } : t)),
+});
+
+const withTask = (state: State, stopId: number, task: Stop['task']): State => ({
+  ...state, stops: state.stops.map((st) => (st.id === stopId ? { ...st, task } : st)),
 });
 
 const click = (state: State, player: string, stopId: number, members = ['h', 'b']): Result => {
@@ -120,26 +129,32 @@ test('the Detour box starts its first playable option: zone built, bow and arrow
   assert.ok(out.logs?.some((l) => l.event === 'taskStarted'));
 });
 
-test('a Detour whose first option is not playable yet starts the second (Fight/Find: Find)', () => {
-  const base = course();
-  const state = {
-    ...base, teams: base.teams.map((t) => (t.id === 'red' ? { ...t, leg: 2, step: 1 } : t)),
-  };
-  const legTwo = { ...state, leg: { n: 2, phase: 'racing' as const } };
-  const begun = click(legTwo, 'h', 6);
+test('a Detour whose first option is not playable yet starts the second (Brawn)', () => {
+  const options: [DetourOption, DetourOption] = [brainsBrawn.a, brainsBrawn.b];
+  const state = withTask(at(course(), 1), 2, { type: 'detour', options });
+  const begun = click(state, 'h', 2);
   assert.equal(begun.refusal, undefined);
-  assert.deepEqual(teamOf(begun.state, 'red').task, { stopId: 6, option: 'B' });
-  const hidden = stopOf(begun.state, 6).zones?.B?.hidden;
-  assert.equal(hidden?.length, 2, 'one wool per team');
-  const zone = begun.effects.find((e) => e.kind === 'zoneBlocks');
-  assert.equal(zone?.kind === 'zoneBlocks' && zone.zone, 'B');
+  assert.deepEqual(teamOf(begun.state, 'red').task, { stopId: 2, option: 'B' });
+  assert.deepEqual(stopOf(begun.state, 2).zones?.B, { kind: 'hunt' });
+  const spawn = begun.effects.find((e) => e.kind === 'spawnTargets');
+  assert.deepEqual(spawn, {
+    kind: 'spawnTargets',
+    tag: 'hunt:red:2:B',
+    name: '§cRed Target§r',
+    at: { x: 206, y: 71, z: -20 },
+    count: 3,
+    topUp: false,
+  });
+  assert.ok(!kinds(begun.effects).includes('zoneBlocks'), 'husks need no blocks');
+  assert.ok(!kinds(begun.effects).includes('giveVanilla'));
+  const title = begun.effects.find((e) => e.kind === 'title');
+  assert.match(title?.kind === 'title' ? title.text : '', /Brawn: targets 0\/3/);
 });
 
-test('hunt stops still say they come later', () => {
+test('quiz and recall stops still say they come later', () => {
   const base = at(course(), 2, ['red']);
-  const task = { type: 'roadblock' as const, kind: 'hunt' as const };
-  const hunt = { ...base, stops: base.stops.map((s) => (s.id === 3 ? { ...s, task } : s)) };
-  const out = click(hunt, 'h', 3);
+  const quiz = withTask(base, 3, { type: 'roadblock', kind: 'quiz' });
+  const out = click(quiz, 'h', 3);
   assert.equal(out.refusal, 'stopNotReady');
 });
 
@@ -252,7 +267,7 @@ function digging(): State {
 
 test('haystack: breaking a hidden wool finishes it; the broken wool leaves the hidden list', () => {
   const state = digging();
-  const hidden = stopOf(state, 6).zones?.B?.hidden ?? [];
+  const hidden = stopOf(state, 6).zones?.A?.hidden ?? [];
   const [first, second] = hidden;
   if (!first || !second) throw new Error('two hidden');
   const wrong = event(state, 'h', {
@@ -261,7 +276,7 @@ test('haystack: breaking a hidden wool finishes it; the broken wool leaves the h
   assert.equal(wrong.state, state);
   const done = event(state, 'h', { type: 'blockBroken', block: first, id: BLOCK.yellowWool });
   assert.equal(teamOf(done.state, 'red').step, 2);
-  assert.deepEqual(stopOf(done.state, 6).zones?.B?.hidden, [second]);
+  assert.deepEqual(stopOf(done.state, 6).zones?.A?.hidden, [second]);
   assert.ok(!kinds(done.effects).includes('zoneBlocks'), 'nobody needs a refill yet');
 });
 
@@ -271,13 +286,13 @@ test('haystack: the pile is rebuilt when the wool runs out and another team digs
     ...first,
     teams: first.teams.map((t) => (t.id === 'blue' ? { ...t, leg: 2, step: 1 } : t)),
   }, 'c', 6, ['c', 'd']).state;
-  const [a, b] = stopOf(begun, 6).zones?.B?.hidden ?? [];
+  const [a, b] = stopOf(begun, 6).zones?.A?.hidden ?? [];
   if (!a || !b) throw new Error('two hidden');
   const one = event(begun, 'h', { type: 'blockBroken', block: a, id: BLOCK.yellowWool }).state;
   const out = event(one, 'b', { type: 'blockBroken', block: b, id: BLOCK.yellowWool });
   const refill = out.effects.find((e) => e.kind === 'zoneBlocks');
   assert.ok(refill, 'a rebuild is ordered');
-  const fresh = stopOf(out.state, 6).zones?.B;
+  const fresh = stopOf(out.state, 6).zones?.A;
   assert.equal(fresh?.hidden?.length, 2);
   assert.equal(fresh?.refills, 1);
   assert.equal(teamOf(out.state, 'blue').step, 1, 'blue is still digging');
@@ -286,20 +301,20 @@ test('haystack: the pile is rebuilt when the wool runs out and another team digs
 
 test('haystack: a team that starts on an emptied pile gets it rebuilt', () => {
   const first = digging();
-  const [a, b] = stopOf(first, 6).zones?.B?.hidden ?? [];
+  const [a, b] = stopOf(first, 6).zones?.A?.hidden ?? [];
   if (!a || !b) throw new Error('two hidden');
   const empty = event(
     event(first, 'h', { type: 'blockBroken', block: a, id: BLOCK.yellowWool }).state,
     'b',
     { type: 'blockBroken', block: b, id: BLOCK.yellowWool },
   ).state;
-  assert.deepEqual(stopOf(empty, 6).zones?.B?.hidden, []);
+  assert.deepEqual(stopOf(empty, 6).zones?.A?.hidden, []);
   const late = click({
     ...empty,
     teams: empty.teams.map((t) => (t.id === 'blue' ? { ...t, leg: 2, step: 1 } : t)),
   }, 'c', 6, ['c', 'd']);
   assert.ok(kinds(late.effects).includes('zoneBlocks'));
-  assert.equal(stopOf(late.state, 6).zones?.B?.hidden?.length, 2);
+  assert.equal(stopOf(late.state, 6).zones?.A?.hidden?.length, 2);
 });
 
 test('the HUD task line shows the progress of the team\'s task', () => {
@@ -393,4 +408,163 @@ test('while a Roadblock is under way only its performer must be near the box', (
   const ok = call([{ id: 'b', pos: box }, { id: 'h', pos: far }]);
   assert.equal(ok.refusal, undefined);
   assert.equal(call([{ id: 'b', pos: far }, { id: 'h', pos: box }]).refusal, 'notTogether');
+});
+
+const brawn = (): State => click(
+  withTask(at(course(), 1), 2, { type: 'detour', options: [brainsBrawn.b, brainsBrawn.a] }),
+  'h',
+  2,
+).state;
+const died = (state: State, killer?: string, tag = 'hunt:red:2:A'): Result => reduce(state, {
+  type: 'targetDied', tag, ...(killer ? { killer } : {}),
+});
+const spawns = (out: Result) => out.effects.filter((e) => e.kind === 'spawnTargets');
+
+test('hunt: kills by the team count; the third finishes the Detour', () => {
+  let state = brawn();
+  assert.deepEqual(teamOf(state, 'red').task, { stopId: 2, option: 'A' });
+  for (const killer of ['h', 'b']) {
+    const out = died(state, killer);
+    assert.equal(spawns(out).length, 0, 'a counted kill is not respawned');
+    state = out.state;
+  }
+  assert.equal(teamOf(state, 'red').progress['2:A']?.kills, 2);
+  assert.equal(teamOf(state, 'red').step, 1);
+  const done = died(state, 'h');
+  const red = teamOf(done.state, 'red');
+  assert.equal(red.step, 2);
+  assert.equal(red.task, undefined);
+  assert.ok(done.logs?.some((l) => l.event === 'taskDone'));
+  assert.ok(kinds(done.effects).includes('sidebar'));
+});
+
+test('hunt: a husk killed by anyone else, or by nothing, is respawned', () => {
+  const state = brawn();
+  for (const killer of ['c', 'e', undefined]) {
+    const out = died(state, killer);
+    assert.equal(out.state, state, 'no progress');
+    assert.deepEqual(
+      spawns(out).map((e) => e.kind === 'spawnTargets' && [e.count, e.topUp]),
+      [[1, false]],
+    );
+    assert.ok(out.logs?.some((l) => l.event === 'targetLost'));
+  }
+});
+
+test('hunt: a tag for another stop, team or a paused race is ignored', () => {
+  const state = brawn();
+  const tags = ['hunt:red:6:A', 'hunt:red:2:B', 'hunt:pink:2:A', 'hunt:blue:2:A', 'garbage'];
+  for (const tag of tags) {
+    const out = died(state, 'h', tag);
+    assert.equal(out.state, state, tag);
+    assert.equal(out.effects.length, 0, tag);
+  }
+  const paused = { ...state, phase: 'paused' as const };
+  assert.equal(died(paused, 'h').state, paused);
+});
+
+test('hunt: on a Roadblock only the performer\'s kills count', () => {
+  const hunting = withTask(course(), 3, { type: 'roadblock', kind: 'hunt' });
+  const state = click(at(hunting, 2, ['red']), 'b', 3);
+  assert.equal(spawns(state)[0]?.kind === 'spawnTargets' && spawns(state)[0]?.count, 3);
+  const tag = 'hunt:red:3:A';
+  const teammate = died(state.state, 'h', tag);
+  assert.equal(teammate.state, state.state);
+  assert.equal(spawns(teammate).length, 1, 'respawned');
+  assert.equal(teamOf(died(state.state, 'b', tag).state, 'red').progress['3:A']?.kills, 1);
+});
+
+test('hunt: using the box again tops the husks up and shows the progress', () => {
+  const state = brawn();
+  const one = died(state, 'h').state;
+  const again = click(one, 'b', 2);
+  assert.equal(again.refusal, undefined);
+  const [top] = spawns(again);
+  assert.deepEqual(top?.kind === 'spawnTargets' && [top.count, top.topUp], [2, true]);
+  const note = again.effects.find((e) => e.kind === 'notify');
+  assert.match(note?.kind === 'notify' ? note.text : '', /Brawn: targets 1\/3/);
+  assert.equal(teamOf(again.state, 'red').progress['2:A']?.kills, 1);
+});
+
+test('hunt: the HUD task line shows the kills', () => {
+  const { state } = died(brawn(), 'h');
+  const view = {
+    id: 'h', head: { x: 0, y: 71, z: 0 }, yaw: 0, overworld: true,
+  };
+  const frame = hudFrames(state, [view], { trail: false })[0]?.text;
+  assert.match(frame?.split('\n')[1] ?? '', /Brawn: targets 1\/3/);
+});
+
+const muscle = (): State => click(
+  withTask(at(course(), 1), 2, { type: 'detour', options: [muscleMind.a, muscleMind.b] }),
+  'h',
+  2,
+).state;
+const handedIn = (
+  state: State,
+  items: Record<string, Record<string, number>>,
+  player = 'h',
+): Result => {
+  const box = boxOf(state, 2);
+  return reduce(state, {
+    type: 'interactClue',
+    player,
+    pos: box,
+    members: ['h', 'b'].map((id) => ({ id, pos: box, items: items[id] ?? {} })),
+  });
+};
+const seeds = ITEM.wheatSeeds;
+
+test('gather: starting shows what to bring from the stop\'s terrain and gives nothing', () => {
+  const begun = click(
+    withTask(at(course(), 1), 2, { type: 'detour', options: [muscleMind.a, muscleMind.b] }),
+    'h',
+    2,
+  );
+  assert.deepEqual(teamOf(begun.state, 'red').task, { stopId: 2, option: 'A' });
+  assert.deepEqual(kinds(begun.effects).filter((k) => k !== 'title'), []);
+  const title = begun.effects.find((e) => e.kind === 'title');
+  assert.match(title?.kind === 'title' ? title.text : '', /Muscle: hand in 10 wheat seeds/);
+});
+
+test('gather: a hand-in with the pooled items takes exactly the count and moves on', () => {
+  const state = muscle();
+  const out = handedIn(state, {
+    h: { [seeds]: 6, [ITEM.dirt]: 64 }, b: { [seeds]: 7 },
+  });
+  assert.equal(out.refusal, undefined);
+  const takes = out.effects.filter((e) => e.kind === 'takeVanilla');
+  assert.deepEqual(takes, [
+    {
+      kind: 'takeVanilla', from: 'h', item: seeds, count: 6,
+    },
+    {
+      kind: 'takeVanilla', from: 'b', item: seeds, count: 4,
+    },
+  ]);
+  const order = kinds(out.effects);
+  assert.ok(order.indexOf('takeVanilla') < order.indexOf('title'), 'items go before the next clue');
+  const red = teamOf(out.state, 'red');
+  assert.equal(red.step, 2);
+  assert.equal(red.task, undefined);
+  assert.ok(out.logs?.some((l) => l.event === 'taskDone'));
+});
+
+test('gather: a short hand-in says what is held and changes nothing', () => {
+  const state = muscle();
+  const out = handedIn(state, { h: { [seeds]: 4 }, b: { [seeds]: 3, [ITEM.dirt]: 64 } });
+  assert.equal(out.state, state);
+  assert.deepEqual(kinds(out.effects), ['notify']);
+  const note = out.effects[0];
+  assert.equal(note?.kind === 'notify' && note.text, 'Muscle: you hold 7 of 10 wheat seeds.');
+  assert.equal(note?.kind === 'notify' && note.to, 'h');
+});
+
+test('gather: a team that holds the items before starting still starts first', () => {
+  const state = at(course(), 1);
+  const ready = withTask(state, 2, { type: 'detour', options: [muscleMind.a, muscleMind.b] });
+  const out = handedIn(ready, { h: { [seeds]: 10 } });
+  assert.deepEqual(teamOf(out.state, 'red').task, { stopId: 2, option: 'A' });
+  assert.equal(teamOf(out.state, 'red').step, 1, 'the first use starts, the second hands in');
+  assert.ok(!kinds(out.effects).includes('takeVanilla'));
 });

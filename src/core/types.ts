@@ -71,7 +71,13 @@ export interface ZoneState {
 /** What a racer did that a task may care about (spec §7.1). */
 export type TaskEvent = { type: 'projectileHit'; block: Vec3; shooter: Vec3 }
   | { type: 'blockBroken'; block: Vec3; id: string }
-  | { type: 'standing'; pos: Vec3 };
+  | { type: 'standing'; pos: Vec3 }
+  /** Hunt: an eligible racer killed one of the team's husks. */
+  | { type: 'targetKilled' }
+  /** Hunt: a husk of the team died to anyone else (or to nothing); it is respawned. */
+  | { type: 'targetLost' }
+  /** An eligible racer used the clue box again; `held` is each eligible member's inventory. */
+  | { type: 'boxUsed'; by: PlayerId; held: Record<PlayerId, Record<string, number>> };
 
 export interface Stop {
   id: number;
@@ -229,7 +235,11 @@ export type Action = { type: 'tick' }
    * without `pos` is in another dimension.
    */
   | {
-    type: 'interactClue'; player: PlayerId; pos: Vec3; members: { id: PlayerId; pos?: Vec3 }[];
+    type: 'interactClue';
+    player: PlayerId;
+    pos: Vec3;
+    /** `items`: what the member carries (item id to count), for a Gather hand-in. */
+    members: { id: PlayerId; pos?: Vec3; items?: Record<string, number> }[];
   }
   /**
    * Where the online racers are, sent by the adapter on an interval. One without `pos` is in
@@ -241,7 +251,12 @@ export type Action = { type: 'tick' }
   /** A racer's action a task may count (a shot, a broken block); the core decides if it does. */
   | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
   /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
-  | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName };
+  | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName }
+  /**
+   * A Hunt husk died. `tag` is the one the team's husks carry (`huntTag`); `killer` is the player
+   * who dealt the damage, if any. The core decides whether the kill counts.
+   */
+  | { type: 'targetDied'; tag: string; killer?: PlayerId };
 
 /** The world's settings before the race changed them (restored when it ends, spec §12). */
 export interface RaceSnapshot {
@@ -272,6 +287,15 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   | { kind: 'giveVanilla'; to: PlayerId; item: string; count: number }
   /** Builds a task zone's blocks; the team is standing there, so the chunks are loaded. */
   | { kind: 'zoneBlocks'; stop: number; zone: ZoneName; ops: Op[] }
+  /**
+   * Hunt husks for a team: named `name`, carrying `tag`, at `at`. With `topUp`, `count` is the
+   * number that should be alive and only the missing ones are spawned.
+   */
+  | {
+    kind: 'spawnTargets'; tag: string; name: string; at: Vec3; count: number; topUp: boolean;
+  }
+  /** Removes up to `count` of a vanilla item from the player's inventory (a Gather hand-in). */
+  | { kind: 'takeVanilla'; from: PlayerId; item: string; count: number }
   /** Starts the generation job; the adapter reports back with courseGenerated or courseFailed. */
   | {
     kind: 'generateCourse';

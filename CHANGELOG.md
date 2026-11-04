@@ -43,6 +43,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   rebuilt when it runs out), counted for any member on a Detour and the performer on a
   Roadblock, with progress on the HUD task line. A Detour or Roadblock box starts its task
   directly until the full flow arrives (G11).
+- Combat and inventory tasks: Hunt (3 or 4 husks named and tagged for the team, a kill by an
+  eligible racer counts, any other death respawns it, using the box again tops up missing
+  husks) and Gather (the terrain's item list, handed in at the clue box from the team's pooled
+  inventory, exactly the required count removed) (G12).
 
 ## [0.1.0]
 

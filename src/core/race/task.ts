@@ -8,6 +8,7 @@ import { zonesFor } from '../arena/layout.js';
 import { targetStop } from '../clue.js';
 import { BLOCK } from '../config.js';
 import { Rng } from '../rng.js';
+import { parseHuntTag } from '../tasks/hunt.js';
 import { kindOf } from '../tasks/index.js';
 
 import type { TaskKindName } from '../config.js';
@@ -40,7 +41,7 @@ const offersOf = (stop: Stop): Offer[] => {
   return task?.type === 'roadblock' ? make('A', titled(task.kind), task.kind) : [];
 };
 
-/** Whether a stop has a task that can be played now (Hunt, Gather, Quiz and Recall come later). */
+/** Whether a stop has a task that can be played now (Quiz and Recall come later). */
 export const playable = (stop: Stop): boolean => offersOf(stop).length > 0;
 
 const teamOf = (state: State, id: PlayerId): Team | undefined => {
@@ -60,7 +61,12 @@ const merge = (acc: Result, out: Result): Result => ({
   logs: [...(acc.logs ?? []), ...(out.logs ?? [])],
 });
 
-const contextOf = (state: State, stop: Stop, offer: Offer): TaskContext | undefined => {
+const contextOf = (
+  state: State,
+  stop: Stop,
+  offer: Offer,
+  team?: Team,
+): TaskContext | undefined => {
   const zone = zonesFor(stop.type, stop.pos).find((z) => z.zone === offer.option);
   if (!zone) return undefined;
   return {
@@ -71,12 +77,13 @@ const contextOf = (state: State, stop: Stop, offer: Offer): TaskContext | undefi
     teams: state.teams.length,
     hidden: stop.zones?.[offer.option]?.hidden ?? [],
     label: offer.label,
+    ...(team ? { team: { id: team.id, name: team.name, color: team.color } } : {}),
   };
 };
 
 /** For an offer just made from the stop itself, whose zone always exists. */
-const requireContext = (state: State, stop: Stop, offer: Offer): TaskContext => {
-  const ctx = contextOf(state, stop, offer);
+const requireContext = (state: State, stop: Stop, offer: Offer, team?: Team): TaskContext => {
+  const ctx = contextOf(state, stop, offer, team);
   if (!ctx) throw new Error(`stop ${stop.id} has no zone ${offer.option}`);
   return ctx;
 };
@@ -107,7 +114,7 @@ function playing(state: State, team: Team): Playing | undefined {
     return undefined;
   }
   const offer = offersOf(stop).find((o) => o.option === mine.option);
-  const ctx = offer ? contextOf(state, stop, offer) : undefined;
+  const ctx = offer ? contextOf(state, stop, offer, team) : undefined;
   // A task whose option or zone no longer exists is treated as none (never thrown into a tick).
   return offer && ctx ? {
     stop, offer, ctx, key: keyOf(stop, mine.option),
@@ -138,9 +145,10 @@ function prepareZone(state: State, stop: Stop, offer: Offer): Result {
   const built: Stop = { ...stop, zones: { ...stop.zones, [offer.option]: zone } };
   return {
     state: replaceStop(state, built),
-    effects: [{
+    // Hunt and Gather build nothing: there is no block to place.
+    effects: build.ops.length > 0 ? [{
       kind: 'zoneBlocks', stop: stop.id, zone: offer.option, ops: build.ops,
-    }],
+    }] : [],
     logs: [{
       event: have ? 'zoneRefilled' : 'zoneBuilt',
       fields: {
@@ -165,16 +173,14 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
     progress: { ...team.progress, [key]: team.progress[key] ?? offer.kind.initial },
   };
   const players = roadblock ? [performer] : team.members;
+  const ctx = requireContext(zone.state, current, offer, team);
   const effects: Effect[] = [
     ...zone.effects,
-    ...offer.kind.equip(requireContext(zone.state, current, offer), players),
+    ...offer.kind.equip(ctx, players),
     {
       kind: 'title',
       to: players,
-      text: offer.kind.progressText(
-        started.progress[key] ?? offer.kind.initial,
-        requireContext(zone.state, current, offer),
-      ),
+      text: offer.kind.progressText(started.progress[key] ?? offer.kind.initial, ctx),
       chat: true,
     },
   ];
@@ -187,35 +193,14 @@ function beginTask(state: State, team: Team, stop: Stop, performer: PlayerId): R
   return { state: replaceTeam(zone.state, started), effects, logs };
 }
 
-/**
- * A racer used the clue box of a Detour or Roadblock whose task is playable and the team is
- * together: start the task, or show its progress when it is already under way.
- */
-export function useTaskBox(state: State, team: Team, stop: Stop, player: PlayerId): Result {
-  if (team.task?.stopId === stop.id) {
-    // A zone whose build failed was forgotten (`zoneBuildFailed`); using the box again retries.
-    const offer = offersOf(stop).find((o) => o.option === team.task?.option);
-    const zone = offer ? prepareZone(state, stop, offer) : { state, effects: [] };
-    const text = taskProgressText(zone.state, team) ?? 'Task in progress.';
-    return {
-      ...zone,
-      effects: [...zone.effects, {
-        kind: 'notify', to: player, code: 'taskProgress', text,
-      }],
-    };
-  }
-  return beginTask(state, team, stop, player);
-}
-
-/** Applies a racer's action to the team's task; finishing it clears the stop. */
-function advanceTask(state: State, teamId: string, player: PlayerId, event: TaskEvent): Result {
-  const team = state.teams.find((t) => t.id === teamId);
-  const now = team ? playing(state, team) : undefined;
-  if (!team || !now || !eligible(team, now.stop, player)) return { state, effects: [] };
+/** Applies an event to the team's task: its progress, the kind's response, and completion. */
+function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): Result {
   const { kind } = now.offer;
   const before = team.progress[now.key] ?? kind.initial;
   const after = kind.onEvent(before, event, now.ctx);
-  if (after === before) return { state, effects: [] };
+  // The response comes first: a hand-in's items are taken before the next clue is sent.
+  const response = kind.respond?.(event, before, now.ctx) ?? [];
+  if (after === before) return { state, effects: response };
   const progress = { ...team.progress, [now.key]: after };
   const fields = {
     team: team.id, leg: team.leg, stop: now.stop.id, task: kind.name,
@@ -224,7 +209,7 @@ function advanceTask(state: State, teamId: string, player: PlayerId, event: Task
     const text = kind.progressText(after, now.ctx);
     return {
       state: replaceTeam(state, { ...team, progress }),
-      effects: [],
+      effects: response,
       logs: [{ event: 'taskProgress', fields: { ...fields, text } }],
     };
   }
@@ -233,8 +218,52 @@ function advanceTask(state: State, teamId: string, player: PlayerId, event: Task
   const cleared = advanceStep(replaceTeam(state, finished), finished, now.stop.id);
   return {
     ...cleared,
+    effects: [...response, ...cleared.effects],
     logs: [{ event: 'taskDone', fields: { ...fields, option: task?.option } },
       ...(cleared.logs ?? [])],
+  };
+}
+
+/** Applies a racer's action to the team's task if they are eligible to count. */
+function advanceTask(state: State, teamId: string, player: PlayerId, event: TaskEvent): Result {
+  const team = state.teams.find((t) => t.id === teamId);
+  const now = team ? playing(state, team) : undefined;
+  if (!team || !now || !eligible(team, now.stop, player)) return { state, effects: [] };
+  return applyEvent(state, team, now, event);
+}
+
+/**
+ * A racer used the clue box of a Detour or Roadblock whose task is playable and the team is
+ * together: start the task, or, when it is under way, let the task answer (a Gather hand-in, a
+ * Hunt top-up) and show its progress.
+ */
+export function useTaskBox(
+  state: State,
+  team: Team,
+  stop: Stop,
+  player: PlayerId,
+  members: Of<'interactClue'>['members'],
+): Result {
+  if (team.task?.stopId !== stop.id) return beginTask(state, team, stop, player);
+  // A zone whose build failed was forgotten (`zoneBuildFailed`); using the box again retries.
+  const offer = offersOf(stop).find((o) => o.option === team.task?.option);
+  const zone = offer ? prepareZone(state, stop, offer) : { state, effects: [] };
+  const now = playing(zone.state, team);
+  const held = Object.fromEntries(members.filter((m) => eligible(team, stop, m.id))
+    .map((m) => [m.id, m.items ?? {}]));
+  const used = now && eligible(team, stop, player)
+    ? applyEvent(zone.state, team, now, { type: 'boxUsed', by: player, held })
+    : { state: zone.state, effects: [] };
+  const merged = merge(zone, used);
+  const after = merged.state.teams.find((t) => t.id === team.id);
+  // A finished task has sent the next clue; a kind that spoke (what is still missing) has said it.
+  const said = !after?.task || used.effects.some((e) => e.kind === 'notify');
+  const text = after ? taskProgressText(merged.state, after) ?? 'Task in progress.' : '';
+  return said ? merged : {
+    ...merged,
+    effects: [...merged.effects, {
+      kind: 'notify', to: player, code: 'taskProgress', text,
+    }],
   };
 }
 
@@ -270,6 +299,29 @@ export function taskEvent(state: State, a: Of<'taskEvent'>): Result {
   const team = teamOf(state, a.player);
   const counted = team ? advanceTask(state, team.id, a.player, a.event) : { state, effects: [] };
   return merge(counted, woolBroken(counted.state, a.event));
+}
+
+/**
+ * A Hunt husk died. A kill by an eligible racer of its team counts; a husk that died to anyone
+ * else is respawned. A tag that is not the team's current Hunt (an earlier stop, a team that has
+ * moved on) is ignored.
+ */
+export function targetDied(state: State, a: Of<'targetDied'>): Result {
+  const tag = parseHuntTag(a.tag);
+  const team = tag ? state.teams.find((t) => t.id === tag.team) : undefined;
+  const now = team ? playing(state, team) : undefined;
+  const current = tag && now?.stop.id === tag.stop && team?.task?.option === tag.zone
+    && now.offer.kind.name === 'hunt';
+  if (state.phase !== 'running' || !tag || !team || !now || !current) {
+    return { state, effects: [] };
+  }
+  const credited = a.killer !== undefined && eligible(team, now.stop, a.killer);
+  const out = applyEvent(state, team, now, { type: credited ? 'targetKilled' : 'targetLost' });
+  if (credited) return out;
+  const fields = {
+    team: team.id, leg: team.leg, stop: now.stop.id, killer: a.killer,
+  };
+  return { ...out, logs: [...(out.logs ?? []), { event: 'targetLost', fields }] };
 }
 
 /** Where racers stand (every 10 ticks): the tasks that finish by standing somewhere. */

@@ -51,7 +51,7 @@ export function interactClue(state: State, a: Of<'interactClue'>): Result {
   if (!together) {
     return refuse(state, a.player, 'notTogether', 'All teammates must be present.');
   }
-  if (stop.type !== 'route') return useTaskBox(state, team, stop, a.player);
+  if (stop.type !== 'route') return useTaskBox(state, team, stop, a.player, a.members);
   // The Speed Bump quiz comes first here once G15 adds it (spec §8.2).
   return advanceStep(state, team, stop.id);
 }
