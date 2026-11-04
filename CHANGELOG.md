@@ -55,6 +55,10 @@ Versions follow `package.json`; the release workflow publishes the section match
   performer (hint first, capped per player), switch option with progress kept, Get gear again
   (only what is missing), Hand in tallied fresh, and Quit with a confirmation and the 6 h / 4 h
   penalty served at the Pit Stop; any member may quit while the performer is offline (G14).
+- Advantages: the Express Pass (leg 1 winner, usable on a Detour, Roadblock or Speed Bump until
+  leg ceil(L/2) and never on the final leg), the U-Turn board on the first visit to a Detour with
+  both options required of the target, the Speed Bump quiz at the next leg's Route Info, and the
+  Passport listing them (G15).
 
 ## [0.1.0]
 

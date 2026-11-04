@@ -1,69 +1,34 @@
-// The clue-box menus of a Detour and a Roadblock (spec §7.3, §8.2): choosing an option or the
-// performer, then, mid-task, handing in or answering, getting gear again, switching and quitting.
-// A menu is only a list of buttons; each choice comes back as `taskChoice` and is re-checked
-// against the state, because a form can be stale. What a task counts is in task.ts and tasks/*.
+// The clue-box menus of a Detour, a Roadblock and a Speed Bump (spec §7.3, §8.2, §8.7): choosing
+// an option or the performer, then, mid-task, handing in or answering, getting gear again,
+// switching and quitting. A menu is only a list of buttons (flowMenus.ts); each choice comes back
+// as `taskChoice` and is re-checked against the state, because a form can be stale. What a task
+// counts is in task.ts and tasks/*; the advantages are spent in advantageFlow.ts.
 import { advanceStep } from './advance.js';
+import { useExpressPass, uTurn } from './advantageFlow.js';
+import { expressUsable, uTurnOpen, uTurnTargets } from './advantages.js';
+import {
+  boardMenu, button, candidates, hasTaskHere, ignored, ignoredLog, menuTo, nameOf, optionMenu,
+  performerMenu, playMenu, progressOf, quitCost, say, speedBumpMenu,
+} from './flowMenus.js';
 import { owe } from './penalty.js';
 import {
-  beginTask, boxUsed, eligible, merge, offersOf, playing, prepareZone, replaceTeam,
-  taskProgressText, teamOf,
+  beginTask, boxUsed, eligible, merge, offersOf, playing, prepareZone, replaceTeam, sideDone,
+  teamOf,
 } from './task.js';
 import { clueBoxPos, targetStop } from '../clue.js';
-import {
-  HOUR, PENALTY_HOURS, RACE, ROADBLOCK_HINTS, TICKS_PER_SECOND,
-} from '../config.js';
-import { mayPerform, roadblockCapFor } from '../teams.js';
+import { HOUR, RACE, TICKS_PER_SECOND } from '../config.js';
 import { distance } from '../vec.js';
 
+import type { Members, Of } from './flowMenus.js';
 import type { Playing } from './task.js';
 import type { Held } from '../tasks/kind.js';
 import type {
-  Action, Effect, LogLine, PlayerId, Result, State, Stop, TaskChoice, Team,
+  Effect, PlayerId, Result, State, Stop, Team,
 } from '../types.js';
-
-type Of<T extends Action['type']> = Extract<Action, { type: T }>;
-type Members = Of<'interactClue'>['members'];
-type Menu = Extract<Effect, { kind: 'taskMenu' }>['menu'];
-
-const nameOf = (state: State, id: PlayerId): string => state.players[id]?.name ?? id;
-const hoursFor = (stop: Stop): number => (
-  stop.type === 'roadblock' ? PENALTY_HOURS.quitRoadblock : PENALTY_HOURS.quitDetour);
-const quitLabel = (stop: Stop): string => `Quit (+${hoursFor(stop)} h)`;
 
 const heldOf = (members: Members): Held => Object.fromEntries(
   members.map((m) => [m.id, m.items ?? {}]),
 );
-
-const menuTo = (to: PlayerId, stop: Stop, menu: Menu): Effect => ({
-  kind: 'taskMenu', to, stopId: stop.id, menu,
-});
-const say = (to: PlayerId, code: string, text: string): Effect => ({
-  kind: 'notify', to, code, text,
-});
-const button = (command: TaskChoice, label: string): Menu['buttons'][number] => ({
-  command, label,
-});
-
-const ignoredLog = (state: State, a: Of<'taskChoice'>, reason: string): LogLine => {
-  const team = teamOf(state, a.player);
-  return {
-    event: 'taskChoiceIgnored',
-    fields: {
-      team: team?.id,
-      leg: team?.leg,
-      player: a.player,
-      stop: a.stopId,
-      choice: a.choice.type,
-      reason,
-    },
-  };
-};
-const ignored = (state: State, a: Of<'taskChoice'>, reason: string): Result => ({
-  state, effects: [], logs: [ignoredLog(state, a, reason)],
-});
-
-const progressOf = (state: State, team: Team): string => (
-  taskProgressText(state, team) ?? 'Task in progress.');
 
 /**
  * Whether the team is at the box (spec §8.2): every online member within the presence radius, or
@@ -78,68 +43,41 @@ export function together(stop: Stop, team: Team, members: Members): boolean {
   return must.every((m) => m.pos && distance(m.pos, centre) <= RACE.presenceRadius);
 }
 
-const hasTaskHere = (team: Team, stop: Stop): boolean => team.task?.stopId === stop.id;
-
-/** Every Roadblock of the course, Recall included: the total the per-player cap divides. */
-const roadblocksIn = (state: State): number => state.stops
-  .filter((s) => s.type === 'roadblock').length;
-
-/** The performers a team may pick from: its online members under the cap. */
-const candidates = (state: State, team: Team, members: Members): PlayerId[] => {
-  const cap = roadblockCapFor(team, roadblocksIn(state));
-  return members.map((m) => m.id)
-    .filter((id) => team.members.includes(id) && mayPerform(team, id, cap));
-};
-
-function optionMenu(state: State, stop: Stop, player: PlayerId): Result {
-  const buttons = offersOf(stop).map((o) => button({ type: 'option', option: o.option }, o.label));
-  const body = 'Choose how your team takes this Detour.';
-  return {
-    state, effects: [menuTo(player, stop, { title: `${stop.name}: Detour`, body, buttons })],
-  };
+/**
+ * A Speed Bump's quiz starts at once, unless an Express Pass could skip it (`offer`): then a menu
+ * comes first, so the pass is not locked behind an open question form.
+ */
+function startSpeedBump(
+  state: State,
+  team: Team,
+  stop: Stop,
+  player: PlayerId,
+  offer: boolean,
+): Result {
+  const [quiz] = offersOf(stop);
+  if (!quiz) return { state, effects: [] };
+  return offer && expressUsable(state, team)
+    ? speedBumpMenu(state, team, stop, player) : beginTask(state, team, stop, quiz, player);
 }
 
-/** The hint only: the task itself is revealed once the performer is chosen (spec §8.2). */
-function performerMenu(
+/** The first thing a stop shows a team that has not started its task here. */
+function firstMenu(
   state: State,
   team: Team,
   stop: Stop,
   player: PlayerId,
   members: Members,
 ): Result {
-  const hint = stop.task?.type === 'roadblock' ? ROADBLOCK_HINTS[stop.task.kind] : '';
-  const buttons = candidates(state, team, members)
-    .map((id) => button({ type: 'perform', who: id }, nameOf(state, id)));
-  return {
-    state,
-    effects: [menuTo(player, stop, {
-      title: `${stop.name}: Roadblock`, body: `${hint}\nWho will perform it?`, buttons,
-    })],
-  };
-}
-
-/** The menu of a task under way, for a player who may play it. */
-function playMenu(state: State, team: Team, now: Playing, player: PlayerId): Menu {
-  const { kind } = now.offer;
-  const progress = progressOf(state, team);
-  const other = now.stop.type === 'detour'
-    ? offersOf(now.stop).find((o) => o.option !== now.offer.option) : undefined;
-  return {
-    title: `${now.stop.name}: ${now.offer.label}`,
-    body: progress,
-    buttons: [
-      ...(kind.boxAction ? [button({ type: 'continue' }, kind.boxAction)] : []),
-      ...(kind.equip(now.ctx, [player]).length > 0
-        ? [button({ type: 'gear' }, 'Get gear again')] : []),
-      ...(other ? [button({ type: 'switch' }, `Switch to ${other.label}`)] : []),
-      button({ type: 'quit' }, quitLabel(now.stop)),
-    ],
-  };
+  if (stop.type === 'roadblock') return performerMenu(state, team, stop, player, members);
+  if (stop.type === 'route') return startSpeedBump(state, team, stop, player, true);
+  const targets = uTurnOpen(state, team, stop) ? uTurnTargets(state, team, stop) : [];
+  return targets.length > 0
+    ? boardMenu(state, stop, player, targets) : optionMenu(state, team, stop, player);
 }
 
 /**
- * A racer used the clue box of a Detour or Roadblock whose task is playable and the team is
- * together: show the option or performer menu, or, with the task under way, its menu.
+ * A racer used the clue box of a Detour, a Roadblock or a Speed Bump and the team is together:
+ * show the first menu, or, with the task under way, its menu.
  */
 export function useTaskBox(
   state: State,
@@ -148,11 +86,7 @@ export function useTaskBox(
   player: PlayerId,
   members: Members,
 ): Result {
-  if (!hasTaskHere(team, stop)) {
-    return stop.type === 'roadblock'
-      ? performerMenu(state, team, stop, player, members)
-      : optionMenu(state, stop, player);
-  }
+  if (!hasTaskHere(team, stop)) return firstMenu(state, team, stop, player, members);
   // A zone whose build failed was forgotten (`zoneBuildFailed`); using the box again retries.
   const offer = offersOf(stop).find((o) => o.option === team.task?.option);
   const zone = offer ? prepareZone(state, stop, offer) : { state, effects: [] };
@@ -167,7 +101,7 @@ export function useTaskBox(
       : [menuTo(player, stop, {
         title: `${stop.name}: Roadblock`,
         body: `${performer ? nameOf(state, performer) : 'The performer'} is not here.`,
-        buttons: [button({ type: 'quit' }, quitLabel(stop))],
+        buttons: [button({ type: 'quit' }, `Quit (+${quitCost(stop).hours} h)`)],
       })];
     return merge(zone, { state: zone.state, effects: out });
   }
@@ -228,21 +162,17 @@ function chooseOption(state: State, a: Of<'taskChoice'>, team: Team, stop: Stop)
 
 function quit(state: State, team: Team, now: Playing, to: PlayerId): Result {
   const { stop } = now;
-  const reason = stop.type === 'roadblock' ? 'quitRoadblock' : 'quitDetour';
-  const owed = owe(team, hoursFor(stop), reason);
-  const {
-    task, performer, lockoutUntil, ...rest
-  } = owed.team;
-  const left: Team = rest;
-  const cleared = advanceStep(replaceTeam(state, left), left, stop.id);
+  const { hours, reason } = quitCost(stop);
+  const owed = owe(team, hours, reason);
+  // The step moves on, which ends the task, the performer, the lockout and a U-Turn mark.
+  const cleared = advanceStep(replaceTeam(state, owed.team), owed.team, stop.id);
   return {
     state: cleared.state,
     effects: [
       {
         kind: 'title',
         to: team.members,
-        text: `${nameOf(state, to)} quit ${stop.name}: +${hoursFor(stop)} h, `
-          + 'served at the Pit Stop.',
+        text: `${nameOf(state, to)} quit ${stop.name}: +${hours} h, served at the Pit Stop.`,
         chat: true,
       },
       ...cleared.effects,
@@ -262,14 +192,15 @@ function quit(state: State, team: Team, now: Playing, to: PlayerId): Result {
 
 function switchOption(
   state: State,
+  a: Of<'taskChoice'>,
   team: Team,
   now: Playing,
-  to: PlayerId,
   held: Held,
 ): Result {
   const other = offersOf(now.stop).find((o) => o.option !== now.offer.option);
   if (now.stop.type !== 'detour' || !other) return { state, effects: [] };
-  const out = beginTask(state, team, now.stop, other, to, undefined, held);
+  if (sideDone(state, team, now.stop, other)) return ignored(state, a, 'sideDone');
+  const out = beginTask(state, team, now.stop, other, a.player, undefined, held);
   return {
     ...out,
     logs: [...(out.logs ?? []), {
@@ -292,8 +223,25 @@ export function taskChoice(state: State, a: Of<'taskChoice'>): Result {
   if (!stop || targetStop(state, team)?.id !== stop.id) return ignored(state, a, 'notYourStop');
   if (!together(stop, team, a.members)) return ignored(state, a, 'notTogether');
   const { choice } = a;
-  if (choice.type === 'option') return chooseOption(state, a, team, stop);
-  if (choice.type === 'perform') return perform(state, a, team, stop);
+  // Choices that start something or spend an advantage: no task needs to be under way yet.
+  switch (choice.type) {
+    case 'option':
+      return chooseOption(state, a, team, stop);
+    case 'perform':
+      return perform(state, a, team, stop);
+    case 'uturn':
+      return uTurn(state, a, team, stop);
+    case 'expressPass':
+      return useExpressPass(state, a, team, stop);
+    case 'noUturn':
+      return stop.type === 'detour' && !hasTaskHere(team, stop)
+        ? optionMenu(state, team, stop, a.player) : ignored(state, a, 'noBoard');
+    case 'start':
+      return stop.type === 'route' && team.speedBump && !hasTaskHere(team, stop)
+        ? startSpeedBump(state, team, stop, a.player, false) : ignored(state, a, 'noSpeedBump');
+    default:
+      break;
+  }
   const now = hasTaskHere(team, stop) ? playing(state, team) : undefined;
   if (!now) return ignored(state, a, 'noTask');
   const { performer } = team;
@@ -327,16 +275,17 @@ export function taskChoice(state: State, a: Of<'taskChoice'>): Result {
       };
     }
     case 'switch':
-      return switchOption(state, team, now, a.player, heldOf(a.members));
+      return switchOption(state, a, team, now, heldOf(a.members));
     case 'quit': {
-      const seconds = (hoursFor(stop) * HOUR) / TICKS_PER_SECOND;
+      const { hours } = quitCost(stop);
+      const seconds = (hours * HOUR) / TICKS_PER_SECOND;
       return {
         state,
         effects: [menuTo(a.player, stop, {
           title: `${stop.name}: Quit?`,
           body: 'You skip this task and take the next clue; the penalty is served at the Pit Stop.',
           buttons: [
-            button({ type: 'confirmQuit' }, `Yes, quit (+${hoursFor(stop)} h = ${seconds} s)`),
+            button({ type: 'confirmQuit' }, `Yes, quit (+${hours} h = ${seconds} s)`),
             button({ type: 'status' }, 'Keep playing'),
           ],
         })],

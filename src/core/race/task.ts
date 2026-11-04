@@ -3,6 +3,7 @@
 // tasks/*; this file only knows "eligible players" and the kind. The Detour and Roadblock menus
 // (option choice, performer pick, switching, quitting) are in taskFlow.ts.
 import { advanceStep } from './advance.js';
+import { isUTurned, otherSide } from './advantages.js';
 import { zonesFor } from '../arena/layout.js';
 import { targetStop } from '../clue.js';
 import { BLOCK, TICKS_PER_SECOND } from '../config.js';
@@ -38,6 +39,7 @@ export const offersOf = (stop: Stop): Offer[] => {
     const [a, b] = task.options;
     return [...make('A', a.name, a.kind), ...make('B', b.name, b.kind)];
   }
+  if (stop.type === 'route') return make('A', 'Speed Bump', 'quiz');
   return task?.type === 'roadblock' ? make('A', titled(task.kind), task.kind) : [];
 };
 
@@ -68,11 +70,13 @@ const contextOf = (
   team?: Team,
 ): TaskContext | undefined => {
   const zone = zonesFor(stop.type, stop.pos).find((z) => z.zone === offer.option);
-  if (!zone) return undefined;
+  // A Route Info stop has no zone: its Speed Bump quiz is asked at the clue box.
+  const centre = zone?.centre ?? (stop.type === 'route' ? stop.pos : undefined);
+  if (!centre) return undefined;
   return {
     stop,
     zone: offer.option,
-    centre: zone.centre,
+    centre,
     leg: stop.leg,
     teams: state.teams.length,
     hidden: stop.zones?.[offer.option]?.hidden ?? [],
@@ -138,6 +142,7 @@ export function taskProgressText(state: State, team: Team): string | undefined {
 
 /** Builds the zone if it has not been (or its haystack ran out); one build for every team. */
 export function prepareZone(state: State, stop: Stop, offer: Offer): Result {
+  if (stop.type === 'route') return { state, effects: [] };
   const have = stop.zones?.[offer.option];
   const emptied = offer.kind.name === 'haystack' && (have?.hidden?.length ?? 0) === 0;
   if (have && !emptied) return { state, effects: [] };
@@ -224,6 +229,20 @@ export const lockedFor = (state: State, team: Team): number => Math.max(
   (team.lockoutUntil ?? 0) - state.clock,
 );
 
+/** Whether the side is finished: played to the end, or skipped by an Express Pass. */
+export function sideDone(state: State, team: Team, stop: Stop, offer: Offer): boolean {
+  const progress = team.progress[keyOf(stop, offer.option)] ?? offer.kind.initial;
+  return team.expressPassed === offer.option
+    || offer.kind.done(progress, requireContext(state, stop, offer, team));
+}
+
+/** The other side of a U-Turned Detour, when it is still to do. */
+export function owedSide(state: State, team: Team, now: Playing): Offer | undefined {
+  if (now.stop.type !== 'detour' || !isUTurned(team, now.stop)) return undefined;
+  const other = offersOf(now.stop).find((o) => o.option === otherSide(now.offer.option));
+  return other && !sideDone(state, team, now.stop, other) ? other : undefined;
+}
+
 /** Applies an event to the team's task: its progress, the kind's response, and completion. */
 export function applyEvent(state: State, team: Team, now: Playing, event: TaskEvent): Result {
   const { kind } = now.offer;
@@ -266,17 +285,25 @@ export function applyEvent(state: State, team: Team, now: Playing, event: TaskEv
       ],
     };
   }
-  // The performer and any lockout end with the task (technical design §3).
-  const {
-    task, performer, lockoutUntil, ...rest
-  } = team;
-  const finished: Team = { ...rest, progress };
+  const finished: Team = { ...team, progress };
+  const done = { event: 'taskDone', fields: { ...fields, option: team.task?.option } };
+  // A U-Turned team still owes the other side of its Detour (spec §8.7): on to that one.
+  const owed = owedSide(state, finished, now);
+  if (owed) {
+    const actor = 'by' in event ? event.by : team.members[0] ?? '';
+    const moved = beginTask(replaceTeam(state, finished), finished, now.stop, owed, actor);
+    return {
+      ...moved,
+      effects: [...response, ...moved.effects],
+      logs: [done, ...(moved.logs ?? [])],
+    };
+  }
+  // The step moves on, which also ends the task, its performer and any lockout.
   const cleared = advanceStep(replaceTeam(state, finished), finished, now.stop.id);
   return {
     ...cleared,
     effects: [...response, ...cleared.effects],
-    logs: [{ event: 'taskDone', fields: { ...fields, option: task?.option } },
-      ...(cleared.logs ?? [])],
+    logs: [done, ...(cleared.logs ?? [])],
   };
 }
 

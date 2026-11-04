@@ -7,13 +7,16 @@ import {
 import { hostName } from './host.js';
 import { isPlainClock, roleOf } from './items.js';
 import { planOf, planSummary } from './plan.js';
+import { expressUsable } from './race/advantages.js';
 import { canEndLeg } from './race/legEnd.js';
 import { START_PHASES } from './race/start.js';
 import { SETTINGS_PHASES } from './setup.js';
 import { TEAM_PHASES, teamsView } from './teams.js';
 
 import type { HeldItem } from './items.js';
-import type { Phase, PlayerId, State } from './types.js';
+import type {
+  Phase, PlayerId, State, Team,
+} from './types.js';
 
 export type UseRoute = { kind: 'hostMenu' } | { kind: 'passport' } | { kind: 'claimHost' }
   | { kind: 'say'; text: string };
@@ -122,10 +125,31 @@ export function teamsMenu(state: State, online: readonly PlayerId[]): Menu<Teams
   };
 }
 
+/** The team's advantages as Passport lines (spec §10): Express Pass, U-Turn, Speed Bump. */
+function advantageLines(state: State, team: Team): string[] {
+  const pass = team.expressPass && expressUsable(state, team)
+    ? [`Express Pass: yes (until leg ${team.expressPass.expiresLeg})`] : [];
+  const legs = state.plan?.legs ?? 0;
+  const offered = legs >= 3 && team.leg <= legs - 1;
+  const uTurn = [
+    ...(team.uTurnUsed ? ['U-Turn: used'] : []),
+    ...(!team.uTurnUsed && offered
+      ? [`U-Turn: available on the Detours of legs 2 to ${legs - 1}`] : []),
+  ];
+  const hit = team.uTurnedAt !== undefined ? ['You were U-Turned: do both Detour options.'] : [];
+  return [
+    ...pass,
+    ...uTurn,
+    ...hit,
+    ...(team.speedBump ? ['Speed Bump: answer 2 questions at the next Route Info.'] : []),
+  ];
+}
+
 export function passportMenu(state: State, player: PlayerId): Menu<never> {
   const teamId = state.players[player]?.teamId;
   const team = state.teams.find((t) => t.id === teamId);
   const line = team ? `Team: ${team.color}${team.name}§r` : 'You are not on a team yet.';
-  const body = `${line}\nPhase: ${PHASE_LABEL[state.phase]}`;
+  const advantages = team ? advantageLines(state, team) : [];
+  const body = [line, `Phase: ${PHASE_LABEL[state.phase]}`, ...advantages].join('\n');
   return { title: 'Race Passport', body, buttons: [] };
 }

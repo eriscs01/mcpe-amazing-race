@@ -93,7 +93,14 @@ export type TaskChoice = { type: 'option'; option: ZoneName }
   | { type: 'gear' }
   | { type: 'switch' }
   | { type: 'quit' }
-  | { type: 'confirmQuit' };
+  | { type: 'confirmQuit' }
+  /** Spend the Express Pass; `option` names the side to skip on a U-Turned Detour. */
+  | { type: 'expressPass'; option?: ZoneName }
+  /** U-Turn: the target team's id; `noUturn` closes the board and shows the options. */
+  | { type: 'uturn'; team: string }
+  | { type: 'noUturn' }
+  /** Starts the Speed Bump quiz (offered first when an Express Pass could skip it). */
+  | { type: 'start' };
 
 /** One input of a question form (technical design §2.8): typed text or a dropdown choice. */
 export type FormField = { type: 'text'; label: string; placeholder: string }
@@ -141,7 +148,10 @@ export interface Team {
   task?: { stopId: number; option: 'A' | 'B' };
   expressPass?: { expiresLeg: number };
   uTurnUsed: boolean;
+  /** The Detour (stop id) this team was U-Turned at: it must do both options there. */
   uTurnedAt?: number;
+  /** The side an Express Pass skipped on the U-Turned Detour. */
+  expressPassed?: ZoneName;
   speedBump: boolean;
   /** Key: `${stopId}:${option}`. */
   progress: Record<string, TaskProgress>;

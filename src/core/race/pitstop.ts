@@ -1,5 +1,6 @@
 // Pit Stop and Finish check-in (spec §8.4): arrival on the mat, the penalty countdown, placement
 // by completed check-in and the leg winner's reward. Ending the leg is legEnd.ts.
+import { expressExpiresLeg } from './advantages.js';
 import { matCentre, sidebarRows, targetStop } from '../clue.js';
 import { RACE } from '../config.js';
 import { horizontalDistance } from '../vec.js';
@@ -35,8 +36,15 @@ export function completeCheckIn(
   if (!found || !stop) return { state, effects: [] };
   const { arrivedAt, ...team } = found;
   const place = state.teams.filter((t) => t.checkIns.some((c) => c.leg === found.leg)).length + 1;
+  // The leg 1 winner earns an Express Pass (spec §8.7); a forced end earns nothing. With only two
+  // legs it would end with leg 1, before it could be used, so none is given.
+  const legs = state.plan?.legs;
+  const expiresLeg = legs === undefined ? 0 : expressExpiresLeg(legs);
+  const award = place === 1 && !forced && found.leg === 1 && expiresLeg >= 2
+    ? { expiresLeg } : undefined;
   const checkedIn: Team = {
     ...team,
+    ...(award ? { expressPass: award } : {}),
     status: 'checkedIn',
     step: found.step + 1,
     lastClearedStop: stop.id,
@@ -56,6 +64,10 @@ export function completeCheckIn(
     ...(wins ? [{
       kind: 'broadcast' as const, text: `${teamLabel(found)} wins the Amazing Race!`,
     }] : []),
+    ...(award ? [{
+      kind: 'broadcast' as const,
+      text: `${teamLabel(found)} wins an Express Pass (good until leg ${award.expiresLeg}).`,
+    }] : []),
     ...(place === 1 && !forced ? [{
       kind: 'reward' as const, to: found.members, levels: RACE.winnerLevels, at: matCentre(stop),
     }] : []),
@@ -64,12 +76,17 @@ export function completeCheckIn(
   return {
     state: next,
     effects,
-    logs: [{
-      event: 'checkedIn',
-      fields: {
-        team: id, leg: found.leg, place, clock: state.clock,
+    logs: [
+      {
+        event: 'checkedIn',
+        fields: {
+          team: id, leg: found.leg, place, clock: state.clock,
+        },
       },
-    }],
+      ...(award ? [{
+        event: 'expressAwarded', fields: { team: id, leg: found.leg, expiresLeg: award.expiresLeg },
+      }] : []),
+    ],
   };
 }
 
