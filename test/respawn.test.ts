@@ -62,7 +62,7 @@ test('a death while paused or held keeps the lock', () => {
   const out = reduce(paused, spawn('b', false));
   assert.ok(of(out.effects, 'lockMovement').some((e) => e.locked && e.players.includes('b')));
   const free = reduce(state, spawn('b', false));
-  assert.equal(of(free.effects, 'lockMovement').length, 0);
+  assert.ok(of(free.effects, 'lockMovement').every((e) => !e.locked));
 });
 
 test('no teleport for a spawn outside the race, an eliminated team, or a stranger', () => {
@@ -83,7 +83,7 @@ test('a rejoin goes to the nearest teammate, else to the last stop', () => {
   assert.deepEqual(of(near.effects, 'teleport')[0]?.pos, { x: 7, y: 70, z: 7 });
   const alone = reduce(state, spawn('b', true));
   assert.deepEqual(of(alone.effects, 'teleport')[0]?.pos, matOf(state, 2));
-  assert.equal(of(alone.effects, 'kitRacer').length, 0);
+  assert.deepEqual(of(alone.effects, 'kitRacer').map((e) => e.tagOnly), [true]);
 });
 
 test('a racer who was offline at the start gets the kit once', () => {
@@ -98,7 +98,8 @@ test('a racer who was offline at the start gets the kit once', () => {
     },
   ]);
   assert.equal(out.state.players.b?.kitted, true);
-  assert.equal(of(reduce(out.state, spawn('b', true)).effects, 'kitRacer').length, 0);
+  const again = reduce(out.state, spawn('b', true)).effects;
+  assert.deepEqual(of(again, 'kitRacer').map((e) => e.tagOnly), [true]);
 });
 
 test('a rejoin during a countdown, the mat or a pause stays locked', () => {
@@ -108,7 +109,8 @@ test('a rejoin during a countdown, the mat or a pause stays locked', () => {
     teams: state.teams.map((t) => (t.id === 'red' ? { ...t, departAt: state.clock + 50 } : t)),
   };
   assert.ok(of(reduce(held, spawn('b', true)).effects, 'lockMovement').some((e) => e.locked));
-  assert.equal(of(reduce(state, spawn('b', true)).effects, 'lockMovement').length, 0);
+  const free = of(reduce(state, spawn('b', true)).effects, 'lockMovement');
+  assert.deepEqual(free.map((e) => e.locked), [false]);
 });
 
 test('a rejoining member of an eliminated team is a spectator without a Passport', () => {
@@ -144,4 +146,13 @@ test('a player released after End race is unlocked as well', () => {
   const ended: State = { ...race(), phase: 'finished', ended: true };
   const { effects } = reduce(ended, spawn('b', true));
   assert.ok(of(effects, 'lockMovement').some((e) => !e.locked && e.players.includes('b')));
+});
+
+test('a racing host who is kitted on a rejoin gets Race Control back', () => {
+  const state = race();
+  const late: State = {
+    ...state, players: { ...state.players, h: { name: 'Hana', teamId: 'red' } },
+  };
+  const gives = of(reduce(late, spawn('h', true, { hasPassport: false })).effects, 'giveItem');
+  assert.ok(gives.some((e) => e.item === 'raceControl'));
 });

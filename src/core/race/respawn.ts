@@ -37,9 +37,8 @@ function died(state: State, team: Team, a: Extract<Action, { type: 'playerSpawne
     state,
     effects: [
       ...(pos ? [{ kind: 'teleport' as const, players: [a.player], pos }] : []),
-      // Input permissions after a respawn are not known to survive: say it again.
-      ...(held(state, a.player)
-        ? [{ kind: 'lockMovement' as const, players: [a.player], locked: true }] : []),
+      // Input permissions after a respawn are not known to survive: say it again, either way.
+      { kind: 'lockMovement' as const, players: [a.player], locked: held(state, a.player) },
       ...(mates.length > 0 ? [{
         kind: 'title' as const,
         to: mates,
@@ -68,17 +67,23 @@ function rejoined(state: State, team: Team, a: Extract<Action, { type: 'playerSp
   return {
     state: next,
     effects: [
-      // The kit clears the pack, so the Passport the host rule gave comes again after it.
+      // The kit clears the pack, so the Passport (and a racing host's Race Control) come again
+      // after it. A name tag may not survive a relog: it is set on every rejoin.
+      {
+        kind: 'kitRacer' as const,
+        player: a.player,
+        name: a.name,
+        color: team.color,
+        ...(kit ? {} : { tagOnly: true }),
+      },
       ...(kit ? [
-        {
-          kind: 'kitRacer' as const, player: a.player, name: a.name, color: team.color,
-        },
         { kind: 'giveItem' as const, to: a.player, item: 'passport' as const },
+        ...(a.player === state.hostId
+          ? [{ kind: 'giveItem' as const, to: a.player, item: 'raceControl' as const }] : []),
       ] : []),
       ...(pos && state.phase !== 'dayEnded'
         ? [{ kind: 'teleport' as const, players: [a.player], pos }] : []),
-      ...(held(state, a.player)
-        ? [{ kind: 'lockMovement' as const, players: [a.player], locked: true }] : []),
+      { kind: 'lockMovement' as const, players: [a.player], locked: held(state, a.player) },
     ],
     logs: [{
       event: 'racerRejoined',

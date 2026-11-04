@@ -87,8 +87,10 @@ export function kitRacer(effect: Of<'kitRacer'>, log: Logger): void {
     return;
   }
   try {
-    clearAndKit(player);
-    player.setGameMode(GameMode.Survival);
+    if (effect.tagOnly !== true) {
+      clearAndKit(player);
+      player.setGameMode(GameMode.Survival);
+    }
     player.nameTag = `${effect.color}${effect.name}`;
     log.info('racerKitted', { player: effect.player });
   } catch (error) {

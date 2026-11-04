@@ -353,7 +353,7 @@ limits while testing (use a second account for a non-racer).
 - [ ] Die: you return to your team's last cleared stop, a teammate is told, inventory is kept,
       no penalty; a Roadblock performer keeps the role. Does movement stay locked after a
       respawn during a countdown or a pause?
-- [ ] Leave and rejoin: you get the Passport back, the coloured name tag, and the kit if you
+- [ ] Leave and rejoin: you get the Passport back, the coloured name tag (does it survive a relog without being set again?), and the kit if you
       were offline at the start; you land next to a teammate (or at the last stop); an
       eliminated team's member rejoins as Spectator without a Passport (#46, #40).
 - [ ] Team fixes: Add penalty (race minutes: 30 min = 15 s), Skip step (refused at a Pit Stop),

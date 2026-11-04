@@ -467,7 +467,9 @@ export type Effect = { kind: 'notify'; to: PlayerId; code: string; text: string 
   /** The race is over for these players: Survival and the plain name tag. */
   | { kind: 'resetPlayers'; players: PlayerId[] }
   /** The kit, Survival and the coloured name tag for a racer who joined late. */
-  | { kind: 'kitRacer'; player: PlayerId; name: string; color: string }
+  | {
+    kind: 'kitRacer'; player: PlayerId; name: string; color: string; tagOnly?: boolean;
+  }
   /** Moves the players to `pos` (the Overworld). */
   | { kind: 'teleport'; players: PlayerId[]; pos: Vec3 }
   /** The leg winner's reward (spec §8.4): experience levels and a firework at `at`. */
