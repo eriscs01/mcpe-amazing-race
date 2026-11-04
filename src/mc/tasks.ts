@@ -117,7 +117,11 @@ export function wireTaskEvents(session: Session): void {
   // Not filtered by type: a husk that turned into a zombie in water still carries its tag.
   world.afterEvents.entityDie.subscribe(guard(session.log, 'targetDied', (ev) => {
     const dead = ev.deadEntity;
-    if (!dead.isValid) return;
+    if (!dead.isValid) {
+      // Nothing can be read from it; a lost kill is recovered by using the clue box again.
+      session.log.warn('targetDieInvalid', { type: dead.typeId });
+      return;
+    }
     const tag = dead.getTags().find((t) => parseHuntTag(t) !== undefined);
     if (!tag) return;
     const killer = ev.damageSource.damagingEntity;
