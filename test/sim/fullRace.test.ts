@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { FakeWorld, HOST, TIME_OF_DAY } from './fakeWorld.js';
+import { FakeWorld, HOST, timeAtEndOf } from './fakeWorld.js';
 import { Bot } from './players.js';
 
 import type { Plan } from './players.js';
@@ -55,6 +55,13 @@ function arrive(w: FakeWorld, bots: Bot[], order: string[]): void {
   w.until(() => w.state.leg.n !== leg || w.state.leg.phase !== 'racing', 4000, `leg ${leg} to end`);
 }
 
+/** The id of the stop of that type in that leg (the course layout is asserted once, below). */
+const stopAt = (w: FakeWorld, leg: number, type: 'detour' | 'roadblock'): number => {
+  const found = w.state.stops.find((x) => x.leg === leg && x.type === type);
+  if (!found) throw new Error(`leg ${leg} has no ${type}`);
+  return found.id;
+};
+
 const team = (w: FakeWorld, id: string): Team => {
   const found = w.state.teams.find((t) => t.id === id);
   if (!found) throw new Error(`no team ${id}`);
@@ -93,8 +100,8 @@ const memberOf = (w: FakeWorld, id: string, n: number): string => {
 test('9 players, 3 teams, 3 days: the full race', async (t) => {
   const { w, bots } = await started(9);
   const roadblockPerformer = (id: string): Plans => ({
-    3: { performer: memberOf(w, id, 0) },
-    7: { performer: memberOf(w, id, 0) },
+    [stopAt(w, 1, 'roadblock')]: { performer: memberOf(w, id, 0) },
+    [stopAt(w, 2, 'roadblock')]: { performer: memberOf(w, id, 0) },
   });
 
   await t.test('the plan: 6 legs over 3 days, nobody is ever eliminated with 3 teams', () => {
@@ -103,6 +110,14 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     });
     assert.equal(w.state.teams.length, 3);
     assert.ok(w.state.teams.every((x) => x.members.length === 3));
+    assert.deepEqual(w.state.teams.map((x) => x.id), ['red', 'blue', 'green']);
+    // Every leg but the last is route, detour, roadblock, pit; the last ends at the finish.
+    const types = (leg: number): string[] => w.state.stops.filter((x) => x.leg === leg)
+      .sort((p, q) => p.id - q.id).map((x) => x.type);
+    [1, 2, 3, 4, 5].forEach((leg) => {
+      assert.deepEqual(types(leg), ['route', 'detour', 'roadblock', 'pit']);
+    });
+    assert.equal(types(6).at(-1), 'finish');
   });
 
   await t.test('leg 1: the course plays through; the winner gets the Express Pass', () => {
@@ -122,7 +137,7 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     departed(w);
     const [red, blue, green] = bots;
     assert.ok(red && blue && green);
-    const detour = 6;
+    const detour = stopAt(w, 2, 'detour');
     playUntil(red, detour, roadblockPerformer('red'));
     red.play({ uturn: 'green' });
     assert.equal(team(w, 'red').uTurnUsed, true);
@@ -140,14 +155,13 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
   await t.test('day 1 ends by itself after its two legs and its time of day is saved', () => {
     assert.equal(w.state.phase, 'dayEnded');
     assert.equal(w.state.day, 1);
-    assert.equal(w.state.dayTime, TIME_OF_DAY);
-    assert.ok(HOST);
+    assert.equal(w.state.dayTime, timeAtEndOf(1));
   });
 
   await t.test('the saved day survives closing and reopening the world', () => {
     roundTrip(w);
     assert.equal(w.state.phase, 'dayEnded');
-    assert.equal(w.state.dayTime, TIME_OF_DAY);
+    assert.equal(w.state.dayTime, timeAtEndOf(1));
   });
 
   await t.test('day 2 resumes at the Pit Stops with the rest still to run', () => {
@@ -155,7 +169,7 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     assert.equal(w.state.phase, 'running');
     assert.equal(w.state.day, 2);
     assert.equal(w.state.dayTime, undefined);
-    assert.ok(w.effects.some((e) => e.kind === 'daylight' && e.time === TIME_OF_DAY));
+    assert.ok(w.effects.some((e) => e.kind === 'daylight' && e.time === timeAtEndOf(1)));
     assert.ok(w.state.teams.every((x) => x.hold === undefined));
     departed(w);
   });
@@ -164,19 +178,20 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     const [red, blue, green] = bots;
     assert.ok(red && blue && green);
     // Every team did the Roadblock twice with its first member: the cap of 2 (6 Roadblocks / 3).
-    playUntil(red, 10);
+    playUntil(red, stopAt(w, 3, 'detour'));
     red.click();
-    assert.ok(red.buttons().some((b) => b.type === 'expressPass'), 'the pass is valid in leg 3');
-    playUntil(red, 11);
+    assert.ok(red.menu().some((b) => b.type === 'expressPass'), 'the pass is valid in leg 3');
+    assert.ok(!red.menu().some((b) => b.type === 'uturn'), 'one U-Turn per team: used in leg 2');
+    playUntil(red, stopAt(w, 3, 'roadblock'));
     red.click();
-    const offered = red.buttons().flatMap((b) => (b.type === 'perform' ? [b.who] : []));
+    const offered = red.menu().flatMap((b) => (b.type === 'perform' ? [b.who] : []));
     const capped = memberOf(w, 'red', 0);
     assert.ok(offered.length > 0 && !offered.includes(capped), 'the capped member is not offered');
     const ignored = w.log.find('taskChoiceIgnored').length;
     w.dispatch({
       type: 'taskChoice',
       player: capped,
-      stopId: 11,
+      stopId: stopAt(w, 3, 'roadblock'),
       choice: { type: 'perform', who: capped },
       members: team(w, 'red').members.map((id) => ({ id, pos: w.players.get(id)?.pos })),
     });
@@ -184,16 +199,16 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     assert.equal(team(w, 'red').performer, undefined);
     playToPit(red);
     playToPit(blue);
-    playUntil(green, 11);
+    playUntil(green, stopAt(w, 3, 'roadblock'));
     green.play({ quit: true });
     assert.equal(team(w, 'green').penaltyOwed, 4 * 600);
     playToPit(green);
     // Green reaches its mat first but owes the penalty, so it is checked in after the others.
     arrive(w, bots, ['green', 'red', 'blue']);
-    const arrivedGreen = team(w, 'green').checkIns.find((c) => c.leg === 3);
+    const greenIn = team(w, 'green').checkIns.find((c) => c.leg === 3);
     assert.deepEqual(places(w, 3), { red: 1, blue: 2, green: 3 });
     const blueIn = team(w, 'blue').checkIns.find((c) => c.leg === 3);
-    assert.ok(arrivedGreen && blueIn && arrivedGreen.clock > blueIn.clock);
+    assert.ok(greenIn && blueIn && greenIn.clock > blueIn.clock);
     noOneEliminated(w);
   });
 
@@ -201,12 +216,12 @@ test('9 players, 3 teams, 3 days: the full race', async (t) => {
     departed(w);
     const [red, blue, green] = bots;
     assert.ok(red && blue && green);
-    playUntil(red, 14);
+    playUntil(red, stopAt(w, 4, 'detour'));
     red.click();
-    assert.ok(!red.buttons().some((b) => b.type === 'expressPass'), 'the pass expired after leg 3');
+    assert.ok(!red.menu().some((b) => b.type === 'expressPass'), 'the pass expired after leg 3');
     red.play();
-    playUntil(blue, 15);
-    playUntil(green, 14);
+    playUntil(blue, stopAt(w, 4, 'roadblock'));
+    playUntil(green, stopAt(w, 4, 'detour'));
     const positions = w.online().map((p) => ({ id: p.id, pos: { ...p.pos } }));
     w.send({ type: 'endDay', by: HOST, positions });
     assert.equal(w.state.phase, 'dayEnded');
@@ -293,7 +308,7 @@ test('12 players, 4 teams, 3 days: leg 5 eliminates the last team', async (t) =>
     arrive(w, bots, ['red', 'blue', 'green', 'gold']);
     const winner = team(w, 'red');
     assert.deepEqual(winner.expressPass, { expiresLeg: 3 });
-    nextLeg((id): Plans => (id === 'red' ? { 6: { express: true } } : {}));
+    nextLeg((id): Plans => (id === 'red' ? { [stopAt(w, 2, 'detour')]: { express: true } } : {}));
     assert.equal(team(w, 'red').expressPass, undefined, 'the pass is spent');
     assert.equal(team(w, 'red').progress['6:A'], undefined, 'the Detour was skipped, not played');
     arrive(w, bots, ['red', 'blue', 'green', 'gold']);
@@ -307,23 +322,23 @@ test('12 players, 4 teams, 3 days: leg 5 eliminates the last team', async (t) =>
 
   await t.test('leg 5: the last team to check in is eliminated and spectates', () => {
     nextLeg();
-    arrive(w, bots, ['blue', 'red', 'green', 'gold']);
+    arrive(w, bots, ['gold', 'red', 'blue', 'green']);
     const out = w.state.teams.filter((x) => x.status === 'eliminated');
-    assert.deepEqual(out.map((x) => x.id), ['gold']);
+    assert.deepEqual(out.map((x) => x.id), ['green']);
     const spectated = w.effects.filter((e) => e.kind === 'spectate').flatMap((e) => e.players);
-    assert.deepEqual([...spectated].sort(), [...team(w, 'gold').members].sort());
+    assert.deepEqual([...spectated].sort(), [...team(w, 'green').members].sort());
     assert.equal(alive().length, 3);
   });
 
   await t.test('the final leg is raced by the three left; the first on the mat wins', () => {
     nextLeg();
-    ['green', 'red', 'blue'].forEach((id) => {
+    ['gold', 'red', 'blue'].forEach((id) => {
       bots.find((b) => b.id === id)?.toMat();
       w.tick(GAP);
     });
     w.until(() => w.state.phase === 'finished', 3000, 'the finish');
-    assert.equal(w.state.winner, 'green');
-    assert.deepEqual(eliminated(w), ['gold']);
+    assert.equal(w.state.winner, 'gold');
+    assert.deepEqual(eliminated(w), ['green']);
   });
 
   await t.test('End race restores the world and releases every player', () => {

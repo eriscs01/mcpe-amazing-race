@@ -37,6 +37,10 @@ const FLAT: ProbeSource = {
 const SPAWN: Vec3 = { x: 0, y: 70, z: 0 };
 export const HOST = 'p1';
 export const TIME_OF_DAY = 6000;
+export const DAY_STEP = 1000;
+
+/** The time of day the fake world shows when day `day` ends. */
+export const timeAtEndOf = (day: number): number => TIME_OF_DAY + DAY_STEP * day;
 
 export class FakeWorld {
   readonly bag = new MapBag();
@@ -71,6 +75,9 @@ export class FakeWorld {
 
   /** A fresh Session on the same saved bag: the world closed and opened again. */
   reopen(): void {
+    // The world forgets what the add-on had set up; the core must redo it from the saved state.
+    this.locked.clear();
+    this.shown.clear();
     this.session = this.newSession();
     this.session.load();
   }
@@ -188,11 +195,6 @@ export class FakeWorld {
     });
   }
 
-  /** The time of day the world last had, read back by End day. */
-  get clockTime(): number {
-    return this.timeOfDay;
-  }
-
   private newSession(): Session {
     const session: Session = new Session({
       bag: this.bag,
@@ -226,7 +228,11 @@ export class FakeWorld {
         break;
       case 'daylight':
         if (e.time !== undefined) this.timeOfDay = e.time;
-        if (e.save) session.dispatch({ type: 'dayTimeSaved', time: this.timeOfDay });
+        // Each day ends at a later time of day than the one before.
+        if (e.save) {
+          this.timeOfDay = timeAtEndOf(this.state.day);
+          session.dispatch({ type: 'dayTimeSaved', time: this.timeOfDay });
+        }
         break;
       case 'taskMenu':
       case 'askQuestion':

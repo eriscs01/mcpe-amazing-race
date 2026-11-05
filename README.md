@@ -13,7 +13,7 @@ A behavior-pack add-on that plays *The Amazing Race* in a dedicated world: teams
 
 The host runs everything from the **Race Control** clock (right-click it); every racer carries a **Race Passport** (team, phase and advantages). Nothing needs commands or chat.
 
-1. **Setup**: days (1–5), minutes per day, players per team, whether the host races, and the daylight cycle. The screen shows the legs, eliminations and course radius it derives from them.
+1. **Setup**: days (1–5), minutes per day, players per team, whether the host races, and the daylight cycle. After saving, a message shows the legs, eliminations and course radius derived from them.
 2. **Teams**: *Auto-assign* shuffles everyone online into teams; *Swap two players* adjusts.
 3. Stand at the start line and choose **Generate course here**. Optionally stand at a landmark first and choose **Add landmark here** to make it a stop. Arenas are built automatically (**Build arenas** retries any that failed); **List stops** shows the course.
 4. **Start race**. A 10-second countdown locks everyone at the start, then each team follows its clue to the next stop.
@@ -43,7 +43,7 @@ In-game checks: [docs/ingame-test.md](docs/ingame-test.md).
 
 ## Release
 
-Bump `version` in `package.json` and every version in `behavior_pack/manifest.json`, add a `CHANGELOG.md` section, then push a tag `vX.Y.Z`. The release workflow verifies, packages and publishes the `.mcaddon`.
+Bump `version` in `package.json` and every version in `behavior_pack/manifest.json`, add a `CHANGELOG.md` section (move the `[Unreleased]` entries into it), then push a tag `vX.Y.Z`. The release workflow verifies, packages and publishes the `.mcaddon`.
 
 ## License
 

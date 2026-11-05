@@ -121,7 +121,14 @@ export class Bot {
     });
   }
 
-  /** The buttons of the menu the lead was last shown. */
+  /** The buttons of the menu the lead was shown; throws if it was shown anything else. */
+  menu(): TaskChoice[] {
+    const shown = this.w.shown.get(this.lead);
+    if (shown?.kind !== 'taskMenu') throw new Error(`${this.id} was not shown a menu`);
+    return shown.menu.buttons.map((b) => b.command);
+  }
+
+  /** The buttons of the menu the lead was last shown (none if it was a form or nothing). */
   buttons(): TaskChoice[] {
     const shown = this.w.shown.get(this.lead);
     return shown?.kind === 'taskMenu' ? shown.menu.buttons.map((b) => b.command) : [];
