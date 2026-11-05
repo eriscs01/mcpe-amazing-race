@@ -134,7 +134,7 @@ the technical design (§4) add their checks here and record the result in their 
       everyone within 10 blocks the clue advances, shows the next stop's clue and the team's
       sidebar score rises by one. Another team's box gives "Not your clue box".
 - [ ] ✱ Sidebar fake-player names keep their colour codes.
-- [ ] ✱ A box on a stop with no task says "has no task to play" (Detour and Roadblock boxes now open their menus; see G14).
+- [ ] ✱ A box on a stop with no task says "has no task to play" .
 - [ ] ✱ Start with one racer standing in the Nether: they are brought to the Overworld start
       ring, at a block centre, not stuck in rock. A Nether block at an arena's coordinates is not
       treated as its clue box.
@@ -235,8 +235,9 @@ option, a Roadblock makes the clicker the performer).
       wood type counts in a forest; a short pile says "you hold n of m" and removes nothing.
 - [ ] Inventory tally: items in the hotbar, main inventory and stacks over several slots all
       count; a partial stack is reduced, not removed.
-- [ ] On Peaceful difficulty a Hunt says its targets did not spawn, to the team and the host
-      (#54).
+- [ ] Generate on Easy or harder, switch to Peaceful, then start a Hunt: does `spawnEntity` throw
+      (the team and the host are told the targets did not spawn, #54) or does the husk quietly
+      despawn (then no notice fires; note it)?
 
 ### G13 — Quiz and Recall ✱
 

@@ -78,7 +78,7 @@ Versions follow `package.json`; the release workflow publishes the section match
   packaging still needs `zip`.
 - Project scaffold: behavior pack manifest, build and `.mcaddon` packaging, CI.
 
-### Changed
+### Fixed
 - Cleanup of follow-ups (#65, #33, #54, #58, #70, #47, #51): a U-Turned team moved to its other
   side by a Hunt kill is no longer asked by an absent teammate (the box opens the question); a
   generation that fails because areas did not load says so instead of "water or steep terrain";

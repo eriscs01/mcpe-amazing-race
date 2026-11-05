@@ -432,7 +432,8 @@ export function zoneBuildFailed(state: State, a: Of<'zoneBuildFailed'>): Result 
 export function targetsSpawnFailed(state: State, a: Of<'targetsSpawnFailed'>): Result {
   const hunt = parseHuntTag(a.tag);
   const team = hunt ? state.teams.find((t) => t.id === hunt.team) : undefined;
-  if (!hunt || !team) {
+  const still = team?.task?.stopId === hunt?.stop && team?.task?.option === hunt?.zone;
+  if (!hunt || !team || !still) {
     return { state, effects: [], logs: [{ event: 'targetsSpawnIgnored', fields: { tag: a.tag } }] };
   }
   const to = [...new Set([...team.members, ...(state.hostId ? [state.hostId] : [])])];

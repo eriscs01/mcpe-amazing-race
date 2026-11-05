@@ -68,6 +68,15 @@ test('a pause stops the penalty wait on the mat; unpausing lets it run out', () 
   assert.equal(teamOf(ticks(back, RACE.countdownTicks), 'red').status, 'checkedIn');
 });
 
+test('a day that ends during the penalty wait stops it; resuming the day lets it run out', () => {
+  const arrived = owing(RACE.countdownTicks);
+  const ended = go(arrived, { type: 'endDay', by: 'h', positions: [] }).state;
+  const waited = ticks(ended, RACE.countdownTicks * 2);
+  assert.equal(teamOf(waited, 'red').status, 'racing', 'the race clock stood still');
+  const back = go(waited, { type: 'resumeDay', by: 'h' }).state;
+  assert.equal(teamOf(ticks(back, RACE.countdownTicks), 'red').status, 'checkedIn');
+});
+
 test('a reload re-locks a team that was serving a penalty on its mat', () => {
   const bag = new MapBag();
   saveState(bag, { ...owing(RACE.countdownTicks), hostId: 'h' });
