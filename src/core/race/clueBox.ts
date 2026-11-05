@@ -36,8 +36,7 @@ export function interactClue(state: State, a: Of<'interactClue'>): Result {
     return refuse(state, a.player, 'stopNotReady', 'Stand on the mat to check in.');
   }
   if (stop.type !== 'route' && !playable(stop)) {
-    return refuse(state, a.player, 'stopNotReady', `${stop.name} is a ${stop.type} stop; those `
-      + 'come in a later update.');
+    return refuse(state, a.player, 'stopNotReady', `${stop.name} has no task to play.`);
   }
   // While a Roadblock is under way only its performer needs to be there (spec §8.2).
   if (!together(stop, team, a.members)) {

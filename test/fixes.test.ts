@@ -60,7 +60,8 @@ test('Teleport me to team: the host is moved; a racing host or an empty team is 
   assert.equal(hostRaces.refusal, 'hostRaces');
   // A host who has checked in is still in the race: the same refusal.
   const checkedIn: State = {
-    ...racing, teams: racing.teams.map((t) => (t.members.includes('h') ? { ...t, status: 'checkedIn' } : t)),
+    ...racing,
+    teams: racing.teams.map((t) => (t.members.includes('h') ? { ...t, status: 'checkedIn' } : t)),
   };
   const mat = reduce(checkedIn, {
     type: 'teamFix', by: 'h', team: 'blue', fix: { kind: 'goto', at },

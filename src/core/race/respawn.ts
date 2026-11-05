@@ -108,7 +108,8 @@ export function respawned(state: State, a: Extract<Action, { type: 'playerSpawne
       state: {
         ...state,
         players: {
-          ...state.players, [a.player]: { name: a.name, ...state.players[a.player], released: true },
+          ...state.players,
+          [a.player]: { name: a.name, ...state.players[a.player], released: true },
         },
       },
       effects: [

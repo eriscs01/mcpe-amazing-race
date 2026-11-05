@@ -315,12 +315,14 @@ test('a second option pick is told what the team is doing', () => {
   assert.match(notes(second).join(' '), /Your team is doing Aim/);
 });
 
-test('a Hunt kill that moves a U-Turned team to a quiz side asks no one; the box opens it (#65)', () => {
+test('a Hunt kill moving a U-Turned team to a quiz side asks no one; the box does (#65)', () => {
   const state = at(1, { 2: { type: 'detour', options: [brainsBrawn.b, brainsBrawn.a] } });
   const turned: State = {
     ...state, teams: state.teams.map((t) => (t.id === 'red' ? { ...t, uTurnedAt: 2 } : t)),
   };
-  const kill = (r: Result): Result => reduce(r.state, { type: 'targetDied', tag: 'hunt:red:2:A', killer: 'b' });
+  const kill = (r: Result): Result => reduce(r.state, {
+    type: 'targetDied', tag: 'hunt:red:2:A', killer: 'b',
+  });
   const started = choose(turned, 'h', 2, aim);
   const last = kill(kill(kill(started)));
   const now = last.state;

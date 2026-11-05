@@ -339,6 +339,8 @@ export type Action = { type: 'tick' }
   | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
   /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
   | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName }
+  /** The adapter could not spawn a team's Hunt husks; `tag` names the team, stop and zone. */
+  | { type: 'targetsSpawnFailed'; tag: string }
   /**
    * A button of a `taskMenu` was chosen. `members` are the team's online members now, with what
    * they carry (a hand-in is tallied from this, not from the click that opened the menu).

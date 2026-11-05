@@ -425,6 +425,33 @@ export function zoneBuildFailed(state: State, a: Of<'zoneBuildFailed'>): Result 
   };
 }
 
+/**
+ * The adapter could not spawn a team's Hunt husks (Peaceful difficulty, a world error): tell the
+ * team and the host. Using the box again retries; the host can skip the task meanwhile.
+ */
+export function targetsSpawnFailed(state: State, a: Of<'targetsSpawnFailed'>): Result {
+  const hunt = parseHuntTag(a.tag);
+  const team = hunt ? state.teams.find((t) => t.id === hunt.team) : undefined;
+  if (!hunt || !team) {
+    return { state, effects: [], logs: [{ event: 'targetsSpawnIgnored', fields: { tag: a.tag } }] };
+  }
+  const to = [...new Set([...team.members, ...(state.hostId ? [state.hostId] : [])])];
+  return {
+    state,
+    effects: to.map((who) => ({
+      kind: 'notify' as const,
+      to: who,
+      code: 'targetsSpawnFailed',
+      text: `${team.name}'s Hunt targets did not spawn. Use the clue box again to retry, `
+        + 'or the host can skip the task (Team fixes).',
+    })),
+    logs: [{
+      event: 'targetsSpawnFailed',
+      fields: { team: team.id, stop: hunt.stop, zone: hunt.zone },
+    }],
+  };
+}
+
 /** A question form came back (Quiz, Recall): checked against the team's current question. */
 export function submitAnswer(state: State, a: Of<'submitAnswer'>): Result {
   const ignored = (reason: string): Result => ({

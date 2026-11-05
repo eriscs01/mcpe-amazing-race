@@ -236,8 +236,12 @@ const scramble = (word: string, rng: Rng): string => {
   return `${word.slice(1)}${word.charAt(0)}`;
 };
 
-const anagram = (rng: Rng): Question => {
-  const { answers } = rng.pick(ANAGRAMS);
+/** An anagram not asked yet in this deck (all of them again once the list runs out). */
+const anagram = (rng: Rng, used: Set<number>): Question => {
+  const fresh = ANAGRAMS.map((_, n) => n).filter((n) => !used.has(n));
+  const n = rng.pick(fresh.length > 0 ? fresh : ANAGRAMS.map((_, k) => k));
+  used.add(n);
+  const answers = ANAGRAMS[n]?.answers ?? [];
   const word = answers[0] ?? '';
   return {
     prompt: `Unscramble this mob or item: ${scramble(word, rng)}`,
@@ -249,6 +253,7 @@ const anagram = (rng: Rng): Question => {
 export function questionAt(seed: number, index: number): Question {
   const rng = new Rng(seed);
   const used = new Set<number>();
+  const usedWords = new Set<number>();
   let question: Question = { prompt: '', accepted: [] };
   for (let i = 0; i <= index; i += 1) {
     const roll = rng.next();
@@ -263,7 +268,7 @@ export function questionAt(seed: number, index: number): Question {
     } else if (roll < 0.75) {
       question = sum(rng);
     } else {
-      question = anagram(rng);
+      question = anagram(rng, usedWords);
     }
   }
   return question;

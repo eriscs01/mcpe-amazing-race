@@ -88,6 +88,14 @@ describe('questionAt', () => {
     assert.ok(seen > 30);
   });
 
+  it('an anagram is not asked twice in one deck (#58)', () => {
+    for (let seed = 0; seed < 100; seed += 1) {
+      const answers = Array.from({ length: 40 }, (_, i) => questionAt(seed, i))
+        .filter((q) => q.prompt.startsWith('Unscramble')).map((q) => q.accepted[0]);
+      assert.equal(new Set(answers).size, answers.length, `seed ${seed}`);
+    }
+  });
+
   it('anagrams scramble the answer into something else', () => {
     let seen = 0;
     for (let seed = 0; seed < 300; seed += 1) {

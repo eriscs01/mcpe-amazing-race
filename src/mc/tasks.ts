@@ -55,7 +55,11 @@ const alive = (entity: Entity): boolean => entity.isValid
   && (entity.getComponent('minecraft:health')?.currentValue ?? 1) > 0;
 
 /** Spawns a team's Hunt husks (or, topping up, only the ones missing) at the zone centre. */
-export function spawnTargets(effect: Of<'spawnTargets'>, log: Logger): void {
+export function spawnTargets(
+  effect: Of<'spawnTargets'>,
+  log: Logger,
+  failed: (tag: string) => void,
+): void {
   try {
     const dimension = world.getDimension(OVERWORLD);
     const living = effect.topUp ? dimension.getEntities({ tags: [effect.tag] }).filter(alive) : [];
@@ -72,6 +76,7 @@ export function spawnTargets(effect: Of<'spawnTargets'>, log: Logger): void {
     });
   } catch (error) {
     log.error('spawnTargetsFailed', error, { tag: effect.tag, count: effect.count });
+    failed(effect.tag);
   }
 }
 

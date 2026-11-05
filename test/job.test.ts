@@ -73,19 +73,23 @@ test('when every candidate is rejected the course fails with noGround', async ()
   assert.equal(!out.ok && 'reason' in out && out.reason, 'noGround');
 });
 
-test('when the area never loads the course fails with loadTimeout, not noGround (#33)', async () => {
+test('an area that never loads fails the course with loadTimeout, not noGround (#33)', async () => {
   const out = await runGeneration(input(), new FakeSource(() => TIMEOUT));
   assert.equal(!out.ok && 'reason' in out && out.reason, 'loadTimeout');
 });
 
-test('half timeouts and half rough ground still count as a load problem; fewer do not', async () => {
-  // Load 1 is the start line; then the candidates alternate between timeouts and rejections.
-  const mixed = new FakeSource((pos, n) => (n === 1 ? flat(pos) : (n % 2 === 0 ? TIMEOUT : undefined)));
-  const half = await runGeneration(input(), mixed);
-  assert.equal(!half.ok && 'reason' in half && half.reason, 'loadTimeout');
-  const few = new FakeSource((pos, n) => (n === 1 ? flat(pos) : (n === 3 ? TIMEOUT : undefined)));
-  const rare = await runGeneration(input(), few);
-  assert.equal(!rare.ok && 'reason' in rare && rare.reason, 'noGround');
+test('half timeouts and half rejections are a load problem; one timeout is not', async () => {
+  const run = async (timeouts: (n: number) => boolean): Promise<unknown> => {
+    // Load 1 is the start line; the candidates after it time out or are rejected.
+    const source = new FakeSource((pos, n) => {
+      if (n === 1) return flat(pos);
+      return timeouts(n) ? TIMEOUT : undefined;
+    });
+    const out = await runGeneration(input(), source);
+    return !out.ok && 'reason' in out && out.reason;
+  };
+  assert.equal(await run((n) => n % 2 === 0), 'loadTimeout');
+  assert.equal(await run((n) => n === 3), 'noGround');
 });
 
 test('a full ticking-area list stops the job at once', async () => {
