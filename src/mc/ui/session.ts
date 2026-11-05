@@ -78,12 +78,14 @@ export async function status(session: Session, player: Player): Promise<void> {
 /** The online member of the team nearest to the host, where they stand (the host goes there). */
 function memberPos(session: Session, teamId: string, host: Player): Vec3 | undefined {
   const team = session.state?.teams.find((t) => t.id === teamId);
-  const dist = (p: Player): number => (host.dimension.id === OVERWORLD
+  // Measured in the Overworld; a host elsewhere has no distance, so the first teammate is taken.
+  const away = (p: Player): number => (host.dimension.id === OVERWORLD
     ? (p.location.x - host.location.x) ** 2 + (p.location.z - host.location.z) ** 2 : 0);
   const [mate] = world.getPlayers()
     .filter((p) => team?.members.includes(p.id) && p.dimension.id === OVERWORLD)
-    .sort((x, y) => dist(x) - dist(y));
-  return mate?.location;
+    .map((p) => ({ p, d: away(p) }))
+    .sort((x, y) => x.d - y.d);
+  return mate?.p.location;
 }
 
 export async function teamFixes(session: Session, player: Player): Promise<void> {
