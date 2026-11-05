@@ -34,7 +34,7 @@ npm test            # core unit tests (Node >= 22)
 npm run lint        # ESLint: Airbnb style (rules + formatting) + Minecraft lint
 npm run format      # auto-fix what ESLint can (formatting included)
 npm run coverage    # tests + coverage; fails below 80% lines of src/core
-npm run package     # clean build + checks -> dist/AmazingRace.mcaddon
+npm run package     # clean build + checks -> dist/AmazingRace.mcaddon (needs the `zip` command)
 ```
 
 Targets stable `@minecraft/server` / `@minecraft/server-ui` 2.0.0 only; no Beta APIs, no resource pack.
