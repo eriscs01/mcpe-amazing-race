@@ -71,6 +71,8 @@ Versions follow `package.json`; the release workflow publishes the section match
   stop, rejoin (kit, name tag, lock, Spectator, teammate), host Team fixes (penalty, skip,
   go to team, eliminate), Status and End race (husks, gamerules and time restored, sidebar
   removed, players released) (G17).
+- Full-race simulation: `test/sim` runs the real `Session` and core on a flat fake world with scripted teams (9 players in 3 teams over 3 days, and 12 players in 4 teams for an elimination); README hosting guide; M4 release checklist (G18).
+- `npm run` scripts clean with `scripts/clean.mjs` instead of POSIX `rm -rf` (#28).
 
 ## [0.1.0]
 
