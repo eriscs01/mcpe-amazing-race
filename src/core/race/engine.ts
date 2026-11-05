@@ -25,7 +25,7 @@ import { racerPositions } from './pitstop.js';
 import { blockPlaced } from './protect.js';
 import { startRace } from './start.js';
 import {
-  submitAnswer, targetDied, taskEvent, taskStanding, zoneBuildFailed,
+  submitAnswer, targetDied, targetsSpawnFailed, taskEvent, taskStanding, zoneBuildFailed,
 } from './task.js';
 import { taskChoice } from './taskFlow.js';
 import { tick } from './tick.js';
@@ -114,6 +114,8 @@ export function reduce(state: State, action: Action): Result {
       return taskEvent(state, action);
     case 'zoneBuildFailed':
       return zoneBuildFailed(state, action);
+    case 'targetsSpawnFailed':
+      return targetsSpawnFailed(state, action);
     case 'targetDied':
       return targetDied(state, action);
     case 'submitAnswer':

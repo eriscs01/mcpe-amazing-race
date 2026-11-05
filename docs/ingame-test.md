@@ -82,6 +82,8 @@ the technical design (§4) add their checks here and record the result in their 
       logged and the host menu is back in Setup.
 - [ ] ✱ Generate again from Ready replaces the course; Discard course returns to Setup and
       Setup can be opened again, with landmarks and teams still there.
+- [ ] With the server busy (or a very slow load), a failed generation says the terrain did not
+      load in time rather than "water or steep terrain" (#33).
 
 ### G7 — arena build & lighting ✱
 
@@ -132,7 +134,7 @@ the technical design (§4) add their checks here and record the result in their 
       everyone within 10 blocks the clue advances, shows the next stop's clue and the team's
       sidebar score rises by one. Another team's box gives "Not your clue box".
 - [ ] ✱ Sidebar fake-player names keep their colour codes.
-- [ ] ✱ Detour / Roadblock / Pit Stop boxes say they come in a later update.
+- [ ] ✱ A box on a stop with no task says "has no task to play" .
 - [ ] ✱ Start with one racer standing in the Nether: they are brought to the Overworld start
       ring, at a block centre, not stuck in rock. A Nether block at an arena's coordinates is not
       treated as its clue box.
@@ -202,6 +204,7 @@ racers could break course blocks.
 - [ ] Roadblock: the player who clicked the box is the performer; a teammate's shots or breaks
       do not count, and only the performer must be within 10 blocks on later clicks.
 - [ ] A Quiz or Recall stop asks questions in a form (see G13).
+- [ ] A refill of the hay pile while a racer digs inside it: what happens to the racer (#51)?
 
 ### G12 — Combat and inventory tasks ✱
 
@@ -232,6 +235,9 @@ option, a Roadblock makes the clicker the performer).
       wood type counts in a forest; a short pile says "you hold n of m" and removes nothing.
 - [ ] Inventory tally: items in the hotbar, main inventory and stacks over several slots all
       count; a partial stack is reduced, not removed.
+- [ ] Generate on Easy or harder, switch to Peaceful, then start a Hunt: does `spawnEntity` throw
+      (the team and the host are told the targets did not spawn, #54) or does the husk quietly
+      despawn (then no notice fires; note it)?
 
 ### G13 — Quiz and Recall ✱
 
@@ -255,6 +261,8 @@ and a final leg (Recall). Use `/scriptevent race:dump` to find them.
       race task, any wrong one locks the team out for 20 s. Note whether the dropdown labels and
       a text field give the expected `formValues` (no extra slots). Check the Recall form's
       title ("Recall: Which Pit Stop did you check in at, leg by leg?") is not cut off.
+- [ ] A U-Turned team finishing a Hunt side that is followed by a quiz side is not shown a form
+      until it uses the box (#65).
 
 ### G14 — Detour and Roadblock flow ✱
 
@@ -362,6 +370,8 @@ limits while testing (use a second account for a non-racer).
 - [ ] End race: husks vanish, gamerules and time of day return, the sidebar is gone, everyone
       is Survival with their plain name tag and no Passport (#40, #45, #53). Also try it on a
       final leg nobody finished. A player offline at that moment is released on rejoin.
+- [ ] After End race, a player who rejoins is reset once only: setting Creative afterwards sticks
+      across a relog; a host teleported to the nearest online teammate (#70).
 
 ### M4 — Release (G18)
 

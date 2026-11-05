@@ -10,7 +10,7 @@ import { onMat } from './helpers/race.js';
 import { DETOUR_PAIRS, ITEM, PENALTY_HOURS } from '../src/core/config.js';
 import { reduce } from '../src/core/race/engine.js';
 
-import type { Result, TaskChoice } from '../src/core/types.js';
+import type { Result, State, TaskChoice } from '../src/core/types.js';
 
 const aim = { type: 'option', option: 'A' } as const;
 const climb = { type: 'option', option: 'B' } as const;
@@ -313,4 +313,22 @@ test('a second option pick is told what the team is doing', () => {
   const second = choose(started, 'b', 2, climb);
   assert.equal(second.state, started);
   assert.match(notes(second).join(' '), /Your team is doing Aim/);
+});
+
+test('a Hunt kill moving a U-Turned team to a quiz side asks no one; the box does (#65)', () => {
+  const state = at(1, { 2: { type: 'detour', options: [brainsBrawn.b, brainsBrawn.a] } });
+  const turned: State = {
+    ...state, teams: state.teams.map((t) => (t.id === 'red' ? { ...t, uTurnedAt: 2 } : t)),
+  };
+  const kill = (r: Result): Result => reduce(r.state, {
+    type: 'targetDied', tag: 'hunt:red:2:A', killer: 'b',
+  });
+  const started = choose(turned, 'h', 2, aim);
+  const last = kill(kill(kill(started)));
+  const now = last.state;
+  assert.deepEqual(red(now).task, { stopId: 2, option: 'B' }, 'moved to the quiz side');
+  assert.equal(last.effects.some((e) => e.kind === 'askQuestion'), false, 'no form for anyone');
+  const opened = click(now, 'b', 2);
+  const shown = opened.effects.find((e) => e.kind === 'askQuestion' || e.kind === 'taskMenu');
+  assert.equal(shown && 'to' in shown && shown.to, 'b', 'the box user is shown the quiz');
 });

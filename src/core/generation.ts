@@ -62,6 +62,9 @@ export function failureText(failure: GenerationFailure, radius: number): string 
     case 'noGround':
       return `No usable ground for the ${stopName(failure)} (water or steep terrain everywhere `
         + 'it looked). Move the start line and generate again.';
+    case 'loadTimeout':
+      return `The terrain for the ${stopName(failure)} did not load in time (the server may be `
+        + 'busy). Wait a moment and generate again.';
     default:
       return 'Course generation failed unexpectedly. See the Content Log.';
   }

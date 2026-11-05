@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { runGeneration, TickingAreaFull } from '../src/core/course/job.js';
-import { generateCourse, PAUSE } from '../src/core/course/walk.js';
+import { generateCourse, PAUSE, TIMEOUT } from '../src/core/course/walk.js';
 
 import type { ProbeSource } from '../src/core/course/job.js';
-import type { CourseInput, Probe } from '../src/core/course/walk.js';
+import type { Answer, CourseInput, Probe } from '../src/core/course/walk.js';
 import type { Vec3 } from '../src/core/vec.js';
 
 const start = { x: 0, y: 64, z: 0 };
@@ -21,9 +21,9 @@ class FakeSource implements ProbeSource {
 
   pauses = 0;
 
-  constructor(private readonly answer: (pos: Vec3, n: number) => Probe | undefined = flat) {}
+  constructor(private readonly answer: (pos: Vec3, n: number) => Answer = flat) {}
 
-  async load(pos: Vec3): Promise<Probe | undefined> {
+  async load(pos: Vec3): Promise<Answer> {
     this.loads.push(pos);
     return this.answer(pos, this.loads.length);
   }
@@ -71,6 +71,25 @@ test('when every candidate is rejected the course fails with noGround', async ()
   const out = await runGeneration(input(), new FakeSource(() => undefined));
   assert.ok(!out.ok);
   assert.equal(!out.ok && 'reason' in out && out.reason, 'noGround');
+});
+
+test('an area that never loads fails the course with loadTimeout, not noGround (#33)', async () => {
+  const out = await runGeneration(input(), new FakeSource(() => TIMEOUT));
+  assert.equal(!out.ok && 'reason' in out && out.reason, 'loadTimeout');
+});
+
+test('half timeouts and half rejections are a load problem; one timeout is not', async () => {
+  const run = async (timeouts: (n: number) => boolean): Promise<unknown> => {
+    // Load 1 is the start line; the candidates after it time out or are rejected.
+    const source = new FakeSource((pos, n) => {
+      if (n === 1) return flat(pos);
+      return timeouts(n) ? TIMEOUT : undefined;
+    });
+    const out = await runGeneration(input(), source);
+    return !out.ok && 'reason' in out && out.reason;
+  };
+  assert.equal(await run((n) => n % 2 === 0), 'loadTimeout');
+  assert.equal(await run((n) => n === 3), 'noGround');
 });
 
 test('a full ticking-area list stops the job at once', async () => {

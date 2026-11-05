@@ -46,6 +46,9 @@ const session: Session = new Session({
     zoneFailed: (stop, zone) => system.run(guard(session.log, 'zoneBuildFailed', () => {
       session.dispatch({ type: 'zoneBuildFailed', stop, zone });
     })),
+    spawnFailed: (tag) => system.run(guard(session.log, 'targetsSpawnFailed', () => {
+      session.dispatch({ type: 'targetsSpawnFailed', tag });
+    })),
   }),
   newSeed: () => Math.floor(Math.random() * 2 ** 32),
 });

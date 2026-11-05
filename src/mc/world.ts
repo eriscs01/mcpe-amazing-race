@@ -29,6 +29,7 @@ export interface EffectHost {
   taskMenu: (effect: Extract<Effect, { kind: 'taskMenu' }>) => void;
   /** A task zone could not be built (the core forgets it so the next box use retries). */
   zoneFailed: (stop: number, zone: Extract<Effect, { kind: 'zoneBlocks' }>['zone']) => void;
+  spawnFailed: (tag: string) => void;
   /** The time of day, read after the daylight stopped for a day's end (`dayTimeSaved`). */
   dayTime: (time: number) => void;
 }
@@ -64,7 +65,7 @@ function apply(effect: Effect, log: Logger, host: EffectHost): void {
       host.taskMenu(effect);
       break;
     case 'spawnTargets':
-      spawnTargets(effect, log);
+      spawnTargets(effect, log, host.spawnFailed);
       break;
     case 'takeVanilla':
       takeVanilla(effect, log);

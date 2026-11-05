@@ -182,7 +182,7 @@ export function beginTask(
   team: Team,
   stop: Stop,
   offer: Offer,
-  by: PlayerId,
+  by: PlayerId | undefined,
   performer?: PlayerId,
   held?: Held,
 ): Result {
@@ -196,6 +196,7 @@ export function beginTask(
     progress: { ...team.progress, [key]: team.progress[key] ?? offer.kind.initial },
   };
   const players = performer ? [performer] : team.members;
+  const asker = performer ?? by;
   const ctx = requireContext(zone.state, current, offer, team);
   const progress = started.progress[key] ?? offer.kind.initial;
   const effects: Effect[] = [
@@ -208,7 +209,7 @@ export function beginTask(
       text: offer.kind.progressText(progress, ctx),
       chat: true,
     },
-    ...(offer.kind.prompt?.(progress, ctx, performer ?? by) ?? []),
+    ...(asker ? offer.kind.prompt?.(progress, ctx, asker) ?? [] : []),
   ];
   const logs: LogLine[] = [...(zone.logs ?? []), {
     event: 'taskStarted',
@@ -290,7 +291,8 @@ export function applyEvent(state: State, team: Team, now: Playing, event: TaskEv
   // A U-Turned team still owes the other side of its Detour (spec §8.7): on to that one.
   const owed = owedSide(state, finished, now);
   if (owed) {
-    const actor = 'by' in event ? event.by : team.members[0] ?? '';
+    // An event with no actor (a Hunt kill) asks no one: the box opens the question later.
+    const actor = 'by' in event ? event.by : undefined;
     const moved = beginTask(replaceTeam(state, finished), finished, now.stop, owed, actor);
     return {
       ...moved,
@@ -420,6 +422,34 @@ export function zoneBuildFailed(state: State, a: Of<'zoneBuildFailed'>): Result 
       text: 'The task area did not build. Use the clue box again to retry.',
     })),
     logs: [{ event: 'zoneForgotten', fields: { stop: stop.id, zone: a.zone, task: lost?.kind } }],
+  };
+}
+
+/**
+ * The adapter could not spawn a team's Hunt husks (Peaceful difficulty, a world error): tell the
+ * team and the host. Using the box again retries; the host can skip the task meanwhile.
+ */
+export function targetsSpawnFailed(state: State, a: Of<'targetsSpawnFailed'>): Result {
+  const hunt = parseHuntTag(a.tag);
+  const team = hunt ? state.teams.find((t) => t.id === hunt.team) : undefined;
+  const still = team?.task?.stopId === hunt?.stop && team?.task?.option === hunt?.zone;
+  if (!hunt || !team || !still) {
+    return { state, effects: [], logs: [{ event: 'targetsSpawnIgnored', fields: { tag: a.tag } }] };
+  }
+  const to = [...new Set([...team.members, ...(state.hostId ? [state.hostId] : [])])];
+  return {
+    state,
+    effects: to.map((who) => ({
+      kind: 'notify' as const,
+      to: who,
+      code: 'targetsSpawnFailed',
+      text: `${team.name}'s Hunt targets did not spawn. Use the clue box again to retry, `
+        + 'or the host can skip the task (Team fixes).',
+    })),
+    logs: [{
+      event: 'targetsSpawnFailed',
+      fields: { team: team.id, stop: hunt.stop, zone: hunt.zone },
+    }],
   };
 }
 

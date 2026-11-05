@@ -64,7 +64,9 @@ export async function endRace(session: Session, player: Player): Promise<void> {
     'End race',
   );
   if (await showMenu(player, menu, session.log) !== 'yes') return;
-  session.dispatch({ type: 'endRace', by: player.id });
+  session.dispatch({
+    type: 'endRace', by: player.id, online: world.getPlayers().map((p) => p.id),
+  });
 }
 
 export async function status(session: Session, player: Player): Promise<void> {
@@ -73,12 +75,17 @@ export async function status(session: Session, player: Player): Promise<void> {
   await showMenu(player, statusMenu(state, world.getPlayers().map((p) => p.id)), session.log);
 }
 
-/** The first online member of the team, where they stand (the host goes there). */
-function memberPos(session: Session, teamId: string): Vec3 | undefined {
+/** The online member of the team nearest to the host, where they stand (the host goes there). */
+function memberPos(session: Session, teamId: string, host: Player): Vec3 | undefined {
   const team = session.state?.teams.find((t) => t.id === teamId);
-  const mate = world.getPlayers().find((p) => team?.members.includes(p.id)
-    && p.dimension.id === OVERWORLD);
-  return mate?.location;
+  // Measured in the Overworld; a host elsewhere has no distance, so the first teammate is taken.
+  const away = (p: Player): number => (host.dimension.id === OVERWORLD
+    ? (p.location.x - host.location.x) ** 2 + (p.location.z - host.location.z) ** 2 : 0);
+  const [mate] = world.getPlayers()
+    .filter((p) => team?.members.includes(p.id) && p.dimension.id === OVERWORLD)
+    .map((p) => ({ p, d: away(p) }))
+    .sort((x, y) => x.d - y.d);
+  return mate?.p.location;
 }
 
 export async function teamFixes(session: Session, player: Player): Promise<void> {
@@ -106,7 +113,7 @@ export async function teamFixes(session: Session, player: Player): Promise<void>
   const fix: Fix | undefined = [
     { kind: 'penalty' as const, minutes: typeof m === 'number' ? m : 0 },
     { kind: 'skip' as const },
-    { kind: 'goto' as const, at: memberPos(session, team.id) },
+    { kind: 'goto' as const, at: memberPos(session, team.id, player) },
     { kind: 'eliminate' as const },
   ][f];
   if (fix) {

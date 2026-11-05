@@ -155,6 +155,9 @@ test('haystack: a 5×5×3 pile with one wool per team (max 9) hidden in the midd
   assert.equal(sets(ops).filter((o) => o.block === BLOCK.yellowWool).length, 3);
   const many = haystack.build(ctxOf({ teams: 14 }), new Rng(7)).hidden;
   assert.equal(many?.length, 9);
+  const counts = [1, 9, 10].map((teams) => (
+    haystack.build(ctxOf({ teams }), new Rng(7)).hidden?.length));
+  assert.deepEqual(counts, [1, 9, 9], 'one wool per team, at most nine');
 });
 
 test('haystack: breaking a hidden wool completes it; other blocks and bare wool do not', () => {

@@ -185,6 +185,8 @@ export interface PlayerRecord {
   returnedAt?: number;
   /** The racer was given the kit (at the start, or on a later join); read with `??`. */
   kitted?: boolean;
+  /** Set once End race has released the player (reset, no Passport); read with `?? false`. */
+  released?: boolean;
 }
 
 export interface LegState {
@@ -324,7 +326,7 @@ export type Action = { type: 'tick' }
   | { type: 'dayTimeSaved'; time: number }
   | { type: 'resumeDay'; by: PlayerId }
   /** Host: restores the world and releases the players (spec §12). */
-  | { type: 'endRace'; by: PlayerId }
+  | { type: 'endRace'; by: PlayerId; online: PlayerId[] }
   /** Host Team fixes (spec §4): `minutes` are race minutes. */
   | {
     type: 'teamFix';
@@ -337,6 +339,8 @@ export type Action = { type: 'tick' }
   | { type: 'taskEvent'; player: PlayerId; event: TaskEvent }
   /** The adapter could not build a task zone: forget it so the next box use rebuilds it. */
   | { type: 'zoneBuildFailed'; stop: number; zone: ZoneName }
+  /** The adapter could not spawn a team's Hunt husks; `tag` names the team, stop and zone. */
+  | { type: 'targetsSpawnFailed'; tag: string }
   /**
    * A button of a `taskMenu` was chosen. `members` are the team's online members now, with what
    * they carry (a hand-in is tallied from this, not from the click that opened the menu).
@@ -380,7 +384,7 @@ export interface ArenaSite {
 
 /** Why a generation job ended without a course. */
 export type GenerationFailure = {
-  reason: 'noGround' | 'noRoom'; stop: number; leg: number; type: StopType;
+  reason: 'noGround' | 'loadTimeout' | 'noRoom'; stop: number; leg: number; type: StopType;
 } | {
   reason: 'pinOutsideCourse' | 'pinTooClose' | 'tooManyPins'; pin: number;
 } | { reason: 'tickingAreaFull' } | { reason: 'error' };

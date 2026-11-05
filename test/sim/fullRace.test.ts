@@ -342,7 +342,7 @@ test('12 players, 4 teams, 3 days: leg 5 eliminates the last team', async (t) =>
   });
 
   await t.test('End race restores the world and releases every player', () => {
-    w.send({ type: 'endRace', by: HOST });
+    w.send({ type: 'endRace', by: HOST, online: w.online().map((x) => x.id) });
     assert.equal(w.state.ended, true);
     assert.ok(w.effects.some((e) => e.kind === 'restoreWorld'));
     assert.ok(w.effects.some((e) => e.kind === 'clearSidebar'));

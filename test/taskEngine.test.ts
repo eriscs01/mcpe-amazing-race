@@ -286,6 +286,10 @@ test('haystack: the pile is rebuilt when the wool runs out and another team digs
   assert.equal(fresh?.hidden?.length, 2);
   assert.equal(fresh?.refills, 1);
   assert.equal(teamOf(out.state, 'blue').step, 1, 'blue is still digging');
+  assert.deepEqual(teamOf(out.state, 'blue').task, teamOf(one, 'blue').task, 'blue is untouched');
+  const ops = refill?.kind === 'zoneBlocks' ? refill.ops : [];
+  assert.ok(ops.some((o) => o.kind === 'fill'), 'the whole pile is laid again');
+  assert.equal(ops.filter((o) => o.kind === 'set').length, 2, 'with the new wool hidden in it');
   assert.ok(out.logs?.some((l) => l.event === 'zoneRefilled'));
 });
 
@@ -347,6 +351,20 @@ test('a zone whose build failed is forgotten, the team told, and the next use re
   assert.equal(retry.state.teams.find((t) => t.id === 'red')?.task?.option, 'A');
   assert.ok(stopOf(retry.state, 2).zones?.A);
   assert.ok(retry.logs?.some((l) => l.event === 'zoneBuilt'));
+});
+
+test('a Hunt whose husks could not spawn tells the team and the host (#54)', () => {
+  const state: State = { ...aiming(), hostId: 'e' };
+  const out = reduce(state, { type: 'targetsSpawnFailed', tag: 'hunt:red:2:A' });
+  const told = out.effects.flatMap((e) => (e.kind === 'notify' ? [e.to] : []));
+  assert.deepEqual(told.sort(), ['b', 'e', 'h']);
+  assert.ok(out.effects.every((e) => e.kind !== 'notify' || e.text.includes('clue box again')));
+  assert.equal(out.state, state);
+  const moved = reduce(state, { type: 'targetsSpawnFailed', tag: 'hunt:red:2:B' });
+  assert.equal(moved.effects.length, 0, 'the team is not on that side of the Detour');
+  const stray = reduce(state, { type: 'targetsSpawnFailed', tag: 'hunt:nobody:2:A' });
+  assert.equal(stray.effects.length, 0);
+  assert.equal(stray.logs?.[0]?.event, 'targetsSpawnIgnored');
 });
 
 test('events outside a running race, or from a team that is not racing, change nothing', () => {

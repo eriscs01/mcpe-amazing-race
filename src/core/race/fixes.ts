@@ -76,8 +76,9 @@ function eliminate(state: State, a: Fix, team: Team): Result {
 }
 
 function go(state: State, a: Fix, team: Team, at: Vec3 | undefined): Result {
-  if (memberTeam(state, a.by)?.status === 'racing') {
-    const text = 'You are racing: leaving your team would break the rules.';
+  const own = memberTeam(state, a.by);
+  if (own && own.status !== 'eliminated') {
+    const text = 'You are in the race: leaving your team would break the rules.';
     return refuse(state, a.by, 'hostRaces', text);
   }
   if (!at) return refuse(state, a.by, 'nobodyOnline', `Nobody of ${team.name} is online.`);

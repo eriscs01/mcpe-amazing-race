@@ -77,3 +77,12 @@ Versions follow `package.json`; the release workflow publishes the section match
 - The npm scripts clean with `scripts/clean.mjs` instead of POSIX-only `rm -rf` (#28);
   packaging still needs `zip`.
 - Project scaffold: behavior pack manifest, build and `.mcaddon` packaging, CI.
+
+### Fixed
+- Cleanup of follow-ups (#65, #33, #54, #58, #70, #47, #51): a U-Turned team moved to its other
+  side by a Hunt kill is no longer asked by an absent teammate (the box opens the question); a
+  generation that fails because areas did not load says so instead of "water or steep terrain";
+  a Hunt whose husks could not spawn tells the team and the host; a quiz deck no longer repeats
+  an anagram; after End race a player is reset once, not at every later join; "Teleport me to
+  team" goes to the nearest teammate and is refused for a host who is still in the race; the
+  clue-box message for a stop with no task no longer promises a later update.
