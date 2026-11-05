@@ -13,10 +13,10 @@
     "lint": "eslint . --max-warnings 0",
     "format": "eslint . --fix",
     "build": "tsc",
-    "test": "rm -rf build/test && tsc -p tsconfig.test.json && node --test \"build/test/test/**/*.test.js\"",
-    "coverage": "rm -rf build/test build/coverage && tsc -p tsconfig.test.json && c8 node --test \"build/test/test/**/*.test.js\"",
-    "package": "rm -rf behavior_pack/scripts && npm run build && node scripts/package.mjs",
-    "clean": "rm -rf behavior_pack/scripts build dist"
+    "test": "node scripts/clean.mjs build/test && tsc -p tsconfig.test.json && node --test \"build/test/test/**/*.test.js\"",
+    "coverage": "node scripts/clean.mjs build/test build/coverage && tsc -p tsconfig.test.json && c8 node --test \"build/test/test/**/*.test.js\"",
+    "package": "node scripts/clean.mjs behavior_pack/scripts && npm run build && node scripts/package.mjs",
+    "clean": "node scripts/clean.mjs behavior_pack/scripts build dist"
   },
   "dependencies": {
     "@minecraft/server": "2.0.0",

@@ -363,6 +363,17 @@ limits while testing (use a second account for a non-racer).
       is Survival with their plain name tag and no Passport (#40, #45, #53). Also try it on a
       final leg nobody finished. A player offline at that moment is released on rejoin.
 
-### M2–M4
+### M4 — Release (G18)
 
-Add checks as the groups land.
+The release check on the packaged add-on, in a fresh world copy with 2 players. The per-group checks above (and the owed runs listed in the follow-up issues) are not repeated here; run those first.
+
+| Check | Result (version, date) |
+|---|---|
+| `npm run package` output (`dist/AmazingRace.mcaddon`) opens in Minecraft and imports without an error | |
+| The pack activates on 1.21.90+ with no experiments and no Content Log errors at world load | |
+| Race Control opens the host menu; the Passport opens its menu for a racer | |
+| Setup → Teams → Generate course → arenas built → Start race on a real world | |
+| Beacon beams stand over the next stop's arena; the HUD arrow points at it | |
+| One Detour and one Roadblock played to the end; the team checks in on the mat | |
+| End day, close the world, reopen it: the day resumes where each team stood (Resume day) | |
+| End race restores the daylight cycle and time of day and releases both players | |
