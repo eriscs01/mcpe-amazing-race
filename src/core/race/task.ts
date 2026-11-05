@@ -182,7 +182,7 @@ export function beginTask(
   team: Team,
   stop: Stop,
   offer: Offer,
-  by: PlayerId,
+  by: PlayerId | undefined,
   performer?: PlayerId,
   held?: Held,
 ): Result {
@@ -196,6 +196,7 @@ export function beginTask(
     progress: { ...team.progress, [key]: team.progress[key] ?? offer.kind.initial },
   };
   const players = performer ? [performer] : team.members;
+  const asker = performer ?? by;
   const ctx = requireContext(zone.state, current, offer, team);
   const progress = started.progress[key] ?? offer.kind.initial;
   const effects: Effect[] = [
@@ -208,7 +209,7 @@ export function beginTask(
       text: offer.kind.progressText(progress, ctx),
       chat: true,
     },
-    ...(offer.kind.prompt?.(progress, ctx, performer ?? by) ?? []),
+    ...(asker ? offer.kind.prompt?.(progress, ctx, asker) ?? [] : []),
   ];
   const logs: LogLine[] = [...(zone.logs ?? []), {
     event: 'taskStarted',
@@ -290,7 +291,8 @@ export function applyEvent(state: State, team: Team, now: Playing, event: TaskEv
   // A U-Turned team still owes the other side of its Detour (spec §8.7): on to that one.
   const owed = owedSide(state, finished, now);
   if (owed) {
-    const actor = 'by' in event ? event.by : team.members[0] ?? '';
+    // An event with no actor (a Hunt kill) asks no one: the box opens the question later.
+    const actor = 'by' in event ? event.by : undefined;
     const moved = beginTask(replaceTeam(state, finished), finished, now.stop, owed, actor);
     return {
       ...moved,

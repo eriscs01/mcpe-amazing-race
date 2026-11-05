@@ -22,8 +22,14 @@ export function endRace(state: State, a: Extract<Action, { type: 'endRace' }>): 
     { kind: 'lockMovement', players, locked: false },
     { kind: 'broadcast', text: 'The race has been ended by the host.' },
   ];
+  // Players online now are reset by the effects above; the others are reset at their first join.
+  const released = Object.fromEntries(a.online.filter((id) => players.includes(id)).map((id) => [
+    id, { name: id, ...state.players[id], released: true },
+  ]));
   return {
-    state: { ...state, phase: 'finished', ended: true },
+    state: {
+      ...state, phase: 'finished', ended: true, players: { ...state.players, ...released },
+    },
     effects,
     logs: [{
       event: 'raceEnded',

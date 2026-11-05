@@ -132,6 +132,21 @@ test('a rejoin after End race releases the player', () => {
   assert.equal(of(res.effects, 'teleport').length, 0);
 });
 
+test('a player released by End race is not reset again at later joins', () => {
+  const ended = reduce(
+    { ...race(), hostId: 'h' },
+    { type: 'endRace', by: 'h', online: ['b'] },
+  ).state;
+  // Online at End race: already reset, so the first join after it leaves them alone.
+  const again = reduce(ended, spawn('b', true));
+  assert.equal(of(again.effects, 'resetPlayers').length, 0);
+  // Offline at End race: reset once at the first join, then left alone.
+  const first = reduce(ended, spawn('c', true));
+  assert.deepEqual(of(first.effects, 'resetPlayers'), [{ kind: 'resetPlayers', players: ['c'] }]);
+  assert.equal(first.state.players.c?.released, true);
+  assert.equal(of(reduce(first.state, spawn('c', true)).effects, 'resetPlayers').length, 0);
+});
+
 test('a late racer gets the Passport after the kit that clears the pack', () => {
   const state = race();
   const late: State = {

@@ -102,15 +102,22 @@ export function respawned(state: State, a: Extract<Action, { type: 'playerSpawne
   const team = teamOf(state, a.player);
   if (!team) return same(state);
   if (state.ended) {
-    return a.initial ? {
-      state,
+    // Released once: a host who sets Creative in the kept world is not overridden at every join.
+    if (!a.initial || state.players[a.player]?.released === true) return same(state);
+    return {
+      state: {
+        ...state,
+        players: {
+          ...state.players, [a.player]: { name: a.name, ...state.players[a.player], released: true },
+        },
+      },
       effects: [
         { kind: 'resetPlayers', players: [a.player] },
         { kind: 'lockMovement', players: [a.player], locked: false },
         ...leave(a.player),
       ],
       logs: [{ event: 'racerReleased', fields: { player: a.player } }],
-    } : same(state);
+    };
   }
   if (!IN_RACE.includes(state.phase)) return same(state);
   if (team.status === 'eliminated') {

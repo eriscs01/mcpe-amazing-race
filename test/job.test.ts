@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { runGeneration, TickingAreaFull } from '../src/core/course/job.js';
-import { generateCourse, PAUSE } from '../src/core/course/walk.js';
+import { generateCourse, PAUSE, TIMEOUT } from '../src/core/course/walk.js';
 
 import type { ProbeSource } from '../src/core/course/job.js';
-import type { CourseInput, Probe } from '../src/core/course/walk.js';
+import type { Answer, CourseInput, Probe } from '../src/core/course/walk.js';
 import type { Vec3 } from '../src/core/vec.js';
 
 const start = { x: 0, y: 64, z: 0 };
@@ -21,9 +21,9 @@ class FakeSource implements ProbeSource {
 
   pauses = 0;
 
-  constructor(private readonly answer: (pos: Vec3, n: number) => Probe | undefined = flat) {}
+  constructor(private readonly answer: (pos: Vec3, n: number) => Answer = flat) {}
 
-  async load(pos: Vec3): Promise<Probe | undefined> {
+  async load(pos: Vec3): Promise<Answer> {
     this.loads.push(pos);
     return this.answer(pos, this.loads.length);
   }
@@ -71,6 +71,21 @@ test('when every candidate is rejected the course fails with noGround', async ()
   const out = await runGeneration(input(), new FakeSource(() => undefined));
   assert.ok(!out.ok);
   assert.equal(!out.ok && 'reason' in out && out.reason, 'noGround');
+});
+
+test('when the area never loads the course fails with loadTimeout, not noGround (#33)', async () => {
+  const out = await runGeneration(input(), new FakeSource(() => TIMEOUT));
+  assert.equal(!out.ok && 'reason' in out && out.reason, 'loadTimeout');
+});
+
+test('half timeouts and half rough ground still count as a load problem; fewer do not', async () => {
+  // Load 1 is the start line; then the candidates alternate between timeouts and rejections.
+  const mixed = new FakeSource((pos, n) => (n === 1 ? flat(pos) : (n % 2 === 0 ? TIMEOUT : undefined)));
+  const half = await runGeneration(input(), mixed);
+  assert.equal(!half.ok && 'reason' in half && half.reason, 'loadTimeout');
+  const few = new FakeSource((pos, n) => (n === 1 ? flat(pos) : (n === 3 ? TIMEOUT : undefined)));
+  const rare = await runGeneration(input(), few);
+  assert.equal(!rare.ok && 'reason' in rare && rare.reason, 'noGround');
 });
 
 test('a full ticking-area list stops the job at once', async () => {

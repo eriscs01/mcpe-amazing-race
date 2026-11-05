@@ -118,6 +118,15 @@ const failing = (state: State, failure: GenerationFailure) => reduce(
   { type: 'courseFailed', job: (state.job ?? 0) + 1, failure },
 );
 
+test('a load timeout tells the host the terrain did not load, not that it is bad', () => {
+  const out = failing(hosted(), {
+    reason: 'loadTimeout', stop: 3, leg: 1, type: 'detour',
+  });
+  const note = out.effects[0];
+  assert.match(note?.kind === 'notify' ? note.text : '', /did not load in time/);
+  assert.doesNotMatch(note?.kind === 'notify' ? note.text : '', /water or steep/);
+});
+
 test('a failed first job returns to setup and tells the host why', () => {
   const out = failing(hosted(), {
     reason: 'noGround', stop: 3, leg: 1, type: 'detour',

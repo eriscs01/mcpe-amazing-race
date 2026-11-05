@@ -5,10 +5,12 @@ import { test } from 'node:test';
 
 import { BLOCK, ENTITY } from '../src/core/config.js';
 import { scanCandidate } from '../src/core/course/scan.js';
+import { TIMEOUT } from '../src/core/course/walk.js';
 import { horizontalDistance } from '../src/core/vec.js';
 
 import type { Area, AreaLoader, Evidence } from '../src/core/course/scan.js';
 import type { Ground } from '../src/core/course/terrain.js';
+import type { Probe } from '../src/core/course/walk.js';
 import type { Vec3 } from '../src/core/vec.js';
 
 interface World {
@@ -41,11 +43,17 @@ class FakeLoader implements AreaLoader {
   }
 }
 
+/** The probe, with a timeout read as a rejection. */
+const scanned = async (...args: Parameters<typeof scanCandidate>): Promise<Probe | undefined> => {
+  const answer = await scanCandidate(...args);
+  return answer === TIMEOUT ? undefined : answer;
+};
+
 const noEvidence: Evidence = { entities: [], blocks: [] };
 const here = { x: 500, y: 64, z: 500 };
 
 test('flat plains is accepted at the asked position with its height', async () => {
-  const probe = await scanCandidate(here, new FakeLoader(flatWorld), 1);
+  const probe = await scanned(here, new FakeLoader(flatWorld), 1);
   assert.deepEqual(probe, {
     pos: { x: 500, y: 70, z: 500 }, terrain: 'plains', spread: 0,
   });
@@ -53,7 +61,7 @@ test('flat plains is accepted at the asked position with its height', async () =
 
 test('terrain comes from the ground block', async () => {
   const sand: World = { at: () => ({ id: BLOCK.sand, y: 70 }) };
-  assert.equal((await scanCandidate(here, new FakeLoader(sand), 1))?.terrain, 'desert');
+  assert.equal((await scanned(here, new FakeLoader(sand), 1))?.terrain, 'desert');
 });
 
 test('samples the centre and 6 blocks out on each axis', async () => {
@@ -64,19 +72,19 @@ test('samples the centre and 6 blocks out on each axis', async () => {
       return { id: BLOCK.grassBlock, y: 70 };
     },
   };
-  await scanCandidate(here, new FakeLoader(world), 1);
+  await scanned(here, new FakeLoader(world), 1);
   assert.deepEqual([...new Set(seen)].sort(), ['-6,0', '0,-6', '0,0', '0,6', '6,0']);
 });
 
-test('a timeout (area never loaded) rejects the candidate', async () => {
-  assert.equal(await scanCandidate(here, new FakeLoader(flatWorld, 'timeout'), 1), undefined);
+test('a timeout (area never loaded) is reported as TIMEOUT, not as a rejection', async () => {
+  assert.equal(await scanCandidate(here, new FakeLoader(flatWorld, 'timeout'), 1), TIMEOUT);
 });
 
 test('water or rough ground rejects the candidate', async () => {
   const lake: World = { at: () => ({ id: 'minecraft:water', y: 62 }) };
-  assert.equal(await scanCandidate(here, new FakeLoader(lake), 1), undefined);
+  assert.equal(await scanned(here, new FakeLoader(lake), 1), undefined);
   const cliff: World = { at: (x) => ({ id: BLOCK.stone, y: x > 502 ? 90 : 70 }) };
-  assert.equal(await scanCandidate(here, new FakeLoader(cliff), 1), undefined);
+  assert.equal(await scanned(here, new FakeLoader(cliff), 1), undefined);
 });
 
 const villageAt = (c: Vec3): Evidence => ({
@@ -92,7 +100,7 @@ test('a landmark moves the arena 20-30 blocks off it and tags the probe', async 
     evidence: (c) => (
       c.x === 500 ? villageAt(c) : { entities: [], blocks: [] }),
   });
-  const probe = await scanCandidate(here, loader, 1);
+  const probe = await scanned(here, loader, 1);
   assert.ok(probe?.landmark);
   assert.deepEqual(probe.landmark, { kind: 'village', pos: village });
   const d = horizontalDistance(probe.pos, village);
@@ -106,14 +114,14 @@ test('if no offset spot is usable the candidate stays, without the landmark', as
       : { id: 'minecraft:water', y: 62 }),
     evidence: villageAt,
   };
-  const probe = await scanCandidate(here, new FakeLoader(world), 1);
+  const probe = await scanned(here, new FakeLoader(world), 1);
   assert.equal(probe?.landmark, undefined);
   assert.equal(probe?.pos.x, 500);
 });
 
 test('scanning is reproducible for a seed', async () => {
   const world: World = { ...flatWorld, evidence: onlyAtHere };
-  const a = await scanCandidate(here, new FakeLoader(world), 4);
-  const b = await scanCandidate(here, new FakeLoader(world), 4);
+  const a = await scanned(here, new FakeLoader(world), 4);
+  const b = await scanned(here, new FakeLoader(world), 4);
   assert.deepEqual(a, b);
 });

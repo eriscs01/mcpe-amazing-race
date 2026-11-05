@@ -185,6 +185,8 @@ export interface PlayerRecord {
   returnedAt?: number;
   /** The racer was given the kit (at the start, or on a later join); read with `??`. */
   kitted?: boolean;
+  /** Set once End race has released the player (reset, no Passport); read with `?? false`. */
+  released?: boolean;
 }
 
 export interface LegState {
@@ -324,7 +326,7 @@ export type Action = { type: 'tick' }
   | { type: 'dayTimeSaved'; time: number }
   | { type: 'resumeDay'; by: PlayerId }
   /** Host: restores the world and releases the players (spec §12). */
-  | { type: 'endRace'; by: PlayerId }
+  | { type: 'endRace'; by: PlayerId; online: PlayerId[] }
   /** Host Team fixes (spec §4): `minutes` are race minutes. */
   | {
     type: 'teamFix';
@@ -380,7 +382,7 @@ export interface ArenaSite {
 
 /** Why a generation job ended without a course. */
 export type GenerationFailure = {
-  reason: 'noGround' | 'noRoom'; stop: number; leg: number; type: StopType;
+  reason: 'noGround' | 'loadTimeout' | 'noRoom'; stop: number; leg: number; type: StopType;
 } | {
   reason: 'pinOutsideCourse' | 'pinTooClose' | 'tooManyPins'; pin: number;
 } | { reason: 'tickingAreaFull' } | { reason: 'error' };

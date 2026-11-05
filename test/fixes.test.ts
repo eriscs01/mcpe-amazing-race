@@ -58,6 +58,14 @@ test('Teleport me to team: the host is moved; a racing host or an empty team is 
     type: 'teamFix', by: 'h', team: 'blue', fix: { kind: 'goto', at },
   });
   assert.equal(hostRaces.refusal, 'hostRaces');
+  // A host who has checked in is still in the race: the same refusal.
+  const checkedIn: State = {
+    ...racing, teams: racing.teams.map((t) => (t.members.includes('h') ? { ...t, status: 'checkedIn' } : t)),
+  };
+  const mat = reduce(checkedIn, {
+    type: 'teamFix', by: 'h', team: 'blue', fix: { kind: 'goto', at },
+  });
+  assert.equal(mat.refusal, 'hostRaces');
 });
 
 test('Eliminate: Spectator, no Passport, unlocked, husks removed, never the last team', () => {
@@ -112,7 +120,7 @@ test('End race restores the world, releases everyone and is done once', () => {
   const base = pitRace();
   const snapshot = { rules: { keepInventory: false }, time: 5 };
   const state: State = { ...base, hostId: 'e', snapshot };
-  const out = reduce(state, { type: 'endRace', by: 'e' });
+  const out = reduce(state, { type: 'endRace', by: 'e', online: [] });
   assert.equal(out.state.phase, 'finished');
   assert.equal(out.state.ended, true);
   assert.deepEqual(of(out.effects, 'restoreWorld'), [
@@ -123,17 +131,17 @@ test('End race restores the world, releases everyone and is done once', () => {
   const everyone = ['b', 'c', 'd', 'f', 'g', 'h'];
   assert.deepEqual(of(out.effects, 'resetPlayers')[0]?.players.sort(), everyone);
   assert.equal(of(out.effects, 'takeItem').length, 6);
-  assert.equal(reduce(out.state, { type: 'endRace', by: 'e' }).refusal, 'alreadyEnded');
-  assert.equal(reduce(state, { type: 'endRace', by: 'h' }).refusal, 'notHost');
+  assert.equal(reduce(out.state, { type: 'endRace', by: 'e', online: [] }).refusal, 'alreadyEnded');
+  assert.equal(reduce(state, { type: 'endRace', by: 'h', online: [] }).refusal, 'notHost');
   const ready: State = { ...state, phase: 'ready' };
-  assert.equal(reduce(ready, { type: 'endRace', by: 'e' }).refusal, 'badPhase');
+  assert.equal(reduce(ready, { type: 'endRace', by: 'e', online: [] }).refusal, 'badPhase');
 });
 
 test('End race works on a final leg nobody finished, and from a finished race', () => {
   const state: State = { ...pitRace(), hostId: 'e', phase: 'paused' };
-  assert.equal(reduce(state, { type: 'endRace', by: 'e' }).refusal, undefined);
+  assert.equal(reduce(state, { type: 'endRace', by: 'e', online: [] }).refusal, undefined);
   const done: State = { ...state, phase: 'finished' };
-  assert.equal(reduce(done, { type: 'endRace', by: 'e' }).state.ended, true);
+  assert.equal(reduce(done, { type: 'endRace', by: 'e', online: [] }).state.ended, true);
 });
 
 test('the host\'s elimination still counts for the leg after the grace period', () => {

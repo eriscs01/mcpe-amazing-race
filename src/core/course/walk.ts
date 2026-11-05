@@ -25,7 +25,13 @@ export interface Probe {
   landmark?: Landmark;
 }
 
-export type Prober = (pos: Vec3) => Probe | undefined;
+/** The answer for a candidate that could not be probed because its area did not load in time. */
+export const TIMEOUT = 'timeout' as const;
+
+/** What the caller sends back for a position: a probe, undefined (rejected) or TIMEOUT. */
+export type Answer = Probe | typeof TIMEOUT | undefined;
+
+export type Prober = (pos: Vec3) => Answer;
 
 export interface CourseInput {
   /** The host's position: the start line. */
@@ -48,14 +54,17 @@ export type CourseOutcome = {
   inserted: number;
 } | {
   ok: false;
-  /** noGround: every candidate probed was rejected; noRoom: no position kept the rules. */
-  reason: 'noGround' | 'noRoom';
+  /**
+   * noGround: the candidates were rejected; loadTimeout: at least half of them did not load in
+   * time; noRoom: no position kept the rules.
+   */
+  reason: 'noGround' | 'loadTimeout' | 'noRoom';
   stop: number;
   leg: number;
   type: StopType;
 } | ({ ok: false } & PinProblem);
 
-type Choice = { probe: Probe; asked: number } | 'noGround' | 'noRoom';
+type Choice = { probe: Probe; asked: number } | 'noGround' | 'loadTimeout' | 'noRoom';
 
 /**
  * Probes up to 6 candidates from `next`: the first valid one with a landmark wins, else the
@@ -65,14 +74,17 @@ type Choice = { probe: Probe; asked: number } | 'noGround' | 'noRoom';
 function* choose(
   next: () => Generator<Pause, Vec3 | undefined, unknown>,
   ok: (pos: Vec3) => Generator<Pause, boolean, unknown>,
-): Generator<Vec3 | Pause, Choice, Probe | undefined> {
+): Generator<Vec3 | Pause, Choice, Answer> {
   const valid: Probe[] = [];
   let asked = 0;
+  let timeouts = 0;
   while (asked < COURSE.candidatesPerStop && valid.length < COURSE.validToChoose) {
     const candidate = yield* next();
     if (!candidate) break;
     asked += 1;
-    const probe: Probe | undefined = yield candidate;
+    const answer: Answer = yield candidate;
+    if (answer === TIMEOUT) timeouts += 1;
+    const probe = answer === TIMEOUT ? undefined : answer;
     const moved = probe && (probe.pos.x !== candidate.x || probe.pos.z !== candidate.z);
     if (probe && (!moved || (yield* ok(probe.pos)))) {
       if (probe.landmark) return { probe, asked };
@@ -82,7 +94,8 @@ function* choose(
   const flattest = valid.reduce<Probe | undefined>((best, p) => (
     best && best.spread <= p.spread ? best : p), undefined);
   if (flattest) return { probe: flattest, asked };
-  return asked > 0 ? 'noGround' : 'noRoom';
+  if (asked === 0) return 'noRoom';
+  return timeouts * 2 >= asked ? 'loadTimeout' : 'noGround';
 }
 
 /** The placed stops, with their names drawn as they are added. */
@@ -137,8 +150,9 @@ function* fixedStop(
   slot: Slot,
   pos: Vec3,
   next: number,
-): Generator<Vec3 | Pause, void, Probe | undefined> {
-  const probe = yield pos;
+): Generator<Vec3 | Pause, void, Answer> {
+  const answer = yield pos;
+  const probe = answer === TIMEOUT ? undefined : answer;
   const placed: Probe = probe
     ? { ...probe, pos: { x: pos.x, y: probe.pos.y, z: pos.z } }
     : { pos, terrain: TERRAIN_FALLBACK, spread: 0 };
@@ -152,7 +166,7 @@ function* fixedStop(
  */
 export function* generateCourse(
   input: CourseInput,
-): Generator<Vec3 | Pause, CourseOutcome, Probe | undefined> {
+): Generator<Vec3 | Pause, CourseOutcome, Answer> {
   const rng = new Rng(input.seed);
   const { legs, peaceful } = input;
   const base = skeleton({ legs, peaceful, seed: rng.int(0, 0xffffffff) });

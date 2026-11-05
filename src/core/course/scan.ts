@@ -6,10 +6,11 @@ import { LANDMARK, TERRAIN_PROBE } from '../config.js';
 import { Rng } from '../rng.js';
 import { detectLandmark, offsetCandidates } from './landmarks.js';
 import { assess } from './terrain.js';
+import { TIMEOUT } from './walk.js';
 
 import type { Evidence } from './landmarks.js';
 import type { Ground } from './terrain.js';
-import type { Probe } from './walk.js';
+import type { Answer, Probe } from './walk.js';
 import type { Vec3 } from '../vec.js';
 
 export type { Evidence } from './landmarks.js';
@@ -36,14 +37,14 @@ function assessAt(area: Area, x: number, z: number): Site | undefined {
   return result.ok ? result : undefined;
 }
 
-/** Probes one candidate; undefined rejects it (timeout, water, or rough ground). */
+/** Probes one candidate; undefined rejects it (water or rough ground), TIMEOUT: it did not load. */
 export async function scanCandidate(
   pos: Vec3,
   loader: AreaLoader,
   seed: number,
-): Promise<Probe | undefined> {
+): Promise<Answer> {
   const area = await loader.load(pos);
-  if (!area) return undefined;
+  if (!area) return TIMEOUT;
   const site = assessAt(area, pos.x, pos.z);
   if (!site) return undefined;
   const probe: Probe = {
