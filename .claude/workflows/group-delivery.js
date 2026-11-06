@@ -3,12 +3,12 @@ export const meta = {
   description: 'Research, plan (advisor-reviewed), implement test-first, verify, review and completeness-check one unit of work; stops before the PR',
   whenToUse: 'One implementation group or cleanup batch for the Amazing Race add-on. Pass args {task, issues?, branch?}. The main session opens the PR, merges and cleans up.',
   phases: [
-    { title: 'Research', detail: 'explorers: spec and design, code, follow-up issues' },
-    { title: 'Plan', detail: 'planner, then advisor review, one revision' },
-    { title: 'Implement', detail: 'test first, then code, committed on a branch' },
-    { title: 'Verify', detail: 'typecheck, lint, coverage, package; fix until green' },
-    { title: 'Review', detail: 'isolated reviewer in a worktree, then fixes' },
-    { title: 'Completeness', detail: 'advisor checks the final diff against the plan' },
+    { title: 'Research', detail: 'explorers: spec and design, code, follow-up issues', model: 'haiku' },
+    { title: 'Plan', detail: 'planner (sonnet), advisor review (opus), one revision' },
+    { title: 'Implement', detail: 'test first, then code, committed on a branch', model: 'sonnet' },
+    { title: 'Verify', detail: 'typecheck, lint, coverage, package; fix until green', model: 'sonnet' },
+    { title: 'Review', detail: 'isolated reviewer in a worktree, then fixes', model: 'sonnet' },
+    { title: 'Completeness', detail: 'advisor checks the final diff against the plan', model: 'opus' },
   ],
 }
 
@@ -105,6 +105,9 @@ const VERDICT = {
   required: ['verdict', 'gaps', 'closes', 'leaveOpen'],
 }
 
+// Sonnet builds and reviews, Haiku explores, Opus advises (group-workflow roles).
+const MODEL = { explore: 'haiku', build: 'sonnet', review: 'sonnet', advise: 'opus' }
+
 const RULES = 'Follow CLAUDE.md and the test-driven-development, design-principles and debuggability skills. '
   + 'The spec (docs/amazing-race-addon-spec.md) wins on behaviour, docs/technical-design.md on structure. '
   + 'Core never imports @minecraft/*. Stable APIs only.'
@@ -118,7 +121,9 @@ const lenses = [
 ]
 const research = (await parallel(lenses.map(([key, ask]) => () => agent(
   `${context}\n\n${ask}\nRead only; report terse path:line facts.`,
-  { label: `research:${key}`, phase: 'Research', agentType: 'explorer', schema: FACTS },
+  {
+    label: `research:${key}`, phase: 'Research', agentType: 'explorer', model: MODEL.explore, schema: FACTS,
+  },
 )))).filter(Boolean)
 const brief = research.map((r) => `${r.summary}\n${r.facts.map((f) => `- ${f.path}: ${f.note}`).join('\n')}`).join('\n\n')
 
@@ -126,11 +131,13 @@ const brief = research.map((r) => `${r.summary}\n${r.facts.map((f) => `- ${f.pat
 phase('Plan')
 let plan = await agent(
   `${context}\n\nResearch:\n${brief}\n\n${RULES}\nWrite a short plan: scope, modules and types, tests to write first, decisions needed (technical design §3), follow-up issues taken in or deferred with a reason. Stay inside the task's scope.`,
-  { label: 'plan', phase: 'Plan', schema: PLAN },
+  { label: 'plan', phase: 'Plan', model: MODEL.build, schema: PLAN },
 )
 const advice = await agent(
   `Plan review (checkpoint 1). Verify the plan against the code and docs; answer STOP, GO_WITH_CHANGES or GO with ranked concrete changes. Be terse.\n\n${context}\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
-  { label: 'advisor:plan', phase: 'Plan', agentType: 'advisor', schema: ADVICE },
+  {
+    label: 'advisor:plan', phase: 'Plan', agentType: 'advisor', model: MODEL.advise, schema: ADVICE,
+  },
 )
 if (advice.verdict === 'STOP') {
   return { stopped: 'plan', advice, plan }
@@ -138,7 +145,7 @@ if (advice.verdict === 'STOP') {
 if (advice.verdict === 'GO_WITH_CHANGES') {
   plan = await agent(
     `Revise the plan to apply every change below. Return the full revised plan.\n\nPlan:\n${JSON.stringify(plan, null, 2)}\n\nChanges:\n${advice.changes.map((c) => `- ${c}`).join('\n')}`,
-    { label: 'plan:revise', phase: 'Plan', schema: PLAN },
+    { label: 'plan:revise', phase: 'Plan', model: MODEL.build, schema: PLAN },
   )
 }
 log(`plan: ${advice.verdict}; ${plan.modules.length} modules, ${plan.testsFirst.length} tests first`)
@@ -147,7 +154,7 @@ log(`plan: ${advice.verdict}; ${plan.modules.length} modules, ${plan.testsFirst.
 phase('Implement')
 const impl = await agent(
   `${context}\n\n${RULES}\nImplement this plan on ${branch}. Write the failing tests first, see them fail, then the code. Run \`npm run format\` after editing. Update docs/technical-design.md (§2/§3), CHANGELOG.md and docs/ingame-test.md. Commit everything (a worktree reviewer sees only committed work) with the attribution trailers from the session; do not push and do not open a PR.\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
-  { label: 'implement', phase: 'Implement', schema: IMPL },
+  { label: 'implement', phase: 'Implement', model: MODEL.build, schema: IMPL },
 )
 
 // ── Verify: the four CI checks, fix until green (at most 3 rounds) ──────────────────────────
@@ -156,7 +163,9 @@ let checks
 for (let round = 1; round <= 3; round += 1) {
   checks = await agent(
     `On branch ${impl.branch}, run \`npm run typecheck\`, \`npm run lint\`, \`npm run coverage\` (core lines must stay at or above 80%) and \`npm run package\`. For any failure, fix the cause (never skip or weaken a test), run \`npm run format\`, re-run, and commit the fix. Report the final state of each check and any failure text still open.`,
-    { label: `verify:${round}`, phase: 'Verify', schema: CHECKS },
+    {
+      label: `verify:${round}`, phase: 'Verify', model: MODEL.build, schema: CHECKS,
+    },
   )
   if (checks.typecheck && checks.lint && checks.coverage && checks.pkg) break
 }
@@ -169,14 +178,19 @@ phase('Review')
 const review = await agent(
   `Review the diff of ${impl.branch} against origin/main (committed work) against the spec, docs/technical-design.md, CLAUDE.md and the design-principles, debuggability and test-driven-development skills. Check correctness, persistence safety, exhaustiveness, logs and test quality. Return a verdict and ranked findings. Do not edit.\n\nPlan it implements:\n${JSON.stringify(plan, null, 2)}`,
   {
-    label: 'review', phase: 'Review', agentType: 'reviewer', isolation: 'worktree', schema: REVIEW,
+    label: 'review',
+    phase: 'Review',
+    agentType: 'reviewer',
+    model: MODEL.review,
+    isolation: 'worktree',
+    schema: REVIEW,
   },
 )
 const mustFix = review.findings.filter((f) => f.severity !== 'nit')
 if (mustFix.length > 0) {
   await agent(
     `On branch ${impl.branch}, fix these review findings (skip any you can show is wrong and say why), then re-run typecheck, lint, coverage and package, \`npm run format\`, and commit.\n\n${mustFix.map((f) => `- [${f.severity}] ${f.where}: ${f.issue}`).join('\n')}`,
-    { label: 'review:fix', phase: 'Review' },
+    { label: 'review:fix', phase: 'Review', model: MODEL.build },
   )
 }
 
@@ -185,13 +199,17 @@ phase('Completeness')
 const verdict = await agent(
   `Completeness check (checkpoint 3) for ${impl.branch} (diff vs origin/main). Check the diff covers every scope item and taken-in issue of the plan, that anything declined is recorded in docs, and that docs/CHANGELOG/ingame-test and tests are current and assert behaviour. Say which taken-in issues the PR should close and which stay open. Terse.\n\n${context}\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
   {
-    label: 'advisor:completeness', phase: 'Completeness', agentType: 'advisor', schema: VERDICT,
+    label: 'advisor:completeness',
+    phase: 'Completeness',
+    agentType: 'advisor',
+    model: MODEL.advise,
+    schema: VERDICT,
   },
 )
 if (verdict.verdict !== 'GO') {
   await agent(
     `On branch ${impl.branch}, close these gaps, re-run typecheck, lint, coverage and package, \`npm run format\`, and commit.\n\n${verdict.gaps.map((g) => `- ${g}`).join('\n')}`,
-    { label: 'completeness:fix', phase: 'Completeness' },
+    { label: 'completeness:fix', phase: 'Completeness', model: MODEL.build },
   )
 }
 
