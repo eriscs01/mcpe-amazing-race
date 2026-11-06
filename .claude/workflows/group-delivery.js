@@ -4,11 +4,11 @@ export const meta = {
   whenToUse: 'One implementation group or cleanup batch for the Amazing Race add-on. Pass args {task, issues?, branch?}. The main session opens the PR, merges and cleans up.',
   phases: [
     { title: 'Research', detail: 'explorers: spec and design, code, follow-up issues', model: 'haiku' },
-    { title: 'Plan', detail: 'planner (sonnet), advisor review (opus), one revision' },
-    { title: 'Implement', detail: 'test first, then code, committed on a branch', model: 'sonnet' },
-    { title: 'Verify', detail: 'typecheck, lint, coverage, package; fix until green', model: 'sonnet' },
-    { title: 'Review', detail: 'isolated reviewer in a worktree, then fixes', model: 'sonnet' },
-    { title: 'Completeness', detail: 'advisor checks the final diff against the plan', model: 'opus' },
+    { title: 'Plan', detail: 'sonnet drafts, opus reviews and sets the risk tier, one revision' },
+    { title: 'Implement', detail: 'test first, then code; haiku / sonnet / opus by risk tier' },
+    { title: 'Verify', detail: 'haiku first, sonnet then opus if a failure survives' },
+    { title: 'Review', detail: 'sonnet reviewer (opus if high risk); haiku fixes nits, stronger model for major' },
+    { title: 'Completeness', detail: 'opus (sonnet if trivial) checks the diff against the plan' },
   ],
 }
 
@@ -38,21 +38,23 @@ const PLAN = {
   type: 'object',
   properties: {
     scope: { type: 'string' },
+    risk: { type: 'string', enum: ['trivial', 'normal', 'high'] },
     modules: { type: 'array', items: { type: 'string' } },
     testsFirst: { type: 'array', items: { type: 'string' } },
     decisions: { type: 'array', items: { type: 'string' } },
     takenIn: { type: 'array', items: { type: 'string' } },
     deferred: { type: 'array', items: { type: 'string' } },
   },
-  required: ['scope', 'modules', 'testsFirst', 'decisions', 'takenIn', 'deferred'],
+  required: ['scope', 'risk', 'modules', 'testsFirst', 'decisions', 'takenIn', 'deferred'],
 }
 const ADVICE = {
   type: 'object',
   properties: {
     verdict: { type: 'string', enum: ['STOP', 'GO_WITH_CHANGES', 'GO'] },
+    risk: { type: 'string', enum: ['trivial', 'normal', 'high'] },
     changes: { type: 'array', items: { type: 'string' } },
   },
-  required: ['verdict', 'changes'],
+  required: ['verdict', 'risk', 'changes'],
 }
 const IMPL = {
   type: 'object',
@@ -105,8 +107,12 @@ const VERDICT = {
   required: ['verdict', 'gaps', 'closes', 'leaveOpen'],
 }
 
-// Sonnet builds and reviews, Haiku explores, Opus advises (group-workflow roles).
-const MODEL = { explore: 'haiku', build: 'sonnet', review: 'sonnet', advise: 'opus' }
+// Cheapest model that can do each job; Opus is spent on judgments (plan review, risk tier,
+// completeness) and on escalation when a cheaper model has failed or the risk is high.
+// The advisor sets the risk tier of the work, and the tier picks the builder.
+const BUILDER = { trivial: 'haiku', normal: 'sonnet', high: 'opus' }
+const FLOOR_SONNET = (m) => (m === 'haiku' ? 'sonnet' : m)
+const MODEL = { explore: 'haiku', draft: 'sonnet', advise: 'opus' }
 
 const RULES = 'Follow CLAUDE.md and the test-driven-development, design-principles and debuggability skills. '
   + 'The spec (docs/amazing-race-addon-spec.md) wins on behaviour, docs/technical-design.md on structure. '
@@ -122,7 +128,7 @@ const lenses = [
 const research = (await parallel(lenses.map(([key, ask]) => () => agent(
   `${context}\n\n${ask}\nRead only; report terse path:line facts.`,
   {
-    label: `research:${key}`, phase: 'Research', agentType: 'explorer', model: MODEL.explore, schema: FACTS,
+    label: `research:${key}`, phase: 'Research', agentType: 'explorer', model: MODEL.explore, effort: 'low', schema: FACTS,
   },
 )))).filter(Boolean)
 const brief = research.map((r) => `${r.summary}\n${r.facts.map((f) => `- ${f.path}: ${f.note}`).join('\n')}`).join('\n\n')
@@ -130,11 +136,11 @@ const brief = research.map((r) => `${r.summary}\n${r.facts.map((f) => `- ${f.pat
 // ── Plan: draft, advisor review, one revision ───────────────────────────────────────────────
 phase('Plan')
 let plan = await agent(
-  `${context}\n\nResearch:\n${brief}\n\n${RULES}\nWrite a short plan: scope, modules and types, tests to write first, decisions needed (technical design §3), follow-up issues taken in or deferred with a reason. Stay inside the task's scope.`,
-  { label: 'plan', phase: 'Plan', model: MODEL.build, schema: PLAN },
+  `${context}\n\nResearch:\n${brief}\n\n${RULES}\nWrite a short plan: scope, modules and types, tests to write first, decisions needed (technical design §3), follow-up issues taken in or deferred with a reason. Stay inside the task's scope. Classify risk: trivial (docs, tests, mechanical edits only), normal (ordinary logic), high (persisted state, protocols, concurrency, anything hard to reverse).`,
+  { label: 'plan', phase: 'Plan', model: MODEL.draft, schema: PLAN },
 )
 const advice = await agent(
-  `Plan review (checkpoint 1). Verify the plan against the code and docs; answer STOP, GO_WITH_CHANGES or GO with ranked concrete changes. Be terse.\n\n${context}\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
+  `Plan review (checkpoint 1). Verify the plan against the code and docs; answer STOP, GO_WITH_CHANGES or GO with ranked concrete changes, and set risk (trivial / normal / high) yourself: it picks the model that builds, reviews and fixes the work. Be terse.\n\n${context}\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
   {
     label: 'advisor:plan', phase: 'Plan', agentType: 'advisor', model: MODEL.advise, schema: ADVICE,
   },
@@ -145,26 +151,34 @@ if (advice.verdict === 'STOP') {
 if (advice.verdict === 'GO_WITH_CHANGES') {
   plan = await agent(
     `Revise the plan to apply every change below. Return the full revised plan.\n\nPlan:\n${JSON.stringify(plan, null, 2)}\n\nChanges:\n${advice.changes.map((c) => `- ${c}`).join('\n')}`,
-    { label: 'plan:revise', phase: 'Plan', model: MODEL.build, schema: PLAN },
+    { label: 'plan:revise', phase: 'Plan', model: MODEL.draft, schema: PLAN },
   )
 }
-log(`plan: ${advice.verdict}; ${plan.modules.length} modules, ${plan.testsFirst.length} tests first`)
+const builder = BUILDER[advice.risk]
+const reviewer = advice.risk === 'high' ? 'opus' : 'sonnet'
+log(`plan: ${advice.verdict}; risk ${advice.risk} -> builder ${builder}, reviewer ${reviewer}; ${plan.modules.length} modules, ${plan.testsFirst.length} tests first`)
 
 // ── Implement: one agent, since the edits are sequential and share files ────────────────────
 phase('Implement')
 const impl = await agent(
   `${context}\n\n${RULES}\nImplement this plan on ${branch}. Write the failing tests first, see them fail, then the code. Run \`npm run format\` after editing. Update docs/technical-design.md (§2/§3), CHANGELOG.md and docs/ingame-test.md. Commit everything (a worktree reviewer sees only committed work) with the attribution trailers from the session; do not push and do not open a PR.\n\nPlan:\n${JSON.stringify(plan, null, 2)}`,
-  { label: 'implement', phase: 'Implement', model: MODEL.build, schema: IMPL },
+  { label: 'implement', phase: 'Implement', model: builder, schema: IMPL },
 )
 
 // ── Verify: the four CI checks, fix until green (at most 3 rounds) ──────────────────────────
 phase('Verify')
 let checks
+// Round 1 is cheap; a failure that survives it is retried on a stronger model.
+const LADDER = ['haiku', 'sonnet', 'opus']
 for (let round = 1; round <= 3; round += 1) {
   checks = await agent(
     `On branch ${impl.branch}, run \`npm run typecheck\`, \`npm run lint\`, \`npm run coverage\` (core lines must stay at or above 80%) and \`npm run package\`. For any failure, fix the cause (never skip or weaken a test), run \`npm run format\`, re-run, and commit the fix. Report the final state of each check and any failure text still open.`,
     {
-      label: `verify:${round}`, phase: 'Verify', model: MODEL.build, schema: CHECKS,
+      label: `verify:${round}`,
+      phase: 'Verify',
+      model: LADDER[round - 1],
+      ...(round === 1 ? { effort: 'low' } : {}),
+      schema: CHECKS,
     },
   )
   if (checks.typecheck && checks.lint && checks.coverage && checks.pkg) break
@@ -181,16 +195,21 @@ const review = await agent(
     label: 'review',
     phase: 'Review',
     agentType: 'reviewer',
-    model: MODEL.review,
+    model: reviewer,
     isolation: 'worktree',
     schema: REVIEW,
   },
 )
 const mustFix = review.findings.filter((f) => f.severity !== 'nit')
+const hard = mustFix.some((f) => f.severity === 'blocker' || f.severity === 'major')
 if (mustFix.length > 0) {
   await agent(
     `On branch ${impl.branch}, fix these review findings (skip any you can show is wrong and say why), then re-run typecheck, lint, coverage and package, \`npm run format\`, and commit.\n\n${mustFix.map((f) => `- [${f.severity}] ${f.where}: ${f.issue}`).join('\n')}`,
-    { label: 'review:fix', phase: 'Review', model: MODEL.build },
+    {
+      label: 'review:fix',
+      phase: 'Review',
+      model: hard ? FLOOR_SONNET(builder) : 'haiku',
+    },
   )
 }
 
@@ -202,14 +221,14 @@ const verdict = await agent(
     label: 'advisor:completeness',
     phase: 'Completeness',
     agentType: 'advisor',
-    model: MODEL.advise,
+    model: advice.risk === 'trivial' ? 'sonnet' : MODEL.advise,
     schema: VERDICT,
   },
 )
 if (verdict.verdict !== 'GO') {
   await agent(
     `On branch ${impl.branch}, close these gaps, re-run typecheck, lint, coverage and package, \`npm run format\`, and commit.\n\n${verdict.gaps.map((g) => `- ${g}`).join('\n')}`,
-    { label: 'completeness:fix', phase: 'Completeness', model: MODEL.build },
+    { label: 'completeness:fix', phase: 'Completeness', model: FLOOR_SONNET(builder) },
   )
 }
 
