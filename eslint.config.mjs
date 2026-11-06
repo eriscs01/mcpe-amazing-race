@@ -13,7 +13,8 @@ export default [
   {
     // Review agents' worktrees hold whole copies of the repo outside both tsconfigs.
     ignores: [
-      '.claude/worktrees/**', 'behavior_pack/scripts/**', 'build/**', 'dist/**', 'node_modules/**',
+      '.claude/worktrees/**', '.claude/workflows/**', 'behavior_pack/scripts/**', 'build/**',
+      'dist/**', 'node_modules/**',
     ],
   },
 
